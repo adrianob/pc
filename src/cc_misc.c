@@ -1,27 +1,33 @@
 #include "cc_misc.h"
 
-int comp_get_line_number (void)
+extern int g_line_number;
+
+int
+comp_get_line_number(void)
 {
-  //implemente esta função
-  return -1;
+    return g_line_number;
 }
 
-void yyerror (char const *mensagem)
+void
+yyerror(char const *mensagem)
 {
-  fprintf (stderr, "%s\n", mensagem); //altere para que apareça a linha
+    fprintf(stderr, "%s\n", mensagem); //altere para que apareça a linha
 }
 
-void main_init (int argc, char **argv)
+void
+main_init(int argc, char **argv)
 {
-  //implemente esta função com rotinas de inicialização, se necessário
+    //implemente esta função com rotinas de inicialização, se necessário
 }
 
-void main_finalize (void)
+void
+main_finalize(void)
 {
-  //implemente esta função com rotinas de inicialização, se necessário
+    //implemente esta função com rotinas de inicialização, se necessário
 }
 
-void comp_print_table (void)
+void
+comp_print_table(void)
 {
   //para cada entrada na tabela de símbolos
   //Etapa 1: chame a função cc_dict_etapa_1_print_entrada

@@ -1,0 +1,3 @@
+-I./build
+-I./include
+-std=c11

@@ -1,5 +1,7 @@
 /*
   Coloque aqui o identificador do grupo e dos seus membros
+
+  - Leonardo Hahn
 */
 %{
 #include "main.h"
