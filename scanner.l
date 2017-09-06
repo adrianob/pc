@@ -97,5 +97,6 @@ TK_IDENTIFICADOR    [a-zA-Z_][a-zA-Z_0-9]*
 \n                  g_line_number++;
 [/][/].*            {}
 [/][*](.|\n)*[*][/] {}
+[[:blank:]]+        /* No action */
 .                   return TOKEN_ERRO;
 %%
