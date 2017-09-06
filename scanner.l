@@ -52,6 +52,8 @@ TK_LIT_CHAR         \'([a-zA-Z0-9]|{SPECIALS})\'
 TK_LIT_STRING       \"(\\.|[^"])*\"
 TK_IDENTIFICADOR    [a-zA-Z_][a-zA-Z_0-9]*
 %%
+\n                  g_line_number++;
+[[:blank:]]+        /* No action */
 
 {SPECIALS}          return yytext[0];
 {TK_PR_INT}         return TK_PR_INT;
@@ -94,9 +96,10 @@ TK_IDENTIFICADOR    [a-zA-Z_][a-zA-Z_0-9]*
 {TK_LIT_CHAR}       return TK_LIT_CHAR;
 {TK_LIT_STRING}     return TK_LIT_STRING;
 {TK_IDENTIFICADOR}  return TK_IDENTIFICADOR;
-\n                  g_line_number++;
 [/][/].*            {}
-[/][*](.|\n)*[*][/] {}
-[[:blank:]]+        /* No action */
+[/][*](.|\n)*[*][/] {
+                        for (int i = 0; i < yyleng-1; i++)
+                            if (yytext[i] == '\n') g_line_number++;
+                    }
 .                   return TOKEN_ERRO;
 %%
