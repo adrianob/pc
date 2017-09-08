@@ -6,7 +6,9 @@
 */
 %{
 #include "parser.h" //arquivo automaticamente gerado pelo bison
+#include "cc_dict.h"
 int g_line_number = 1;
+extern comp_dict_t *dict;
 %}
 
 DIGIT               [0-9]
@@ -50,13 +52,13 @@ protected   return TK_PR_PROTECTED;
 \|\|        return TK_OC_OR;
 \<\<        return TK_OC_SL;
 \>\>        return TK_OC_SR;
-[+-]?{DIGIT}+        return TK_LIT_INT;
-[+-]?{DIGIT}+\.{DIGIT}+      return TK_LIT_FLOAT;
 false      return TK_LIT_FALSE;
 true       return TK_LIT_TRUE;
-\'([a-zA-Z0-9]|{SPECIALS})\'       return TK_LIT_CHAR;
-\"(\\.|[^"])*\"     return TK_LIT_STRING;
-[a-zA-Z_][a-zA-Z_0-9]*  return TK_IDENTIFICADOR;
+[+-]?{DIGIT}+        { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); return TK_LIT_INT; }
+[+-]?{DIGIT}+\.{DIGIT}+      { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); return TK_LIT_FLOAT; }
+\'([a-zA-Z0-9]|{SPECIALS})\'      { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); return TK_LIT_CHAR; }
+\"(\\.|[^"])*\"     { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); return TK_LIT_STRING; }
+[a-zA-Z_][a-zA-Z_0-9]*  { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); return TK_IDENTIFICADOR; }
 [/][/].*            {}
 [/][*](.|\n)*[*][/] {
                         for (int i = 0; i < yyleng-1; i++)
