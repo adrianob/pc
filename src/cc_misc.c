@@ -29,6 +29,13 @@ void
 main_finalize(void)
 {
     //implemente esta função com rotinas de inicialização, se necessário
+    int i, l;
+    for (i = 0, l = dict->size; i < l; ++i) {
+      if (dict->data[i]) {
+        dict_remove(dict, dict->data[i]->key);
+      }
+    }
+    dict_free(dict);
 }
 
 void
