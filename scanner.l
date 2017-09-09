@@ -7,6 +7,7 @@
 %{
 #include "parser.h" //arquivo automaticamente gerado pelo bison
 #include "cc_dict.h"
+void add_to_dict(char * key, int line_number);
 int g_line_number = 1;
 extern comp_dict_t *dict;
 %}
@@ -15,6 +16,7 @@ DIGIT               [0-9]
 SPECIALS            [,;:()\[\]{}+\-*/<>=!&$%#^]
 
 %%
+{SPECIALS}      return yytext[0];
 int         return TK_PR_INT;
 float       return TK_PR_FLOAT;
 bool        return TK_PR_BOOL;
@@ -51,31 +53,25 @@ protected   return TK_PR_PROTECTED;
 false       return TK_LIT_FALSE;
 true        return TK_LIT_TRUE;
 {DIGIT}+\.{DIGIT}+  {
-                        dict_put(dict, yytext, (void *) g_line_number);
+                        add_to_dict(yytext, g_line_number);
                         return TK_LIT_FLOAT;
                     }
-(\+|\-)?{DIGIT}+    {
-                        dict_put(dict, yytext, (void *) g_line_number);
+{DIGIT}+    {
+                        add_to_dict(yytext, g_line_number);
                         return TK_LIT_INT;
                     }
 \'([a-zA-Z0-9]|{SPECIALS})\'    {
-                                    dict_put(dict, yytext, (void *) g_line_number);
-                                    return TK_LIT_CHAR;
-                                }
+                        add_to_dict(yytext, g_line_number);
+                        return TK_LIT_CHAR;
+                    }
 \"(\\.|[^"])*\"     {
-                        dict_put(dict, yytext, (void *) g_line_number);
+                        add_to_dict(yytext, g_line_number);
                         return TK_LIT_STRING;
                     }
 [a-zA-Z_][a-zA-Z_0-9]*  {
-                            // FIXME(leo)?:
-                            // A sintaxe correta aqui seria &g_line_number.
-                            //
-                            // E também é necessário usar malloc aqui para um inteiro.
-                            // Nao da pra passar a um pointeiro direto pra g_line_number,
-                            // porque essa valor está sempre mudando durante o programa.
-                            dict_put(dict, yytext, (void *) g_line_number);
-                            return TK_IDENTIFICADOR;
-                        }
+                        add_to_dict(yytext, g_line_number);
+                        return TK_IDENTIFICADOR;
+                    }
 [/][*](.|\n)*[*][/] {
                         for (int i = 0; i < yyleng-1; i++)
                             if (yytext[i] == '\n') g_line_number++;
@@ -83,6 +79,12 @@ true        return TK_LIT_TRUE;
 [/][/].*            /* No action */
 \n                  g_line_number++;
 [[:blank:]]+        /* No action */
-{SPECIALS}      return yytext[0];
 .               return TOKEN_ERRO;
 %%
+
+void add_to_dict(char * key, int line_number){
+  int *line = malloc(sizeof(int));
+  *line = line_number;
+  dict_put(dict, key, line);
+  free(line);
+}

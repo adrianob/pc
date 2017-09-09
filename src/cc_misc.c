@@ -38,7 +38,8 @@ main_finalize(void)
             dict_remove(dict, dict->data[i]->key);
         }
     }
-    dict_free(dict);
+    if(dict->occupation == 0)
+      dict_free(dict);
 }
 
 void
