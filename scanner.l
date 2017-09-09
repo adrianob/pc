@@ -86,5 +86,4 @@ void add_to_dict(char * key, int line_number){
   int *line = malloc(sizeof(int));
   *line = line_number;
   dict_put(dict, key, line);
-  free(line);
 }

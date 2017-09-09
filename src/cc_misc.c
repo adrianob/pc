@@ -1,6 +1,7 @@
 #include "cc_misc.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "cc_dict.h"
 #include "main.h"
 
@@ -24,22 +25,23 @@ main_init(int argc, char **argv)
     dict = dict_new();
 }
 
+static void
+remove_dict_items(comp_dict_t *dict, void (*free_func)(void *value))
+{
+    for (int hash = 0; hash < dict->size; ++hash) {
+        while (dict->data[hash]) {
+            void *value = dict_remove(dict, dict->data[hash]->key);
+            if (free_func) free_func(value);
+        }
+    }
+    assert(dict->occupation == 0);
+}
+
 void
 main_finalize(void)
 {
-    int i, l;
-    for (i = 0, l = dict->size; i < l; ++i) {
-        if (dict->data[i]) {
-            // o i aqui representa o hash da hash table. Tu na real está removendo só os primeiros items da
-            // hash-table. Pode acontecer que duas keys diferentes sejam mapeadas para o mesmo hash.
-
-            // Nota que o occupation nao fica zero no final, como deveria.
-            // printf("occupation: %d\n", dict->occupation);
-            dict_remove(dict, dict->data[i]->key);
-        }
-    }
-    if(dict->occupation == 0)
-      dict_free(dict);
+    remove_dict_items(dict, free);
+    dict_free(dict);
 }
 
 void
