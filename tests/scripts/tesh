@@ -342,7 +342,7 @@ sub exec_cmd {
     }
 
     # substitute remaining variables, if any
-    while ( $cmd{'cmd'} =~ /\${(\w+)(?::[=-][^}]*)?}/ ) {
+    while ( $cmd{'cmd'} =~ /\$\{(\w+)(?::[=-][^}]*)?}/ ) {
         $cmd{'cmd'} = var_subst( $cmd{'cmd'}, $1, "" );
     }
     while ( $cmd{'cmd'} =~ /\$(\w+)/ ) {

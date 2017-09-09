@@ -12,13 +12,9 @@ extern comp_dict_t *dict;
 %}
 
 DIGIT               [0-9]
-SPECIALS            [\,|\;|\:|\(|\)|\[|\]|\{|\}|\+|\-|\*|\/|\<|\>|\=|\!|\&|\$|\%|\#|\^]
+SPECIALS            [,;:()\[\]{}+\-*/<>=!&$%#^]
 
 %%
-\n                  g_line_number++;
-[[:blank:]]+        /* No action */
-
-{SPECIALS}          return yytext[0];
 int         return TK_PR_INT;
 float       return TK_PR_FLOAT;
 bool        return TK_PR_BOOL;
@@ -52,17 +48,41 @@ protected   return TK_PR_PROTECTED;
 \|\|        return TK_OC_OR;
 \<\<        return TK_OC_SL;
 \>\>        return TK_OC_SR;
-false      return TK_LIT_FALSE;
-true       return TK_LIT_TRUE;
-{DIGIT}+\.{DIGIT}+      { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); free(key); return TK_LIT_FLOAT; }
-{DIGIT}+        { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); free(key); return TK_LIT_INT; }
-\'([a-zA-Z0-9]|{SPECIALS})\'      { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); free(key);return TK_LIT_CHAR; }
-\"(\\.|[^"])*\"     { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); free(key);return TK_LIT_STRING; }
-[a-zA-Z_][a-zA-Z_0-9]*  { char *key = strdup(yytext); dict_put(dict, key, (void *) g_line_number); free(key);return TK_IDENTIFICADOR; }
-[/][/].*            {}
+false       return TK_LIT_FALSE;
+true        return TK_LIT_TRUE;
+{DIGIT}+\.{DIGIT}+  {
+                        dict_put(dict, yytext, (void *) g_line_number);
+                        return TK_LIT_FLOAT;
+                    }
+(\+|\-)?{DIGIT}+    {
+                        dict_put(dict, yytext, (void *) g_line_number);
+                        return TK_LIT_INT;
+                    }
+\'([a-zA-Z0-9]|{SPECIALS})\'    {
+                                    dict_put(dict, yytext, (void *) g_line_number);
+                                    return TK_LIT_CHAR;
+                                }
+\"(\\.|[^"])*\"     {
+                        dict_put(dict, yytext, (void *) g_line_number);
+                        return TK_LIT_STRING;
+                    }
+[a-zA-Z_][a-zA-Z_0-9]*  {
+                            // FIXME(leo)?:
+                            // A sintaxe correta aqui seria &g_line_number.
+                            //
+                            // E também é necessário usar malloc aqui para um inteiro.
+                            // Nao da pra passar a um pointeiro direto pra g_line_number,
+                            // porque essa valor está sempre mudando durante o programa.
+                            dict_put(dict, yytext, (void *) g_line_number);
+                            return TK_IDENTIFICADOR;
+                        }
 [/][*](.|\n)*[*][/] {
                         for (int i = 0; i < yyleng-1; i++)
                             if (yytext[i] == '\n') g_line_number++;
                     }
-.                   return TOKEN_ERRO;
+[/][/].*            /* No action */
+\n                  g_line_number++;
+[[:blank:]]+        /* No action */
+{SPECIALS}      return yytext[0];
+.               return TOKEN_ERRO;
 %%
