@@ -61,17 +61,17 @@ true        return TK_LIT_TRUE;
                         return TK_LIT_INT;
                     }
 \'([a-zA-Z0-9]|{SPECIALS})\'    {
-                        char *str = strdup(yytext);
-                        str++; //remove first char
+                        char *str = strdup(yytext+1); //remove first char
                         str[strlen(str) - 1] = '\0'; //remove last char
                         add_to_dict(str, g_line_number);
+                        free(str);
                         return TK_LIT_CHAR;
                     }
 \"(\\.|[^"])*\"     {
-                        char *str = strdup(yytext);
-                        str++; //remove first char
+                        char *str = strdup(yytext+1); //remove first char
                         str[strlen(str) - 1] = '\0'; //remove last char
                         add_to_dict(str, g_line_number);
+                        free(str);
                         return TK_LIT_STRING;
                     }
 [a-zA-Z_][a-zA-Z_0-9]*  {
