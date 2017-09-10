@@ -61,11 +61,17 @@ true        return TK_LIT_TRUE;
                         return TK_LIT_INT;
                     }
 \'([a-zA-Z0-9]|{SPECIALS})\'    {
-                        add_to_dict(yytext, g_line_number);
+                        char *str = strdup(yytext);
+                        str++; //remove first char
+                        str[strlen(str) - 1] = '\0'; //remove last char
+                        add_to_dict(str, g_line_number);
                         return TK_LIT_CHAR;
                     }
 \"(\\.|[^"])*\"     {
-                        add_to_dict(yytext, g_line_number);
+                        char *str = strdup(yytext);
+                        str++; //remove first char
+                        str[strlen(str) - 1] = '\0'; //remove last char
+                        add_to_dict(str, g_line_number);
                         return TK_LIT_STRING;
                     }
 [a-zA-Z_][a-zA-Z_0-9]*  {
@@ -84,6 +90,12 @@ true        return TK_LIT_TRUE;
 
 void add_to_dict(char * key, int line_number){
   int *line = malloc(sizeof(int));
+  if(line == NULL) {
+    perror("malloc failed");
+    exit(EXIT_FAILURE);
+  }
   *line = line_number;
+  //keep only last entry
+  dict_remove(dict, key);
   dict_put(dict, key, line);
 }
