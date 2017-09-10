@@ -16,7 +16,6 @@ DIGIT               [0-9]
 SPECIALS            [,;:()\[\]{}+\-*/<>=!&$%#^]
 
 %%
-{SPECIALS}      return yytext[0];
 int         return TK_PR_INT;
 float       return TK_PR_FLOAT;
 bool        return TK_PR_BOOL;
@@ -52,13 +51,13 @@ protected   return TK_PR_PROTECTED;
 \>\>        return TK_OC_SR;
 false       return TK_LIT_FALSE;
 true        return TK_LIT_TRUE;
-{DIGIT}+\.{DIGIT}+  {
-                        add_to_dict(yytext, g_line_number);
-                        return TK_LIT_FLOAT;
-                    }
 {DIGIT}+    {
                         add_to_dict(yytext, g_line_number);
                         return TK_LIT_INT;
+                    }
+{DIGIT}+\.{DIGIT}+  {
+                        add_to_dict(yytext, g_line_number);
+                        return TK_LIT_FLOAT;
                     }
 \'([a-zA-Z0-9]|{SPECIALS})\'    {
                         char *str = strdup(yytext+1); //remove first char
@@ -82,9 +81,10 @@ true        return TK_LIT_TRUE;
                         for (int i = 0; i < yyleng-1; i++)
                             if (yytext[i] == '\n') g_line_number++;
                     }
-[/][/].*            /* No action */
-\n                  g_line_number++;
-[[:blank:]]+        /* No action */
+[/][/].*        /* No action */
+{SPECIALS}      return yytext[0];
+\n              g_line_number++;
+[[:blank:]]+    /* No action */
 .               return TOKEN_ERRO;
 %%
 
@@ -96,6 +96,7 @@ void add_to_dict(char * key, int line_number){
   }
   *line = line_number;
   //keep only last entry
-  dict_remove(dict, key);
+  void* val = dict_remove(dict, key);
+  free(val);
   dict_put(dict, key, line);
 }
