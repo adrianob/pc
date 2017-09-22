@@ -8,6 +8,7 @@
 #include "main.h"
 %}
 
+%define parse.error verbose
 /* Declaração dos tokens da linguagem */
 %token TK_PR_INT
 %token TK_PR_FLOAT
