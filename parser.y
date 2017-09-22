@@ -64,7 +64,7 @@
 /* Regras (e ações) da gramática */
 
 programa:
-        programa decl_global | programa decl_func | decl_tipos | {};
+        programa decl_global | programa decl_func | programa decl_tipos | {};
 
 decl_tipos:
         TK_PR_CLASS TK_IDENTIFICADOR '[' lista_campos ']' ';'
