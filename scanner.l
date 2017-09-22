@@ -106,7 +106,7 @@ true                {
 
 void add_to_dict(char *lexeme, int line_number, int token_type)
 {
-    printf("Adding lexeme %s on line number \n", lexeme, line_number);
+    printf("Adding lexeme %s on line number %d \n", lexeme, line_number);
     TableSymbol *symbol = table_symbol_make(line_number, token_type, lexeme);
 
     char *key = malloc(strlen(lexeme) + 20); // The size of the array has to be enough to contain the key.
