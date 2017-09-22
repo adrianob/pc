@@ -51,9 +51,57 @@
 %token TK_IDENTIFICADOR
 %token TOKEN_ERRO
 
+
+%right '='
+%left '<'
+%left '>'
+%left '+' '-'
+%left '*' '/'
+%left '!'
+
+
 %%
 /* Regras (e ações) da gramática */
 
 programa:
+        programa decl_global | programa decl_func | decl_tipos | {};
+
+decl_tipos:
+        TK_PR_CLASS TK_IDENTIFICADOR '[' lista_campos ']' ';'
+
+lista_campos:
+        campo | campo ':' lista_campos
+
+campo:
+        TK_PR_PROTECTED tipo TK_IDENTIFICADOR |
+        TK_PR_PRIVATE tipo TK_IDENTIFICADOR |
+        TK_PR_PUBLIC tipo TK_IDENTIFICADOR
+
+tipo:
+        TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL | TK_PR_CHAR | TK_PR_STRING
+
+/* @TODO vetores */
+decl_global:
+        tipo TK_IDENTIFICADOR ';' | TK_PR_STATIC tipo TK_IDENTIFICADOR ';'
+
+decl_func:
+        cabecalho corpo_func
+
+cabecalho:
+        tipo TK_IDENTIFICADOR lista_entrada
+
+lista_entrada:
+        '(' parametros_entrada ')'
+
+parametros_entrada:
+        parametro_entrada | parametro_entrada ',' parametros_entrada
+
+parametro_entrada:
+        tipo TK_IDENTIFICADOR | TK_PR_CONST tipo TK_IDENTIFICADOR
+
+/* @TODO comandos */
+corpo_func:
+        '{' '}'
+
 
 %%
