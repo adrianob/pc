@@ -7,7 +7,18 @@
 %{
 #include "parser.h" //arquivo automaticamente gerado pelo bison
 #include "cc_dict.h"
-void add_to_dict(char * key, int line_number);
+#include "main.h"
+
+static inline char *
+dup_without_first_and_last(char *str)
+{
+    char *new_str = strdup(str+1); //remove first char
+    new_str[strlen(new_str) - 1] = '\0'; //remove last char
+    return new_str;
+}
+
+void add_to_dict(char *lexeme, int line_number, int token_type);
+
 int g_line_number = 1;
 extern comp_dict_t *dict;
 %}
@@ -49,54 +60,62 @@ protected   return TK_PR_PROTECTED;
 \|\|        return TK_OC_OR;
 \<\<        return TK_OC_SL;
 \>\>        return TK_OC_SR;
-false       return TK_LIT_FALSE;
-true        return TK_LIT_TRUE;
-{DIGIT}+    {
-                        add_to_dict(yytext, g_line_number);
+false               {
+                        add_to_dict(yytext, g_line_number, POA_LIT_BOOL);
+                        return TK_LIT_FALSE;
+                    }
+true                {
+                        add_to_dict(yytext, g_line_number, POA_LIT_BOOL);
+                        return TK_LIT_TRUE;
+                    }
+{DIGIT}+            {
+                        add_to_dict(yytext, g_line_number, POA_LIT_INT);
                         return TK_LIT_INT;
                     }
 {DIGIT}+\.{DIGIT}+  {
-                        add_to_dict(yytext, g_line_number);
+                        add_to_dict(yytext, g_line_number, POA_LIT_FLOAT);
                         return TK_LIT_FLOAT;
                     }
 \'([a-zA-Z0-9]|{SPECIALS})\'    {
-                        char *str = strdup(yytext+1); //remove first char
-                        str[strlen(str) - 1] = '\0'; //remove last char
-                        add_to_dict(str, g_line_number);
+                        char *str = dup_without_first_and_last(yytext);
+                        add_to_dict(str, g_line_number, POA_LIT_CHAR);
                         free(str);
                         return TK_LIT_CHAR;
                     }
 \"(\\.|[^"])*\"     {
-                        char *str = strdup(yytext+1); //remove first char
-                        str[strlen(str) - 1] = '\0'; //remove last char
-                        add_to_dict(str, g_line_number);
+                        char *str = dup_without_first_and_last(yytext);
+                        add_to_dict(str, g_line_number, POA_LIT_STRING);
                         free(str);
                         return TK_LIT_STRING;
                     }
 [a-zA-Z_][a-zA-Z_0-9]*  {
-                        add_to_dict(yytext, g_line_number);
+                        TableSymbol *symbol = table_symbol_make(g_line_number, POA_IDENT, yytext);
+                        add_to_dict(yytext, g_line_number, POA_IDENT);
                         return TK_IDENTIFICADOR;
                     }
 [/][*](.|\n)*[*][/] {
                         for (int i = 0; i < yyleng-1; i++)
                             if (yytext[i] == '\n') g_line_number++;
                     }
-[/][/].*        /* No action */
+[/][/].*        {}
 {SPECIALS}      return yytext[0];
 \n              g_line_number++;
-[[:blank:]]+    /* No action */
+[[:blank:]]+    {}
 .               return TOKEN_ERRO;
 %%
 
-void add_to_dict(char * key, int line_number){
-  int *line = malloc(sizeof(int));
-  if(line == NULL) {
-    perror("malloc failed");
-    exit(EXIT_FAILURE);
-  }
-  *line = line_number;
-  //keep only last entry
-  void* val = dict_remove(dict, key);
-  free(val);
-  dict_put(dict, key, line);
+void add_to_dict(char *lexeme, int line_number, int token_type)
+{
+    printf("Adding lexeme %s on line number \n", lexeme, line_number);
+    TableSymbol *symbol = table_symbol_make(line_number, token_type, lexeme);
+
+    char *key = malloc(strlen(lexeme) + 20); // The size of the array has to be enough to contain the key.
+    snprintf(key, strlen(key), "%s[%d]", lexeme, token_type); // append the lexem and the token type together.
+
+    // keep only last entry
+    void *val = dict_remove(dict, key);
+    free(val);
+
+    dict_put(dict, key, symbol);
+    free(key);
 }

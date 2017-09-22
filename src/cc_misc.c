@@ -26,12 +26,12 @@ main_init(int argc, char **argv)
 }
 
 static void
-remove_dict_items(comp_dict_t *dict, void (*free_func)(void *value))
+remove_dict_items(comp_dict_t *dict)
 {
     for (int hash = 0; hash < dict->size; ++hash) {
         while (dict->data[hash]) {
-            void *value = dict_remove(dict, dict->data[hash]->key);
-            if (free_func) free_func(value);
+            TableSymbol *value = dict_remove(dict, dict->data[hash]->key);
+            table_symbol_free(value);
         }
     }
     assert(dict->occupation == 0);
@@ -40,7 +40,7 @@ remove_dict_items(comp_dict_t *dict, void (*free_func)(void *value))
 void
 main_finalize(void)
 {
-    remove_dict_items(dict, free);
+    remove_dict_items(dict);
     dict_free(dict);
 }
 
@@ -50,6 +50,7 @@ comp_print_table(void)
     //para cada entrada na tabela de símbolos
     //Etapa 1: chame a função cc_dict_etapa_1_print_entrada
     //implemente esta função
+    printf("Printing table\n");
     int i, l;
     for (i = 0, l = dict->size; i < l; ++i) {
         if (dict->data[i]) {
@@ -59,4 +60,5 @@ comp_print_table(void)
             cc_dict_etapa_1_print_entrada(dict->data[i]->key, *line_number);
         }
     }
+    printf("Done.\n");
 }
