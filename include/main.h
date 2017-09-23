@@ -5,17 +5,17 @@
 */
 #ifndef __MAIN_H
 #define __MAIN_H
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#include <stdbool.h>
 #include "cc_dict.h"
+#include "cc_gv.h"
 #include "cc_list.h"
 #include "cc_misc.h"
 #include "cc_tree.h"
-#include "cc_gv.h"
 #include "parser.h"
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /*
   Protótipos de funções chamadas pelo flex
@@ -27,28 +27,27 @@ void yyerror(const char *s);
   Constantes a serem utilizadas para diferenciar os lexemas que estão
   registrados na tabela de símbolos.
 */
-#define POA_LIT_INT    1
-#define POA_LIT_FLOAT  2
-#define POA_LIT_CHAR   3
+#define POA_LIT_INT 1
+#define POA_LIT_FLOAT 2
+#define POA_LIT_CHAR 3
 #define POA_LIT_STRING 4
-#define POA_LIT_BOOL   5
-#define POA_IDENT      6
+#define POA_LIT_BOOL 5
+#define POA_IDENT 6
 
 typedef struct TableSymbol {
-    int   line_number;
-    int   token_type;
+    int line_number;
+    int token_type;
     union {
-        int   value_int;
+        int value_int;
         float value_float;
         char *value_string_or_ident;
-        char  value_char;
-        bool  value_bool;
+        char value_char;
+        bool value_bool;
     };
 } TableSymbol;
 
-static TableSymbol *
-table_symbol_make(int line_number, int token_type, char *raw_value)
-{
+static TableSymbol *table_symbol_make(int line_number, int token_type,
+                                      char *raw_value) {
     TableSymbol *symbol = malloc(sizeof(*symbol));
     assert(symbol != NULL);
     symbol->line_number = line_number;
@@ -89,25 +88,24 @@ table_symbol_make(int line_number, int token_type, char *raw_value)
         symbol->value_string_or_ident = value;
     } break;
 
-    default: assert(false);
+    default:
+        assert(false);
     }
     return symbol;
 }
 
 // Frees the symbol allotated with table_symbol_make.
-// If the value field was dynamically allocated, the second parameter has to be a function pointer
-// to deallocate it.
-static void
-table_symbol_free(TableSymbol *s)
-{
+// If the value field was dynamically allocated, the second parameter has to be
+// a function pointer to deallocate it.
+static void table_symbol_free(TableSymbol *s) {
     if (s->token_type == POA_LIT_STRING || s->token_type == POA_IDENT) {
         free(s->value_string_or_ident);
     }
     free(s);
 }
 
-void cc_dict_etapa_1_print_entrada (char *token, int line);
-int comp_get_line_number (void);
-void comp_print_table (void);
+void cc_dict_etapa_1_print_entrada(char *token, int line);
+int comp_get_line_number(void);
+void comp_print_table(void);
 
 #endif

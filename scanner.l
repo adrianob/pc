@@ -109,13 +109,15 @@ void add_to_dict(char *lexeme, int line_number, int token_type)
     printf("Adding lexeme %s on line number %d \n", lexeme, line_number);
     TableSymbol *symbol = table_symbol_make(line_number, token_type, lexeme);
 
-    char *key = malloc(strlen(lexeme) + 20); // The size of the array has to be enough to contain the key.
-    snprintf(key, strlen(key), "%s[%d]", lexeme, token_type); // append the lexem and the token type together.
+    size_t key_size = strlen(lexeme) + 20;
+    char *key = calloc(key_size, 1); // The size of the array has to be enough to contain the key.
+    snprintf(key, key_size, "%s-%d", lexeme, token_type); // append the lexem and the token type together.
 
     // keep only last entry
     void *val = dict_remove(dict, key);
     free(val);
 
+    printf("Adding key %s\n", key);
     dict_put(dict, key, symbol);
     free(key);
 }
