@@ -9,8 +9,10 @@ extern int g_line_number;
 
 int comp_get_line_number(void) { return g_line_number; }
 
-void yyerror(char const *mensagem) {
-    fprintf(stderr, "%s\n", mensagem); // altere para que apareça a linha
+void
+yyerror(char const *mensagem)
+{
+    fprintf(stderr, "%d: %s\n", g_line_number, mensagem); //altere para que apareça a linha
 }
 
 void main_init(int argc, char **argv) { dict = dict_new(); }
