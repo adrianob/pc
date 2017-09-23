@@ -83,6 +83,7 @@ static TableSymbol *table_symbol_make(int line_number, int token_type,
     } break;
 
     case POA_IDENT: {
+        //@TODO fix memory leak
         char *value = malloc(strlen(raw_value));
         strncpy(value, raw_value, strlen(raw_value));
         symbol->value_string_or_ident = value;

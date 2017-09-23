@@ -89,7 +89,7 @@ true                {
                         return TK_LIT_STRING;
                     }
 [a-zA-Z_][a-zA-Z_0-9]*  {
-                        TableSymbol *symbol = table_symbol_make(g_line_number, POA_IDENT, yytext);
+                        /*TableSymbol *symbol = table_symbol_make(g_line_number, POA_IDENT, yytext);*/
                         add_to_dict(yytext, g_line_number, POA_IDENT);
                         return TK_IDENTIFICADOR;
                     }
