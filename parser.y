@@ -71,7 +71,7 @@ decl_tipos:
         TK_PR_CLASS TK_IDENTIFICADOR '[' lista_campos ']' ';'
 
 lista_campos:
-        campo | campo ':' lista_campos
+        campo | lista_campos ':' campo
 
 campo:
         TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR |
@@ -96,7 +96,7 @@ lista_entrada:
         '(' parametros_entrada ')'
 
 parametros_entrada:
-        parametro_entrada | parametro_entrada ',' parametros_entrada | {}
+        parametro_entrada | parametros_entrada ',' parametro_entrada | {}
 
 parametro_entrada:
         tipo_primitivo TK_IDENTIFICADOR | TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR
@@ -105,11 +105,11 @@ bloco_comandos:
         '{' seq_comandos '}'
 
 seq_comandos:
-        comando ';' | comando ';' seq_comandos | {}
+        comando ';' | seq_comandos bloco_comandos | seq_comandos comando ';' | {}
 
 /* @TODO adicionar outros comandos */
 comando:
-        bloco_comandos | decl_var | decl_var_init | comando_shift
+        decl_var | decl_var_init | comando_shift | atribuicao
 
 decl_var:
         tipo_primitivo TK_IDENTIFICADOR |
@@ -131,3 +131,36 @@ token_lit:
 comando_shift:
         TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT |
         TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT
+
+/* @TODO tipos declarados pelo usuario */
+atribuicao:
+        TK_IDENTIFICADOR '=' expressao |
+        TK_IDENTIFICADOR '[' expressao ']' '=' expressao
+
+/* @TODO definir expressao corretamente */
+expressao:
+        expressao_arit | expressao_logica | TK_IDENTIFICADOR | token_lit
+
+/* @TODO chamada de funcao e parenteses*/
+expressao_arit:
+        lit_numerico |
+        TK_IDENTIFICADOR operador_arit TK_IDENTIFICADOR |
+        TK_IDENTIFICADOR '[' TK_LIT_INT ']' operador_arit TK_IDENTIFICADOR '[' TK_LIT_INT ']' |
+        lit_numerico operador_arit lit_numerico |
+        expressao_arit operador_arit expressao_arit |
+        '(' expressao_arit ')' operador_arit '(' expressao_arit ')'
+
+/* @TODO testar*/
+expressao_logica:
+        expressao_arit operador_logico expressao_arit |
+        expressao_logica operador_logico expressao_logica |
+
+operador_logico:
+        TK_OC_AND | TK_OC_OR | '!'
+
+lit_numerico:
+        TK_LIT_INT | TK_LIT_FLOAT
+
+/* @TODO verificar se operadores logicos e aritmeticos estao corretos*/
+operador_arit:
+        '+' | '-' | '*' | '/' | TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE

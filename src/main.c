@@ -188,7 +188,7 @@ void main_avaliacao_etapa_1_tabela(void) { comp_print_table(); }
 
 int main_avaliacao_etapa_2(int argc, char **argv) {
     int ret = yyparse();
-    comp_print_table();
+    /*comp_print_table();*/
     return ret;
 }
 
