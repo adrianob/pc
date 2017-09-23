@@ -74,35 +74,60 @@ lista_campos:
         campo | campo ':' lista_campos
 
 campo:
-        TK_PR_PROTECTED tipo TK_IDENTIFICADOR |
-        TK_PR_PRIVATE tipo TK_IDENTIFICADOR |
-        TK_PR_PUBLIC tipo TK_IDENTIFICADOR
+        TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR |
+        TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR |
+        TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR
 
-tipo:
+tipo_primitivo:
         TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL | TK_PR_CHAR | TK_PR_STRING
 
-/* @TODO vetores */
+/* @TODO tipos de usuario */
 decl_global:
-        tipo TK_IDENTIFICADOR ';' | TK_PR_STATIC tipo TK_IDENTIFICADOR ';'
+        tipo_primitivo TK_IDENTIFICADOR ';' | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR ';' |
+        tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';' | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR  '[' TK_LIT_INT ']' ';'
 
 decl_func:
-        cabecalho corpo_func
+        cabecalho bloco_comandos
 
 cabecalho:
-        tipo TK_IDENTIFICADOR lista_entrada
+        tipo_primitivo TK_IDENTIFICADOR lista_entrada
 
 lista_entrada:
         '(' parametros_entrada ')'
 
 parametros_entrada:
-        parametro_entrada | parametro_entrada ',' parametros_entrada
+        parametro_entrada | parametro_entrada ',' parametros_entrada | {}
 
 parametro_entrada:
-        tipo TK_IDENTIFICADOR | TK_PR_CONST tipo TK_IDENTIFICADOR
+        tipo_primitivo TK_IDENTIFICADOR | TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR
 
-/* @TODO comandos */
-corpo_func:
-        '{' '}'
+bloco_comandos:
+        '{' seq_comandos '}'
 
+seq_comandos:
+        comando ';' | comando ';' seq_comandos | {}
 
-%%
+/* @TODO adicionar outros comandos */
+comando:
+        bloco_comandos | decl_var | decl_var_init | comando_shift
+
+decl_var:
+        tipo_primitivo TK_IDENTIFICADOR |
+        TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR |
+        TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR |
+        TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR
+
+decl_var_init:
+        decl_var TK_OC_LE TK_IDENTIFICADOR | decl_var TK_OC_LE token_lit
+
+token_lit:
+        TK_LIT_INT |
+        TK_LIT_FLOAT |
+        TK_LIT_FALSE |
+        TK_LIT_TRUE |
+        TK_LIT_CHAR |
+        TK_LIT_STRING
+
+comando_shift:
+        TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT |
+        TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT
