@@ -9,9 +9,7 @@
 #include "cc_dict.h"
 #include "main.h"
 
-static inline char *
-dup_without_first_and_last(char *str)
-{
+static inline char *dup_without_first_and_last(char *str) {
     char *new_str = strdup(str+1); //remove first char
     new_str[strlen(new_str) - 1] = '\0'; //remove last char
     return new_str;
@@ -104,12 +102,11 @@ true                {
 .               return TOKEN_ERRO;
 %%
 
-void add_to_dict(char *lexeme, int line_number, int token_type)
-{
+void add_to_dict(char *lexeme, int line_number, int token_type) {
     TableSymbol *symbol = table_symbol_make(line_number, token_type, lexeme);
 
-    size_t key_size = strlen(lexeme) + 20;
-    char *key = calloc(key_size, 1); // The size of the array has to be enough to contain the key.
+    size_t key_size = strlen(lexeme) + 20; // The size of the array has to be enough to contain the key.
+    char *key = calloc(key_size, 1);
     snprintf(key, key_size, "%s-%d", lexeme, token_type); // append the lexem and the token type together.
 
     // keep only last entry
