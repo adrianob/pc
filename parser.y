@@ -63,63 +63,120 @@
 /* Regras (e ações) da gramática */
 
 programa:
-        programa decl_global | programa decl_func | programa decl_tipos | {};
+        programa decl_global | programa decl_func | programa decl_tipos | {}
+        ;
 
 decl_tipos:
         TK_PR_CLASS TK_IDENTIFICADOR '[' lista_campos ']' ';'
+        ;
 
 lista_campos:
         campo | lista_campos ':' campo
+        ;
 
 campo:
-        TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR |
-        TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR |
-        TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR
+          TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR
+        | TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR
+        | TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR
+        ;
 
 tipo_primitivo:
         TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL | TK_PR_CHAR | TK_PR_STRING
+        ;
 
 decl_global:
+          decl_global_non_static
+        | TK_PR_STATIC decl_global_non_static
+        ;
+
+decl_global_non_static:
           tipo_primitivo TK_IDENTIFICADOR ';'
-        | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR ';'
         | tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';'
-        | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR  '[' TK_LIT_INT ']' ';'
         | TK_IDENTIFICADOR TK_IDENTIFICADOR ';' /* Declaracao de tipos de usuário */
         ;
 
 decl_func:
         cabecalho bloco_comandos
+        ;
 
 cabecalho:
-        tipo_primitivo TK_IDENTIFICADOR lista_entrada
+         cabecalho_non_static
+       | TK_PR_STATIC cabecalho_non_static
+       ;
+
+cabecalho_non_static:
+         tipo_primitivo TK_IDENTIFICADOR lista_entrada
+       | TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada
+       ;
 
 lista_entrada:
         '(' parametros_entrada ')'
+        ;
 
 parametros_entrada:
         parametro_entrada | parametros_entrada ',' parametro_entrada | {}
+        ;
 
 parametro_entrada:
-        tipo_primitivo TK_IDENTIFICADOR | TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR
+          parametro_entrada_non_const
+        | TK_PR_CONST parametro_entrada_non_const
+        ;
 
+parametro_entrada_non_const:
+          tipo_primitivo TK_IDENTIFICADOR
+        | TK_IDENTIFICADOR TK_IDENTIFICADOR
+        ;
+
+/* FIXME: Bloco de comandos tem ponto e virgula? */
 bloco_comandos:
         '{' seq_comandos '}'
+        ;
 
 seq_comandos:
         comando ';' | seq_comandos bloco_comandos | seq_comandos comando ';' | {}
+        ;
 
 /* @TODO adicionar outros comandos */
 comando:
-        decl_var | decl_var_init | comando_shift | atribuicao
+          comando_decl_var
+        | comando_decl_var_init
+        | comando_atribuicao
+        | comando_entrada_saida
+        | comando_shift
+        | comando_continue
+        | comando_break
+        | comando_return
+        | comando_case
+        ;
 
-decl_var:
-        tipo_primitivo TK_IDENTIFICADOR |
-        TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR |
-        TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR |
-        TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR
+comando_continue:
+        TK_PR_CONTINUE ';';
 
-decl_var_init:
-        decl_var TK_OC_LE TK_IDENTIFICADOR | decl_var TK_OC_LE token_lit
+comando_break:
+        TK_PR_BREAK ';';
+
+comando_return:
+        TK_PR_RETURN ';';
+
+comando_case:
+        TK_PR_CASE TK_LIT_INT ':';
+
+comando_decl_var:
+          comando_decl_var_2
+        | TK_PR_STATIC comando_decl_var_2
+        | TK_PR_CONST comando_decl_var_2
+        | TK_PR_STATIC TK_PR_CONST comando_decl_var_2
+        ;
+
+comando_decl_var_2:
+          tipo_primitivo TK_IDENTIFICADOR
+        | TK_IDENTIFICADOR TK_IDENTIFICADOR
+        ;
+
+comando_decl_var_init:
+          comando_decl_var TK_OC_LE TK_IDENTIFICADOR
+        | comando_decl_var TK_OC_LE token_lit
+        ;
 
 token_lit:
         TK_LIT_INT |
@@ -128,19 +185,35 @@ token_lit:
         TK_LIT_TRUE |
         TK_LIT_CHAR |
         TK_LIT_STRING
+        ;
 
 comando_shift:
         TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT |
         TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT
+        ;
 
-/* @TODO tipos declarados pelo usuario */
-atribuicao:
+/* Sem ponto e virgula? Perguntar pro professor */
+comando_entrada_saida:
+          TK_PR_INPUT expressao
+        | TK_PR_OUTPUT lista_expressoes
+        ;
+
+lista_expressoes:
+          expressao
+        | lista_expressoes ',' expressao
+        ;
+
+/* @TODO sintaxe ident$campo[i] deve ser utilizada? */
+comando_atribuicao:
         TK_IDENTIFICADOR '=' expressao |
         TK_IDENTIFICADOR '[' expressao ']' '=' expressao
+        TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao
+        ;
 
 /* @TODO definir expressao corretamente */
 expressao:
         expressao_arit | expressao_logica | TK_IDENTIFICADOR | token_lit
+        ;
 
 /* @TODO chamada de funcao e parenteses*/
 expressao_arit:
@@ -150,18 +223,24 @@ expressao_arit:
         lit_numerico operador_arit lit_numerico |
         expressao_arit operador_arit expressao_arit |
         '(' expressao_arit ')' operador_arit '(' expressao_arit ')'
+        ;
 
 /* @TODO testar*/
 expressao_logica:
         expressao_arit operador_logico expressao_arit |
         expressao_logica operador_logico expressao_logica |
+        ;
+
 
 operador_logico:
         TK_OC_AND | TK_OC_OR | '!'
+        ;
 
 lit_numerico:
         TK_LIT_INT | TK_LIT_FLOAT
+        ;
 
 /* @TODO verificar se operadores logicos e aritmeticos estao corretos*/
 operador_arit:
         '+' | '-' | '*' | '/' | TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE
+        ;
