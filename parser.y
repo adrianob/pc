@@ -182,8 +182,7 @@ comando_decl_var_init:
         ;
 
 token_lit:
-          TK_LIT_INT
-        | TK_LIT_FLOAT
+          lit_numerico
         | TK_LIT_FALSE
         | TK_LIT_TRUE
         | TK_LIT_CHAR
