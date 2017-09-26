@@ -52,14 +52,12 @@
 %token TK_IDENTIFICADOR
 %token TOKEN_ERRO
 
-
 %right '='
 %left '<'
 %left '>'
 %left '+' '-'
 %left '*' '/'
 %left '!'
-
 
 %%
 /* Regras (e ações) da gramática */
@@ -81,10 +79,13 @@ campo:
 tipo_primitivo:
         TK_PR_INT | TK_PR_FLOAT | TK_PR_BOOL | TK_PR_CHAR | TK_PR_STRING
 
-/* @TODO tipos de usuario */
 decl_global:
-        tipo_primitivo TK_IDENTIFICADOR ';' | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR ';' |
-        tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';' | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR  '[' TK_LIT_INT ']' ';'
+          tipo_primitivo TK_IDENTIFICADOR ';'
+        | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR ';'
+        | tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';'
+        | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR  '[' TK_LIT_INT ']' ';'
+        | TK_IDENTIFICADOR TK_IDENTIFICADOR ';' /* Declaracao de tipos de usuário */
+        ;
 
 decl_func:
         cabecalho bloco_comandos
