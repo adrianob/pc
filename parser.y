@@ -59,6 +59,7 @@
 %left '*' '/'
 %left '!'
 
+
 %%
 /* Regras (e ações) da gramática */
 
@@ -96,8 +97,7 @@ decl_global_non_static:
         ;
 
 decl_func:
-        cabecalho bloco_comandos
-        ;
+        cabecalho bloco_comandos;
 
 cabecalho:
          cabecalho_non_static
@@ -110,12 +110,10 @@ cabecalho_non_static:
        ;
 
 lista_entrada:
-        '(' parametros_entrada ')'
-        ;
+        '(' parametros_entrada ')';
 
 parametros_entrada:
-        parametro_entrada | parametros_entrada ',' parametro_entrada | {}
-        ;
+        parametro_entrada | parametros_entrada ',' parametro_entrada | {};
 
 parametro_entrada:
           parametro_entrada_non_const
@@ -129,12 +127,10 @@ parametro_entrada_non_const:
 
 /* FIXME: Bloco de comandos tem ponto e virgula? */
 bloco_comandos:
-        '{' seq_comandos '}'
-        ;
+        '{' seq_comandos '}';
 
 seq_comandos:
-        comando ';' | seq_comandos bloco_comandos | seq_comandos comando ';' | {}
-        ;
+        comando ';' | seq_comandos bloco_comandos | seq_comandos comando ';' | {};
 
 /* @TODO adicionar outros comandos */
 comando:
@@ -147,6 +143,13 @@ comando:
         | comando_break
         | comando_return
         | comando_case
+        | chamada_func
+        | comando_controle_fluxo
+        ;
+
+lista_comandos:
+          comando
+        | lista_comandos ',' comando
         ;
 
 comando_continue:
@@ -179,13 +182,38 @@ comando_decl_var_init:
         ;
 
 token_lit:
-        TK_LIT_INT |
-        TK_LIT_FLOAT |
-        TK_LIT_FALSE |
-        TK_LIT_TRUE |
-        TK_LIT_CHAR |
-        TK_LIT_STRING
+          TK_LIT_INT
+        | TK_LIT_FLOAT
+        | TK_LIT_FALSE
+        | TK_LIT_TRUE
+        | TK_LIT_CHAR
+        | TK_LIT_STRING
         ;
+
+comando_controle_fluxo:
+          comando_if
+        | comando_for
+        | comando_while
+        | comando_do_while
+        | comando_foreach
+        ;
+
+comando_if:
+          TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos
+        | TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos TK_PR_ELSE bloco_comandos
+        ;
+
+comando_foreach:
+        TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos;
+
+comando_for:
+        TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos;
+
+comando_while:
+        TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos;
+
+comando_do_while:
+        TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')'
 
 comando_shift:
         TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT |
@@ -197,6 +225,9 @@ comando_entrada_saida:
           TK_PR_INPUT expressao
         | TK_PR_OUTPUT lista_expressoes
         ;
+
+chamada_func:
+        TK_IDENTIFICADOR '(' lista_expressoes ')' ';';
 
 lista_expressoes:
           expressao
@@ -212,35 +243,30 @@ comando_atribuicao:
 
 /* @TODO definir expressao corretamente */
 expressao:
-        expressao_arit | expressao_logica | TK_IDENTIFICADOR | token_lit
-        ;
+        expressao_arit | expressao_logica | TK_IDENTIFICADOR | token_lit;
 
 /* @TODO chamada de funcao e parenteses*/
 expressao_arit:
-        lit_numerico |
-        TK_IDENTIFICADOR operador_arit TK_IDENTIFICADOR |
-        TK_IDENTIFICADOR '[' TK_LIT_INT ']' operador_arit TK_IDENTIFICADOR '[' TK_LIT_INT ']' |
-        lit_numerico operador_arit lit_numerico |
-        expressao_arit operador_arit expressao_arit |
-        '(' expressao_arit ')' operador_arit '(' expressao_arit ')'
+          lit_numerico
+        | TK_IDENTIFICADOR operador_arit TK_IDENTIFICADOR
+        | TK_IDENTIFICADOR '[' TK_LIT_INT ']' operador_arit TK_IDENTIFICADOR '[' TK_LIT_INT ']'
+        | lit_numerico operador_arit lit_numerico
+        | expressao_arit operador_arit expressao_arit
+        | '(' expressao_arit ')' operador_arit '(' expressao_arit ')'
         ;
 
 /* @TODO testar*/
 expressao_logica:
-        expressao_arit operador_logico expressao_arit |
-        expressao_logica operador_logico expressao_logica |
+          expressao_arit operador_logico expressao_arit
+        | expressao_logica operador_logico expressao_logica
         ;
-
 
 operador_logico:
-        TK_OC_AND | TK_OC_OR | '!'
-        ;
+        TK_OC_AND | TK_OC_OR | '!';
 
 lit_numerico:
-        TK_LIT_INT | TK_LIT_FLOAT
-        ;
+        TK_LIT_INT | TK_LIT_FLOAT;
 
 /* @TODO verificar se operadores logicos e aritmeticos estao corretos*/
 operador_arit:
-        '+' | '-' | '*' | '/' | TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE
-        ;
+        '+' | '-' | '*' | '/' | TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE;
