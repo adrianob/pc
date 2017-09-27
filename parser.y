@@ -144,7 +144,7 @@ comando:
         | TK_PR_BREAK
         | TK_PR_RETURN
         | TK_PR_CASE TK_LIT_INT ':'
-        /* | comando_atribuicao */
+        | comando_atribuicao
         ;
 /*         | comando_entrada_saida */
 /*         | comando_shift */
@@ -224,8 +224,9 @@ comando_entrada_saida:
         ;
 
 chamada_func:
-          TK_IDENTIFICADOR '(' lista_expressoes ')';
+          TK_IDENTIFICADOR '(' lista_expressoes ')'
         | TK_IDENTIFICADOR '(' ')'
+        ;
 
 lista_expressoes:
           expressao
@@ -233,11 +234,11 @@ lista_expressoes:
         ;
 
 /* @TODO sintaxe ident$campo[i] deve ser utilizada? */
-/* comando_atribuicao: */
-/*         TK_IDENTIFICADOR '=' expressao | */
-/*         TK_IDENTIFICADOR '[' expressao ']' '=' expressao */
-/*         TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao */
-/*         ; */
+comando_atribuicao:
+          TK_IDENTIFICADOR '=' expressao
+        | TK_IDENTIFICADOR '[' expressao ']' '=' expressao
+        | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao
+        ;
 
 /* @TODO definir expressao corretamente */
 expressao:
