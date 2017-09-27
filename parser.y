@@ -9,6 +9,7 @@
 %}
 
 %define parse.error verbose
+%start programa
 /* Declaração dos tokens da linguagem */
 %token TK_PR_INT
 %token TK_PR_FLOAT
@@ -63,8 +64,6 @@
 %nonassoc ','
 
 %%
-/* Regras (e ações) da gramática */
-
 programa:
         %empty | programa decl_global | programa decl_tipos | programa decl_func;
 
@@ -125,35 +124,44 @@ parametro_entrada:
         | TK_PR_CONST TK_IDENTIFICADOR TK_IDENTIFICADOR
         ;
 
-/* FIXME: Bloco de comandos tem ponto e virgula? */
 bloco_comandos:
           '{' seq_comandos '}'
         | '{' '}'
         ;
 
 seq_comandos:
-        comando ';' | seq_comandos comando ';';
+          comando ';'
+        | comando_case
+        | seq_comandos comando ';'
+        | seq_comandos comando_case
+        ;
+
+comando_case:
+        TK_PR_CASE TK_LIT_INT ':';
 
 /* @TODO adicionar outros comandos */
-comando:
+comando_sem_entrada_saida:
           comando_decl_var
         | comando_decl_var_init
         | bloco_comandos
-        | comando_entrada_saida
         | chamada_func
         | TK_PR_CONTINUE
         | TK_PR_BREAK
         | TK_PR_RETURN
-        | TK_PR_CASE TK_LIT_INT ':'
         | comando_atribuicao
         | comando_shift
         | comando_controle_fluxo
         ;
 
+comando:
+          comando_sem_entrada_saida
+        | comando_entrada_saida
+        ;
+
 comando_decl_var:
-          comando_decl_var_2
-        | TK_PR_STATIC comando_decl_var_2
-        | TK_PR_CONST comando_decl_var_2
+                                   comando_decl_var_2
+        | TK_PR_STATIC             comando_decl_var_2
+        |              TK_PR_CONST comando_decl_var_2
         | TK_PR_STATIC TK_PR_CONST comando_decl_var_2
         ;
 
@@ -163,8 +171,14 @@ comando_decl_var_2:
         ;
 
 comando_decl_var_init:
-          comando_decl_var TK_OC_LE TK_IDENTIFICADOR
-        | comando_decl_var TK_OC_LE token_lit
+                                   tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+        |                          tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+        | TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+        | TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+        |              TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+        |              TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+        | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+        | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         ;
 
 token_lit:
@@ -183,6 +197,7 @@ comando_controle_fluxo:
         | comando_while
         | comando_do_while
         | comando_foreach
+        | comando_switch_case
         ;
 
 comando_if:
@@ -197,8 +212,8 @@ comando_for:
         TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos;
 
 lista_comandos:
-          comando
-        | lista_comandos ',' comando
+          comando_sem_entrada_saida
+        | lista_comandos ',' comando_sem_entrada_saida
         ;
 
 comando_while:
@@ -206,6 +221,9 @@ comando_while:
 
 comando_do_while:
         TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')';
+
+comando_switch_case:
+          TK_PR_SWITCH '(' expressao ')' bloco_comandos;
 
 comando_shift:
           TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT
@@ -227,19 +245,15 @@ lista_expressoes:
         | lista_expressoes ',' expressao
         ;
 
-/* @TODO sintaxe ident$campo[i] deve ser utilizada? */
 comando_atribuicao:
           TK_IDENTIFICADOR '=' expressao
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao
         ;
 
-/* @TODO definir expressao corretamente */
+/* @TODO definir expressao corretamente, (faltando expressao logica) */
 expressao:
           expressao_arit
-        /* | TK_IDENTIFICADOR */
-        /* | TK_IDENTIFICADOR '[' expressao ']' */
-        /* | token_lit */
         ;
 
 expressao_arit:
