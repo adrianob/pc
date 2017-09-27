@@ -153,13 +153,13 @@ lista_comandos:
         ;
 
 comando_continue:
-        TK_PR_CONTINUE ';';
+        TK_PR_CONTINUE;
 
 comando_break:
-        TK_PR_BREAK ';';
+        TK_PR_BREAK;
 
 comando_return:
-        TK_PR_RETURN ';';
+        TK_PR_RETURN;
 
 comando_case:
         TK_PR_CASE TK_LIT_INT ':';
@@ -226,7 +226,7 @@ comando_entrada_saida:
         ;
 
 chamada_func:
-        TK_IDENTIFICADOR '(' lista_expressoes ')' ';';
+        TK_IDENTIFICADOR '(' lista_expressoes ')' ;
 
 lista_expressoes:
           expressao
