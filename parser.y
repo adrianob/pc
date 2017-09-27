@@ -53,27 +53,26 @@
 %token TOKEN_ERRO
 
 %right '='
-%left '<'
-%left '>'
+%left TK_OC_GE
+%left TK_OC_LE
 %left '+' '-'
 %left '*' '/'
 %left '!'
 
+%nonassoc "end_list_expressions"
+%nonassoc ','
 
 %%
 /* Regras (e ações) da gramática */
 
 programa:
-        programa decl_global | programa decl_tipos | programa decl_func | {}
-        ;
+        %empty | programa decl_global | programa decl_tipos | programa decl_func;
 
 decl_tipos:
-        TK_PR_CLASS TK_IDENTIFICADOR '[' lista_campos ']' ';'
-        ;
+        TK_PR_CLASS TK_IDENTIFICADOR '[' lista_campos ']' ';';
 
 lista_campos:
-        campo | lista_campos ':' campo
-        ;
+        campo | lista_campos ':' campo;
 
 campo:
           TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR
@@ -102,20 +101,22 @@ decl_global_non_static:
         | TK_IDENTIFICADOR TK_IDENTIFICADOR ';'
         ;
 
-decl_func:
-        cabecalho bloco_comandos;
+decl_func: cabecalho bloco_comandos;
 
 cabecalho:
-                      tipo_primitivo TK_IDENTIFICADOR lista_entrada
-       | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR lista_entrada
-       |              TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada
-       | TK_PR_STATIC TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada
-       ;
+                       tipo_primitivo TK_IDENTIFICADOR lista_entrada
+        | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR lista_entrada
+        |              TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada
+        | TK_PR_STATIC TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada
+        ;
 
-lista_entrada: '(' parametros_entrada ')';
+lista_entrada:
+         '(' ')'
+        |'(' parametros_entrada ')'
+        ;
 
 parametros_entrada:
-        parametro_entrada | parametros_entrada ',' parametro_entrada | {};
+        parametro_entrada | parametros_entrada ',' parametro_entrada;
 
 parametro_entrada:
                       tipo_primitivo TK_IDENTIFICADOR
@@ -145,18 +146,9 @@ comando:
         | TK_PR_RETURN
         | TK_PR_CASE TK_LIT_INT ':'
         | comando_atribuicao
+        | comando_shift
+        | comando_controle_fluxo
         ;
-/*         | comando_entrada_saida */
-/*         | comando_shift */
-/*         | comando_case */
-/*         | comando_controle_fluxo */
-/*         ; */
-/*  */
-/* lista_comandos: */
-/*           comando */
-/*         | lista_comandos ',' comando */
-/*         ; */
-/*  */
 
 comando_decl_var:
           comando_decl_var_2
@@ -183,44 +175,46 @@ token_lit:
         | TK_LIT_STRING
         ;
 
-lit_numerico:
-        TK_LIT_INT | TK_LIT_FLOAT;
+lit_numerico: TK_LIT_INT | TK_LIT_FLOAT;
 
+comando_controle_fluxo:
+          comando_if
+        | comando_for
+        | comando_while
+        | comando_do_while
+        | comando_foreach
+        ;
 
-/* comando_controle_fluxo: */
-/*           comando_if */
-/*         | comando_for */
-/*         | comando_while */
-/*         | comando_do_while */
-/*         | comando_foreach */
-/*         ; */
-/*  */
-/* comando_if: */
-/*           TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos */
-/*         | TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos TK_PR_ELSE bloco_comandos */
-/*         ; */
-/*  */
-/* comando_foreach: */
-/*         TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos; */
-/*  */
-/* comando_for: */
-/*         TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos; */
-/*  */
-/* comando_while: */
-/*         TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos; */
-/*  */
-/* comando_do_while: */
-/*         TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')' */
-/*  */
-/* comando_shift: */
-/*         TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT | */
-/*         TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT */
-/*         ; */
+comando_if:
+          TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos
+        | TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos TK_PR_ELSE bloco_comandos
+        ;
 
-/* Sem ponto e virgula? Perguntar pro professor */
+comando_foreach:
+        TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos;
+
+comando_for:
+        TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos;
+
+lista_comandos:
+          comando
+        | lista_comandos ',' comando
+        ;
+
+comando_while:
+        TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos;
+
+comando_do_while:
+        TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')';
+
+comando_shift:
+          TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT
+        | TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT
+        ;
+
 comando_entrada_saida:
           TK_PR_INPUT expressao
-        | TK_PR_OUTPUT lista_expressoes
+        | TK_PR_OUTPUT lista_expressoes      %prec "end_list_expressions"
         ;
 
 chamada_func:
