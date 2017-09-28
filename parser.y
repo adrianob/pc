@@ -6,10 +6,16 @@
 */
 %{
 #include "main.h"
+#include "cc_dict.h"
 %}
+
+%union {
+    comp_dict_item_t *valor_lexico;
+}
 
 %define parse.error verbose
 %start programa
+
 /* Declaração dos tokens da linguagem */
 %token TK_PR_INT
 %token TK_PR_FLOAT

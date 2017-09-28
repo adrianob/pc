@@ -5,9 +5,9 @@
   - Adriano Benin
 */
 %{
-#include "parser.h" //arquivo automaticamente gerado pelo bison
-#include "cc_dict.h"
 #include "main.h"
+#include "cc_dict.h"
+#include "parser.h" //arquivo automaticamente gerado pelo bison
 
 static inline char *dup_without_first_and_last(char *str) {
     char *new_str = strdup(str+1); //remove first char
@@ -16,6 +16,7 @@ static inline char *dup_without_first_and_last(char *str) {
 }
 
 void add_to_dict(char *lexeme, int line_number, int token_type);
+static comp_dict_item_t *find_dict_entry(const comp_dict_t *dict, char *key);
 
 int g_line_number = 1;
 extern comp_dict_t *dict;
@@ -113,5 +114,22 @@ void add_to_dict(char *lexeme, int line_number, int token_type) {
     free(val);
 
     dict_put(dict, key, symbol);
+
+    // Add the pointer to the entry to yylval
+    yylval.valor_lexico = find_dict_entry(dict, key);
+
     free(key);
+}
+
+static comp_dict_item_t *find_dict_entry(const comp_dict_t *dict, char *key) {
+    for (int hash = 0; hash < dict->size; ++hash) {
+        comp_dict_item_t *search_item = dict->data[hash];
+        while (search_item) {
+            if (strcmp(search_item->key, key) == 0) {
+                return search_item;
+            }
+            search_item = search_item->next;
+        }
+    }
+    return NULL;
 }
