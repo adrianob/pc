@@ -256,7 +256,7 @@ comando_atribuicao:
 
 /* @TODO definir expressao corretamente, (faltando expressao logica) */
 expressao:
-          expressao_arit
+          expressao_arit | expressao_logica
         ;
 
 expressao_arit:
@@ -286,17 +286,26 @@ expressao_arit_operando:
         | chamada_func
         ;
 
-/* @TODO testar */
-/* expressao_logica: */
-/*           expressao operador_logico expressao */
-/*         ; */
+expressao_logica:
+         expressao_arit operator_relacional expressao_arit
+        | expressao_logica TK_OC_AND expressao_logica1
+        | expressao_logica1
+        ;
 
-/* operator_relacional: */
-/*         TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE; */
+expressao_logica1:
+          expressao_logica1 TK_OC_OR expressao_logica2
+        | expressao_logica2
+        ;
 
-/* operador_logico: */
-/*         TK_OC_AND | TK_OC_OR | '!' | operator_relacional; */
+expressao_logica2:
+          expressao_logica2 '!' expressao_logica_operando
+        | expressao_logica_operando
+        ;
 
-/* @TODO verificar se operadores logicos e aritmeticos estao corretos*/
-/* operador_arit: */
-/*         '+' | '-' | '*' | '/'; */
+expressao_logica_operando:
+        TK_LIT_FALSE
+        | TK_LIT_TRUE
+       ;
+
+operator_relacional:
+       TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE;
