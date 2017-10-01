@@ -15,7 +15,7 @@ static inline char *dup_without_first_and_last(char *str) {
     return new_str;
 }
 
-void add_to_dict(char *lexeme, int line_number, int token_type);
+static void add_to_dict(char *lexeme, int line_number, int token_type);
 static comp_dict_item_t *find_dict_entry(const comp_dict_t *dict, char *key);
 
 int g_line_number = 1;
@@ -102,7 +102,7 @@ true                {
 .               return TOKEN_ERRO;
 %%
 
-void add_to_dict(char *lexeme, int line_number, int token_type) {
+static void add_to_dict(char *lexeme, int line_number, int token_type) {
     TableSymbol *symbol = table_symbol_make(line_number, token_type, lexeme);
 
     size_t key_size = strlen(lexeme) + 20; // The size of the array has to be enough to contain the key.
