@@ -83,7 +83,8 @@ static TableSymbol *table_symbol_make(int line_number, int token_type,
     } break;
 
     case POA_IDENT: {
-        //@TODO fix memory leak
+        // There should be no memory leak here, since the value is freed on the function
+        // tyble_symbol_free.
         char *value = malloc(strlen(raw_value));
         strncpy(value, raw_value, strlen(raw_value));
         symbol->value_string_or_ident = value;
@@ -95,9 +96,6 @@ static TableSymbol *table_symbol_make(int line_number, int token_type,
     return symbol;
 }
 
-// Frees the symbol allotated with table_symbol_make.
-// If the value field was dynamically allocated, the second parameter has to be
-// a function pointer to deallocate it.
 static void table_symbol_free(TableSymbol *s) {
     if (s->token_type == POA_LIT_STRING || s->token_type == POA_IDENT) {
         free(s->value_string_or_ident);
@@ -106,6 +104,7 @@ static void table_symbol_free(TableSymbol *s) {
 }
 
 void cc_dict_etapa_1_print_entrada(char *token, int line);
+void cc_dict_etapa_2_print_entrada(char *token, int line, int tipo);
 int comp_get_line_number(void);
 void comp_print_table(void);
 
