@@ -256,7 +256,8 @@ comando_atribuicao:
 
 /* @TODO definir expressao corretamente, (faltando expressao logica) */
 expressao:
-          expressao_arit | expressao_logica
+          expressao_arit
+        | expressao_logica
         ;
 
 expressao_arit:
@@ -284,10 +285,11 @@ expressao_arit_operando:
         | TK_IDENTIFICADOR '[' expressao ']'
         | lit_numerico
         | chamada_func
+        | '(' expressao_arit ')'
         ;
 
 expressao_logica:
-         expressao_arit operator_relacional expressao_arit
+          expressao_arit operator_relacional expressao_arit
         | expressao_logica TK_OC_AND expressao_logica1
         | expressao_logica1
         ;
@@ -303,8 +305,9 @@ expressao_logica2:
         ;
 
 expressao_logica_operando:
-        TK_LIT_FALSE
+          TK_LIT_FALSE
         | TK_LIT_TRUE
+        | '(' expressao_logica ')'
        ;
 
 operator_relacional:
