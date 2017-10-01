@@ -111,7 +111,7 @@ static void add_to_dict(char *lexeme, int line_number, int token_type) {
 
     // keep only last entry
     void *val = dict_remove(dict, key);
-    free(val);
+    table_symbol_free(val);
 
     dict_put(dict, key, symbol);
 
