@@ -254,10 +254,11 @@ comando_atribuicao:
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao
         ;
 
-/* @TODO definir expressao corretamente, (faltando expressao logica) */
 expressao:
           expressao_arit
         | expressao_logica
+        | TK_LIT_CHAR
+        | TK_LIT_STRING
         ;
 
 expressao_arit:
