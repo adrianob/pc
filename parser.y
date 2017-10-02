@@ -142,7 +142,6 @@ seq_comandos:
 comando_case:
         TK_PR_CASE TK_LIT_INT ':';
 
-/* @TODO adicionar outros comandos */
 comando_sem_entrada_saida:
           comando_decl_var
         | comando_decl_var_init
@@ -150,7 +149,7 @@ comando_sem_entrada_saida:
         | chamada_func
         | TK_PR_CONTINUE
         | TK_PR_BREAK
-        | TK_PR_RETURN
+        | TK_PR_RETURN expressao
         | comando_atribuicao
         | comando_shift
         | comando_controle_fluxo
