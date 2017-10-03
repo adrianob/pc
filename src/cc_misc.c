@@ -10,7 +10,7 @@ extern int g_line_number;
 int comp_get_line_number(void) { return g_line_number; }
 
 void yyerror(char const *mensagem) {
-    fprintf(stderr, "%d: %s\n", g_line_number, mensagem); //altere para que apareça a linha
+    fprintf(stderr, "%d: %s\n", g_line_number, mensagem);
 }
 
 void main_init(int argc, char **argv) { dict = dict_new(); }
@@ -41,8 +41,8 @@ void comp_print_table(void) {
 #elif AVALIACAO_ETAPA_2
             TableSymbol *symbol = (TableSymbol *)search_item->value;
             cc_dict_etapa_2_print_entrada(search_item->key, symbol->line_number, symbol->token_type);
-#else
-#error "Not implemented yet"
+/* #else */
+/* #error "Not implemented yet" */
 #endif
             search_item = search_item->next;
         }

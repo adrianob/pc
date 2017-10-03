@@ -7,6 +7,7 @@
 %{
 #include "main.h"
 #include "cc_dict.h"
+#include "cc_ast.h"
 %}
 
 %union {
