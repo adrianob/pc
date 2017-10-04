@@ -91,7 +91,7 @@ true                {
                         add_to_dict(yytext, g_line_number, POA_IDENT);
                         return TK_IDENTIFICADOR;
                     }
-[/][*](.|\n)*[*][/] {
+[/][*][^*]*[*]+([^*/][^*]*[*]+)*[/]   {
                         for (int i = 0; i < yyleng-1; i++)
                             if (yytext[i] == '\n') g_line_number++;
                     }

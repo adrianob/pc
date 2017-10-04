@@ -285,6 +285,7 @@ expressao_arit_operando:
           TK_IDENTIFICADOR
         | TK_IDENTIFICADOR '[' expressao ']'
         | lit_numerico
+        | '-' lit_numerico
         | chamada_func
         | '(' expressao_arit ')'
         ;
