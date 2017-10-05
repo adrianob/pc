@@ -8,6 +8,7 @@
 #include "main.h"
 #include "cc_dict.h"
 #include "cc_ast.h"
+#include "table_symbol.h"
 %}
 
 %union {

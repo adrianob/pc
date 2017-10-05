@@ -1,6 +1,7 @@
 #include "cc_misc.h"
 #include "cc_dict.h"
 #include "main.h"
+#include "table_symbol.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

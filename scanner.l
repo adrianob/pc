@@ -6,6 +6,7 @@
 */
 %{
 #include "main.h"
+#include "table_symbol.h"
 #include "cc_dict.h"
 #include "parser.h" //arquivo automaticamente gerado pelo bison
 
