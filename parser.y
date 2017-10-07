@@ -359,7 +359,7 @@ expressao_logica3:
         ;
 
 expressao_logica4:
-          expressao_logica4 '!' expressao_logica_operando
+         '!' expressao_logica4
         | expressao_logica_operando
         ;
 
