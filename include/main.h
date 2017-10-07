@@ -10,6 +10,7 @@
 #include "cc_list.h"
 #include "cc_misc.h"
 #include "cc_tree.h"
+#include "cc_ast.h"
 #include "parser.h"
 #include <assert.h>
 #include <stdbool.h>

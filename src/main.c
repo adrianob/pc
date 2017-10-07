@@ -1,5 +1,7 @@
 #include "main.h"
+#include "cc_ast.h"
 
+extern AST_Program *g_program;
 extern FILE *yyin;
 extern char *yytext;
 extern int getLineNumber();
@@ -196,6 +198,15 @@ int main_avaliacao_etapa_3(int argc, char **argv) {
     gv_init(NULL);
     int ret = yyparse();
     gv_close();
+
+    int num_funcs = 0;
+    AST_Function *func = g_program->first_func;
+    while (func) {
+        ++num_funcs;
+        func = func->next;
+    }
+    printf("Number of functions declared: %d\n", num_funcs);
+
     return ret;
 }
 

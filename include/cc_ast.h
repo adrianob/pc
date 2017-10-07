@@ -7,6 +7,7 @@
 #define __CC_AST_H
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define AST_PROGRAMA 0
 #define AST_FUNCAO 1
@@ -55,10 +56,31 @@ typedef struct AST_Function {
     struct AST_Function *next;
 } AST_Function;
 
+static AST_Function *ast_function_make() {
+    AST_Function *f = malloc(sizeof(*f));
+    f->type = AST_FUNCAO;
+    f->first_command = NULL;
+    return f;
+}
+
+static void ast_function_free(AST_Function *f) {
+    free(f);
+}
+
 typedef struct AST_Program {
     int type;
-    AST_Function *func;
+    AST_Function *first_func;
 } AST_Program;
+
+static AST_Program *ast_program_make() {
+    AST_Program *p = malloc(sizeof(*p));
+    p->type = AST_PROGRAMA;
+    p->first_func = NULL;
+    return p;
+}
+static void ast_program_free(AST_Program *p) {
+    free(p);
+}
 
 /* ------------------------------------------------
  * Commands
@@ -68,19 +90,30 @@ typedef struct AST_CommandHeader {
     struct AST_CommandHeader *next;
 } AST_CommandHeader ;
 
-typedef struct AST_CommandIfElse {
+typedef struct AST_IfElse {
     AST_CommandHeader     header;
     AST_ExprHeader       *condition;
     AST_CommandHeader    *true_branch;
     AST_CommandHeader    *false_branch;
-} AST_CommandIfElse;
+} AST_IfElse;
 
 typedef struct AST_While {
     AST_CommandHeader  header;
-    AST_CommandHeader *command;
     AST_ExprHeader    *condition;
+    AST_CommandHeader *first_command;
     bool               is_do_while;
 } AST_While;
+
+static AST_While *ast_while_make() {
+    AST_While *w = malloc(sizeof(*w));
+    w->header.type = AST_BLOCO;
+    w->first_command = NULL;
+    return w;
+}
+
+static void ast_while_free(AST_While *w) {
+    free(w);
+}
 
 typedef struct AST_Assignment {
     AST_CommandHeader  header;
@@ -100,6 +133,17 @@ typedef struct AST_Block {
     AST_CommandHeader header;
     AST_CommandHeader *first_command;
 } AST_Block;
+
+static AST_Block *ast_block_make() {
+    AST_Block *b = malloc(sizeof(*b));
+    b->header.type = AST_BLOCO;
+    b->first_command = NULL;
+    return b;
+}
+
+static void ast_block_free(AST_Block *b) {
+    free(b);
+}
 
 /* ------------------------------------------------
  * Expressions

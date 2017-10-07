@@ -9,10 +9,17 @@
 #include "cc_dict.h"
 #include "cc_ast.h"
 #include "table_symbol.h"
+
+AST_Program *g_program = NULL;
 %}
 
 %union {
     comp_dict_item_t *valor_lexico;
+    AST_Function *ast_function;
+    AST_Block *ast_block;
+    AST_IfElse *ast_if_else;
+    AST_While *ast_while;
+    AST_Assignment *ast_assignment;
 }
 
 %define parse.error verbose
@@ -71,9 +78,32 @@
 %nonassoc "end_list_expressions"
 %nonassoc ','
 
+%type<ast_function>   decl_func;
+/* %type<ast_if_else>    comando_if; */
+%type<ast_while>      comando_while;
+/* %type<ast_assignment> comando_atribuicao; */
+/* %type<AST_Return>     comando_return; */
+%type<ast_block>      bloco_comandos;
+
 %%
 programa:
-        %empty | programa decl_global | programa decl_tipos | programa decl_func;
+          %empty                {if (!g_program) g_program = ast_program_make();}
+        | programa decl_global {if (!g_program) g_program = ast_program_make();}
+        | programa decl_tipos {if (!g_program) g_program = ast_program_make();}
+        | programa decl_func {
+            if (!g_program) g_program = ast_program_make();
+
+            if (!g_program->first_func) {
+                g_program->first_func = $2;
+            } else {
+                AST_Function *search = g_program->first_func;
+                while (search->next) {
+                    search = search->next;
+                }
+                search->next = $2;
+            }
+        }
+        ;
 
 decl_tipos:
         TK_PR_CLASS TK_IDENTIFICADOR '[' lista_campos ']' ';';
@@ -105,7 +135,13 @@ decl_global_non_static:
         | TK_IDENTIFICADOR TK_IDENTIFICADOR ';'
         ;
 
-decl_func: cabecalho bloco_comandos;
+decl_func: cabecalho bloco_comandos {
+               $$ = ast_function_make();
+               $$->first_command = $2->first_command;
+               // Free block, since inside function we use the pointer to the command
+               // directly.
+               ast_block_free($2);
+          };
 
 cabecalho:
                        tipo_primitivo TK_IDENTIFICADOR lista_entrada
@@ -130,8 +166,10 @@ parametro_entrada:
         ;
 
 bloco_comandos:
-          '{' seq_comandos '}'
-        | '{' '}'
+          '{' seq_comandos '}' {
+              $$ = ast_block_make();
+          }
+        | '{' '}' {$$ = ast_block_make();}
         ;
 
 seq_comandos:
@@ -149,9 +187,9 @@ comando_sem_entrada_saida:
         | comando_decl_var_init
         | bloco_comandos
         | chamada_func
-        | TK_PR_CONTINUE
-        | TK_PR_BREAK
-        | TK_PR_RETURN expressao
+        | comando_continue
+        | comando_break
+        | comando_return
         | comando_atribuicao
         | comando_shift
         | comando_controle_fluxo
@@ -161,6 +199,12 @@ comando:
           comando_sem_entrada_saida
         | comando_entrada_saida
         ;
+
+comando_return: TK_PR_RETURN expressao;
+
+comando_continue: TK_PR_CONTINUE;
+
+comando_break:  TK_PR_BREAK;
 
 comando_decl_var:
                                    comando_decl_var_2
@@ -221,7 +265,9 @@ lista_comandos:
         ;
 
 comando_while:
-        TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos;
+        TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {
+            $$ = ast_while_make();
+        };
 
 comando_do_while:
         TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')';
