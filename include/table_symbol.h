@@ -3,6 +3,17 @@
 
 #include <stdbool.h>
 
+/*
+  Constantes a serem utilizadas para diferenciar os lexemas que estão
+  registrados na tabela de símbolos.
+*/
+#define POA_LIT_INT 1
+#define POA_LIT_FLOAT 2
+#define POA_LIT_CHAR 3
+#define POA_LIT_STRING 4
+#define POA_LIT_BOOL 5
+#define POA_IDENT 6
+
 typedef struct TableSymbol {
     int line_number;
     int token_type;

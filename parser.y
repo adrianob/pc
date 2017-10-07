@@ -16,10 +16,9 @@ AST_Program *g_program = NULL;
 %union {
     comp_dict_item_t *valor_lexico;
     AST_Function *ast_function;
-    AST_Block *ast_block;
-    AST_IfElse *ast_if_else;
-    AST_While *ast_while;
-    AST_Assignment *ast_assignment;
+    AST_CommandHeader *ast_command_header;
+    AST_ExprHeader *ast_expr_header;
+    int op;
 }
 
 %define parse.error verbose
@@ -78,12 +77,30 @@ AST_Program *g_program = NULL;
 %nonassoc "end_list_expressions"
 %nonassoc ','
 
-%type<ast_function>   decl_func;
+%type<ast_function>    decl_func;
 /* %type<ast_if_else>    comando_if; */
-%type<ast_while>      comando_while;
+%type<ast_command_header> comando_while;
+%type<ast_command_header> comando_do_while;
 /* %type<ast_assignment> comando_atribuicao; */
-/* %type<AST_Return>     comando_return; */
-%type<ast_block>      bloco_comandos;
+%type<ast_command_header> comando_return;
+%type<ast_command_header> bloco_comandos;
+%type<ast_expr_header>    expressao;
+%type<ast_expr_header>    expressao_arit;
+%type<ast_expr_header>    expressao_arit_term1;
+%type<ast_expr_header>    expressao_arit_term2;
+%type<ast_expr_header>    expressao_arit_term3;
+%type<ast_expr_header>    expressao_arit_operando;
+%type<ast_expr_header>    chamada_func;
+%type<ast_expr_header>    lista_expressoes;
+%type<ast_expr_header>    lit_numerico;
+%type<op>                 operator_relacional;
+
+%type<ast_expr_header>    expressao_logica;
+%type<ast_expr_header>    expressao_logica1;
+%type<ast_expr_header>    expressao_logica2;
+%type<ast_expr_header>    expressao_logica3;
+%type<ast_expr_header>    expressao_logica4;
+%type<ast_expr_header>    expressao_logica_operando;
 
 %%
 programa:
@@ -137,10 +154,10 @@ decl_global_non_static:
 
 decl_func: cabecalho bloco_comandos {
                $$ = ast_function_make();
-               $$->first_command = $2->first_command;
+               $$->first_command = ((AST_Block*)$2)->first_command;
                // Free block, since inside function we use the pointer to the command
                // directly.
-               ast_block_free($2);
+               ast_block_free((AST_Block*)$2);
           };
 
 cabecalho:
@@ -200,7 +217,9 @@ comando:
         | comando_entrada_saida
         ;
 
-comando_return: TK_PR_RETURN expressao;
+comando_return: TK_PR_RETURN expressao {
+              $$ = ast_return_make($2);
+          };
 
 comando_continue: TK_PR_CONTINUE;
 
@@ -237,7 +256,10 @@ token_lit:
         | TK_LIT_STRING
         ;
 
-lit_numerico: TK_LIT_INT | TK_LIT_FLOAT;
+lit_numerico:
+          TK_LIT_INT {$$ = ast_literal_make(yylval.valor_lexico);}
+        | TK_LIT_FLOAT {$$ = ast_literal_make(yylval.valor_lexico);}
+        ;
 
 comando_controle_fluxo:
           comando_if
@@ -270,7 +292,9 @@ comando_while:
         };
 
 comando_do_while:
-        TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')';
+        TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')' {
+            $$ = ast_while_make();
+        };
 
 comando_switch_case:
           TK_PR_SWITCH '(' expressao ')' bloco_comandos;
@@ -286,13 +310,20 @@ comando_entrada_saida:
         ;
 
 chamada_func:
-          TK_IDENTIFICADOR '(' lista_expressoes ')'
-        | TK_IDENTIFICADOR '(' ')'
+          TK_IDENTIFICADOR '(' lista_expressoes ')' {
+              $$ = ast_function_call_make(yylval.valor_lexico, $3);
+          }
+        | TK_IDENTIFICADOR '(' ')' {
+              $$ = ast_function_call_make(yylval.valor_lexico, NULL);
+          }
         ;
 
 lista_expressoes:
           expressao
-        | lista_expressoes ',' expressao
+        | lista_expressoes ',' expressao {
+              $$ = $3;
+              $$->next = $1;
+          }
         ;
 
 comando_atribuicao:
@@ -304,70 +335,94 @@ comando_atribuicao:
 expressao:
           expressao_arit
         | expressao_logica
-        | TK_LIT_CHAR
-        | TK_LIT_STRING
+        | TK_LIT_CHAR {$$ = ast_literal_make(yylval.valor_lexico);}
+        | TK_LIT_STRING {$$ = ast_literal_make(yylval.valor_lexico);}
         ;
 
 expressao_arit:
-          expressao_arit '+' expressao_arit_term1
+          expressao_arit '+' expressao_arit_term1 {
+              $$ = ast_arit_expr_make('+', $1, $3);
+          }
         | expressao_arit_term1
         ;
 
 expressao_arit_term1:
-          expressao_arit_term1 '-' expressao_arit_term2
+          expressao_arit_term1 '-' expressao_arit_term2 {
+              $$ = ast_arit_expr_make(AST_ARIM_SUBTRACAO, $1, $3);
+          }
         | expressao_arit_term2
         ;
 
 expressao_arit_term2:
-          expressao_arit_term2 '*' expressao_arit_term3
+          expressao_arit_term2 '*' expressao_arit_term3 {
+              $$ = ast_arit_expr_make(AST_ARIM_MULTIPLICACAO, $1, $3);
+          }
         | expressao_arit_term3
         ;
 
 expressao_arit_term3:
-          expressao_arit_term3 '/' expressao_arit_operando
+          expressao_arit_term3 '/' expressao_arit_operando {
+              $$ = ast_arit_expr_make(AST_ARIM_DIVISAO, $1, $3);
+          }
         | expressao_arit_operando
         ;
 
 expressao_arit_operando:
-          TK_IDENTIFICADOR
-        | TK_IDENTIFICADOR '[' expressao ']'
-        | lit_numerico
-        | '-' lit_numerico
+          TK_IDENTIFICADOR {$$ = ast_identifier_make(yyval.valor_lexico);}
+        | TK_IDENTIFICADOR '[' expressao ']' {$$ = ast_indexed_vector_make(yyval.valor_lexico, $3);}
+        | lit_numerico {$$ = ast_literal_make(yyval.valor_lexico);}
+        | '-' lit_numerico {$$ = ast_arit_expr_make(AST_ARIM_INVERSAO, $2, NULL);}
         | chamada_func
-        | '(' expressao_arit ')'
+        | '(' expressao_arit ')' {$$ = $2;}
         ;
 
 expressao_logica:
-          expressao_arit operator_relacional expressao_arit
-        | expressao_logica TK_OC_AND expressao_logica1
+          expressao_arit operator_relacional expressao_arit {
+              $$ = ast_logic_expr_make($2, $1, $3);
+          }
+        | expressao_logica TK_OC_AND expressao_logica1 {
+              $$ = ast_logic_expr_make(AST_LOGICO_E, $1, $3);
+          }
         | expressao_logica1
         ;
 
 expressao_logica1:
-          expressao_logica1 TK_OC_OR expressao_logica2
+          expressao_logica1 TK_OC_OR expressao_logica2 {
+              $$ = ast_logic_expr_make(AST_LOGICO_OU, $1, $3);
+          }
         | expressao_logica2
         ;
 
 expressao_logica2:
-          expressao_logica2 TK_OC_EQ expressao_logica3
+          expressao_logica2 TK_OC_EQ expressao_logica3 {
+              $$ = ast_logic_expr_make(AST_LOGICO_COMP_IGUAL, $1, $3);
+          }
         | expressao_logica3
         ;
 
 expressao_logica3:
-          expressao_logica3 TK_OC_NE expressao_logica4
+          expressao_logica3 TK_OC_NE expressao_logica4 {
+              $$ = ast_logic_expr_make(AST_LOGICO_COMP_DIF, $1, $3);
+          }
         | expressao_logica4
         ;
 
 expressao_logica4:
-         '!' expressao_logica4
+         '!' expressao_logica4 {
+             $$ = ast_logic_expr_make(AST_LOGICO_COMP_NEGACAO, $2, NULL);
+         }
         | expressao_logica_operando
         ;
 
 expressao_logica_operando:
-          TK_LIT_FALSE
-        | TK_LIT_TRUE
-        | '(' expressao_logica ')'
+          TK_LIT_FALSE {$$ = ast_literal_make(yylval.valor_lexico);}
+        | TK_LIT_TRUE {$$ = ast_literal_make(yylval.valor_lexico);}
+        | '(' expressao_logica ')' {$$ = $2;}
        ;
 
 operator_relacional:
-       TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE;
+          TK_OC_LE {$$ = AST_LOGICO_COMP_LE;}
+        | TK_OC_GE {$$ = AST_LOGICO_COMP_GE;}
+        | TK_OC_EQ {$$ = AST_LOGICO_COMP_IGUAL;}
+        | TK_OC_NE {$$ = AST_LOGICO_COMP_DIF;}
+        ;

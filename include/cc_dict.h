@@ -93,6 +93,8 @@ void *dict_put(comp_dict_t *dict, char *key, void *value);
  */
 void *dict_get(comp_dict_t *dict, char *key);
 
+comp_dict_item_t *dict_get_entry(const comp_dict_t *dict, char *key);
+
 /*
  * Função: dict_remove, remove o valor de uma entrada na tabela de
  * símbolos. Recebe dois parâmetros: o parâmetro _dict_ é um ponteiro

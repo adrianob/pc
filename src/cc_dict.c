@@ -204,6 +204,20 @@ void *dict_get(comp_dict_t *dict, char *key) {
     return item->value;
 }
 
+comp_dict_item_t *dict_get_entry(const comp_dict_t *dict, char *key) {
+    int hash = generate_hash(key, dict->size);
+    comp_dict_item_t *search_item = dict->data[hash];
+
+    while (search_item) {
+        if (strcmp(search_item->key, key) == 0) {
+            return search_item;
+        }
+        search_item = search_item->next;
+    }
+
+    return NULL;
+}
+
 void *dict_remove(comp_dict_t *dict, char *key) {
     if (dict == NULL || dict->data == NULL || key == NULL) {
         ERRO("At least one parameter is NULL");

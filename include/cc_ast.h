@@ -8,6 +8,9 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include "macros.h"
+#include "cc_dict.h"
 
 #define AST_PROGRAMA 0
 #define AST_FUNCAO 1
@@ -50,16 +53,13 @@ typedef struct AST_Identifier AST_Identifier;
 
 typedef struct AST_Function {
     int type;
-
     AST_CommandHeader *first_command;
-
     struct AST_Function *next;
 } AST_Function;
 
 static AST_Function *ast_function_make() {
-    AST_Function *f = malloc(sizeof(*f));
+    AST_Function *f = calloc(1, sizeof(*f));
     f->type = AST_FUNCAO;
-    f->first_command = NULL;
     return f;
 }
 
@@ -73,11 +73,11 @@ typedef struct AST_Program {
 } AST_Program;
 
 static AST_Program *ast_program_make() {
-    AST_Program *p = malloc(sizeof(*p));
+    AST_Program *p = calloc(1, sizeof(*p));
     p->type = AST_PROGRAMA;
-    p->first_func = NULL;
     return p;
 }
+
 static void ast_program_free(AST_Program *p) {
     free(p);
 }
@@ -104,11 +104,10 @@ typedef struct AST_While {
     bool               is_do_while;
 } AST_While;
 
-static AST_While *ast_while_make() {
-    AST_While *w = malloc(sizeof(*w));
-    w->header.type = AST_BLOCO;
-    w->first_command = NULL;
-    return w;
+static AST_CommandHeader *ast_while_make() {
+    AST_While *w = calloc(1, sizeof(*w));
+    w->header.type = AST_WHILE_DO;
+    return &w->header;
 }
 
 static void ast_while_free(AST_While *w) {
@@ -129,16 +128,22 @@ typedef struct AST_Return {
     AST_ExprHeader   *expr;
 } AST_Return;
 
+static AST_CommandHeader *ast_return_make(AST_ExprHeader *expr) {
+    AST_Return *r = calloc(1, sizeof(*r));
+    r->header.type = AST_RETURN;
+    r->expr = expr;
+    return &r->header;
+}
+
 typedef struct AST_Block {
     AST_CommandHeader header;
     AST_CommandHeader *first_command;
 } AST_Block;
 
-static AST_Block *ast_block_make() {
-    AST_Block *b = malloc(sizeof(*b));
+static AST_CommandHeader *ast_block_make() {
+    AST_Block *b = calloc(1, sizeof(*b));
     b->header.type = AST_BLOCO;
-    b->first_command = NULL;
-    return b;
+    return &b->header;
 }
 
 static void ast_block_free(AST_Block *b) {
@@ -158,10 +163,28 @@ typedef struct AST_Identifier {
     comp_dict_item_t *entry;
 } AST_Identifier;
 
+static AST_ExprHeader *ast_identifier_make(comp_dict_item_t *entry) {
+    AST_Identifier *i = calloc(1, sizeof(*i));
+    i->header.type = AST_IDENTIFICADOR;
+    i->entry = entry;
+    return &i->header;
+}
+
+static void ast_identifier_free(AST_Identifier *i) {
+    free(i);
+}
+
 typedef struct AST_Literal {
     AST_ExprHeader    header;
     comp_dict_item_t *entry;
 } AST_Literal;
+
+static AST_ExprHeader *ast_literal_make(comp_dict_item_t *entry) {
+    AST_Literal *l = calloc(1, sizeof(*l));
+    l->header.type = AST_LITERAL;
+    l->entry = entry;
+    return &l->header;
+}
 
 typedef struct AST_AritExpr {
     AST_ExprHeader   header;
@@ -169,10 +192,13 @@ typedef struct AST_AritExpr {
     AST_ExprHeader  *second;
 } AST_AritExpr;
 
-typedef struct AST_UnaryAritExpr {
-    AST_ExprHeader   header;
-    AST_ExprHeader  *expr;
-} AST_UnaryAritExpr;
+static AST_ExprHeader *ast_arit_expr_make(int op, AST_ExprHeader *lhs, AST_ExprHeader *rhs) {
+    AST_AritExpr *a = calloc(1, sizeof(*a));
+    a->header.type = op;
+    a->first = lhs;
+    a->second = rhs;
+    return &a->header;
+}
 
 typedef struct AST_LogicExpr {
     AST_ExprHeader  header;
@@ -180,10 +206,13 @@ typedef struct AST_LogicExpr {
     AST_ExprHeader  *second;
 } AST_LogicExpr;
 
-typedef struct AST_UnaryLogicExpr {
-    AST_ExprHeader   header;
-    AST_ExprHeader  *expr;
-} AST_UnaryLogicExpr;
+static AST_ExprHeader *ast_logic_expr_make(int op, AST_ExprHeader *lhs, AST_ExprHeader *rhs) {
+    AST_LogicExpr *a = calloc(1, sizeof(*a));
+    a->header.type = op;
+    a->first = lhs;
+    a->second = rhs;
+    return &a->header;
+}
 
 typedef struct AST_IndexedVector {
     AST_ExprHeader  header;
@@ -191,10 +220,39 @@ typedef struct AST_IndexedVector {
     AST_ExprHeader *expr;
 } AST_IndexedVector;
 
+static AST_ExprHeader *ast_indexed_vector_make(comp_dict_item_t *entry, AST_ExprHeader *expr) {
+    AST_IndexedVector *iv = calloc(1, sizeof(*iv));
+    iv->header.type = AST_VETOR_INDEXADO;
+    iv->identifier = (AST_Identifier*)ast_identifier_make(entry);
+    iv->expr = expr;
+    return &iv->header;
+}
+
+static void ast_expr_free(AST_ExprHeader *expr) {
+    switch (expr->type) {
+    case AST_IDENTIFICADOR: ast_identifier_free((AST_Identifier*)expr); break;
+    default: Assert(false);
+    }
+}
+
+static void ast_indexed_vector_free(AST_IndexedVector *iv) {
+    ast_identifier_free(iv->identifier);
+    ast_expr_free(iv->expr);
+    free(iv);
+}
+
 typedef struct AST_FunctionCall {
     AST_ExprHeader  header;
     AST_Identifier *identifier;
     AST_ExprHeader *first_param;
 } AST_FunctionCall;
+
+static AST_ExprHeader *ast_function_call_make(comp_dict_item_t *entry, AST_ExprHeader *param) {
+    AST_FunctionCall *f = calloc(1, sizeof(*f));
+    f->header.type = AST_CHAMADA_DE_FUNCAO;
+    f->identifier = (AST_Identifier*)ast_identifier_make(entry);
+    f->first_param = param;
+    return &f->header;
+}
 
 #endif
