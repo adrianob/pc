@@ -349,7 +349,17 @@ expressao_logica1:
         ;
 
 expressao_logica2:
-          expressao_logica2 '!' expressao_logica_operando
+          expressao_logica2 TK_OC_EQ expressao_logica3
+        | expressao_logica3
+        ;
+
+expressao_logica3:
+          expressao_logica3 TK_OC_NE expressao_logica4
+        | expressao_logica4
+        ;
+
+expressao_logica4:
+          expressao_logica4 '!' expressao_logica_operando
         | expressao_logica_operando
         ;
 
