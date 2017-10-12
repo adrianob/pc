@@ -77,11 +77,11 @@ AST_Program *g_program = NULL;
 %nonassoc "end_list_expressions"
 %nonassoc ','
 
-%type<ast_function>    decl_func;
-/* %type<ast_if_else>    comando_if; */
+%type<ast_function>       decl_func;
+%type<ast_command_header> comando_if;
 %type<ast_command_header> comando_while;
 %type<ast_command_header> comando_do_while;
-/* %type<ast_assignment> comando_atribuicao; */
+%type<ast_command_header> comando_atribuicao;
 %type<ast_command_header> comando_return;
 %type<ast_command_header> bloco_comandos;
 %type<ast_expr_header>    expressao;
@@ -271,8 +271,18 @@ comando_controle_fluxo:
         ;
 
 comando_if:
-          TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos
-        | TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos TK_PR_ELSE bloco_comandos
+          TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos {
+	      AST_Block *then_block = (AST_Block*)$6;
+	      $$ = ast_if_make($3, then_block->first_command, NULL);
+	      ast_block_free((AST_Block*)$6);
+	  }
+        | TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos TK_PR_ELSE bloco_comandos {
+	      AST_Block *then_block = (AST_Block*)$6;
+	      AST_Block *else_block = (AST_Block*)$8;
+	      $$ = ast_if_make($3, then_block->first_command, else_block->first_command);
+	      ast_block_free((AST_Block*)$6);
+	      ast_block_free((AST_Block*)$8);
+	  }
         ;
 
 comando_foreach:
@@ -327,9 +337,22 @@ lista_expressoes:
         ;
 
 comando_atribuicao:
-          TK_IDENTIFICADOR '=' expressao
-        | TK_IDENTIFICADOR '[' expressao ']' '=' expressao
-        | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao
+          TK_IDENTIFICADOR '=' expressao {
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
+	      $$ = ast_assignment_make(&id->header, $3);
+	  }
+        | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
+	      AST_ExprHeader *vec = ast_indexed_vector_make(yylval.valor_lexico, $3);
+	      $$ = ast_assignment_make(vec, $6);
+	  }
+        | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
+	      // TODO: Acho que aqui o yylval.valor_lexico nao funciona corretamente, já que
+	      // ele aponta para a ultima entrada na tabela de símbolos, e aqui existem 2 identificadores.
+	      // @FIXME: Perguntar para o professor.
+	      AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
+	      AST_ExprHeader *id = ast_identifier_make(yylval.valor_lexico);
+	      $$ = ast_assignment_user_type_make(user_type_id, id, $5);
+	  }
         ;
 
 expressao:

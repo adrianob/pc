@@ -93,9 +93,19 @@ typedef struct AST_CommandHeader {
 typedef struct AST_IfElse {
     AST_CommandHeader     header;
     AST_ExprHeader       *condition;
-    AST_CommandHeader    *true_branch;
-    AST_CommandHeader    *false_branch;
+    AST_CommandHeader    *then_command;
+    AST_CommandHeader    *else_command;
 } AST_IfElse;
+
+static AST_CommandHeader *ast_if_make(AST_ExprHeader *cond, AST_CommandHeader *then_command,
+				      AST_CommandHeader *else_command) {
+    AST_IfElse *i = calloc(1, sizeof(*i));
+    i->header.type = AST_IF_ELSE;
+    i->condition = cond;
+    i->then_command = then_command;
+    i->else_command = else_command;
+    return &i->header;
+}
 
 typedef struct AST_While {
     AST_CommandHeader  header;
@@ -117,11 +127,31 @@ static void ast_while_free(AST_While *w) {
 typedef struct AST_Assignment {
     AST_CommandHeader  header;
     // This field is NULL when is_user_type_assignment is false
-    AST_ExprHeader    *type_identifier;
+    AST_Identifier    *user_type_identifier;
     AST_ExprHeader    *identifier;
-    AST_ExprHeader    *value;
+    AST_ExprHeader    *expr;
+
     bool is_user_type_assignment;
 } AST_Assignment;
+
+static AST_CommandHeader *ast_assignment_make(AST_ExprHeader *id, AST_ExprHeader *expr) {
+    AST_Assignment *a = calloc(1, sizeof(*a));
+    a->header.type = AST_ATRIBUICAO;
+    a->identifier = id;
+    a->expr = expr;
+    return &a->header;
+}
+
+static AST_CommandHeader *ast_assignment_user_type_make(AST_Identifier *user_type_id,
+							AST_ExprHeader *id, AST_ExprHeader *expr) {
+    AST_Assignment *a = calloc(1, sizeof(*a));
+    a->header.type = AST_ATRIBUICAO;
+    a->is_user_type_assignment = true;
+    a->user_type_identifier = user_type_id;
+    a->identifier = id;
+    a->expr = expr;
+    return &a->header;
+}
 
 typedef struct AST_Return {
     AST_CommandHeader header;
