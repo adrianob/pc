@@ -79,6 +79,7 @@ AST_Program *g_program = NULL;
 
 %type<ast_function>       decl_func;
 %type<ast_command_header> comando_if;
+%type<ast_command_header> comando_shift;
 %type<ast_command_header> comando_while;
 %type<ast_command_header> comando_do_while;
 %type<ast_command_header> comando_atribuicao;
@@ -257,8 +258,12 @@ token_lit:
         ;
 
 lit_numerico:
-          TK_LIT_INT {$$ = ast_literal_make(yylval.valor_lexico);}
-        | TK_LIT_FLOAT {$$ = ast_literal_make(yylval.valor_lexico);}
+          TK_LIT_INT {
+	      $$ = ast_literal_make(yylval.valor_lexico);
+	  }
+        | TK_LIT_FLOAT {
+	      $$ = ast_literal_make(yylval.valor_lexico);
+	  }
         ;
 
 comando_controle_fluxo:
@@ -285,6 +290,7 @@ comando_if:
 	  }
         ;
 
+/* TODO: Finish for and foreach */
 comando_foreach:
         TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos;
 
@@ -310,8 +316,20 @@ comando_switch_case:
           TK_PR_SWITCH '(' expressao ')' bloco_comandos;
 
 comando_shift:
-          TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT
-        | TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT
+          TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT {
+	      // @Todo: What to do here?
+	      // yyvlval.valor_lexico will always point to the last entry in the table.
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
+	      AST_Literal *number = (AST_Literal*)ast_literal_make(yylval.valor_lexico);
+	      $$ = ast_shift_make(id, number, false);
+	  }
+        | TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT {
+	      // @Todo: What to do here?
+	      // yyvlval.valor_lexico will always point to the last entry in the table.
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
+	      AST_Literal *number = (AST_Literal*)ast_literal_make(yylval.valor_lexico);
+	      $$ = ast_shift_make(id, number, true);
+	  }
         ;
 
 comando_entrada_saida:
@@ -346,9 +364,9 @@ comando_atribuicao:
 	      $$ = ast_assignment_make(vec, $6);
 	  }
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
-	      // TODO: Acho que aqui o yylval.valor_lexico nao funciona corretamente, já que
+	      // @Todo: Acho que aqui o yylval.valor_lexico nao funciona corretamente, já que
 	      // ele aponta para a ultima entrada na tabela de símbolos, e aqui existem 2 identificadores.
-	      // @FIXME: Perguntar para o professor.
+	      // @Fixme: Perguntar para o professor.
 	      AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
 	      AST_ExprHeader *id = ast_identifier_make(yylval.valor_lexico);
 	      $$ = ast_assignment_user_type_make(user_type_id, id, $5);

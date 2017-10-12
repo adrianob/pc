@@ -50,6 +50,7 @@ typedef struct comp_dict_item comp_dict_item_t;
 typedef struct AST_CommandHeader AST_CommandHeader;
 typedef struct AST_ExprHeader AST_ExprHeader;
 typedef struct AST_Identifier AST_Identifier;
+typedef struct AST_Literal AST_Literal;
 
 typedef struct AST_Function {
     int type;
@@ -105,6 +106,21 @@ static AST_CommandHeader *ast_if_make(AST_ExprHeader *cond, AST_CommandHeader *t
     i->then_command = then_command;
     i->else_command = else_command;
     return &i->header;
+}
+
+typedef struct AST_Shift {
+    AST_CommandHeader    header;
+    AST_Identifier      *identifier;
+    AST_Literal         *number;
+    bool shift_right;
+} AST_Shift;
+
+static AST_CommandHeader *ast_shift_make(AST_Identifier *id, AST_Literal *number, bool shift_right) {
+    AST_Shift *s = calloc(1, sizeof(*s));
+    s->header.type = (shift_right) ? AST_SHIFT_RIGHT : AST_SHIFT_LEFT;
+    s->identifier = id;
+    s->number = number;
+    return &s->header;
 }
 
 typedef struct AST_While {
