@@ -84,6 +84,8 @@ AST_Program *g_program = NULL;
 %type<ast_command_header> comando_do_while;
 %type<ast_command_header> comando_atribuicao;
 %type<ast_command_header> comando_return;
+%type<ast_command_header> comando_continue;
+%type<ast_command_header> comando_break;
 %type<ast_command_header> bloco_comandos;
 %type<ast_expr_header>    expressao;
 %type<ast_expr_header>    expressao_arit;
@@ -222,9 +224,13 @@ comando_return: TK_PR_RETURN expressao {
               $$ = ast_return_make($2);
           };
 
-comando_continue: TK_PR_CONTINUE;
+comando_continue: TK_PR_CONTINUE {
+		      $$ = ast_continue_make();
+	        };
 
-comando_break:  TK_PR_BREAK;
+comando_break:  TK_PR_BREAK {
+		    $$ = ast_break_make();
+		};
 
 comando_decl_var:
                                    comando_decl_var_2
@@ -290,7 +296,7 @@ comando_if:
 	  }
         ;
 
-/* TODO: Finish for and foreach */
+/* @Todo: Finish for and foreach */
 comando_foreach:
         TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos;
 
