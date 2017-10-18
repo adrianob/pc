@@ -12,39 +12,51 @@
 #include "macros.h"
 #include "cc_dict.h"
 
-#define AST_PROGRAMA 0
-#define AST_FUNCAO 1
-// Comandos
-#define AST_IF_ELSE 2
-#define AST_DO_WHILE 3
-#define AST_WHILE_DO 4
-#define AST_INPUT 5
-#define AST_OUTPUT 6
-#define AST_ATRIBUICAO 7
-#define AST_RETURN 8
-#define AST_BLOCO 9
-// Condição, Saída, Expressão
-#define AST_IDENTIFICADOR 10
-#define AST_LITERAL 11
-#define AST_ARIM_SOMA 12
-#define AST_ARIM_SUBTRACAO 13
-#define AST_ARIM_MULTIPLICACAO 14
-#define AST_ARIM_DIVISAO 15
-#define AST_ARIM_INVERSAO 16       // - (operador unário -)
-#define AST_LOGICO_E 17            // &&
-#define AST_LOGICO_OU 18           // ||
-#define AST_LOGICO_COMP_DIF 19     // !=
-#define AST_LOGICO_COMP_IGUAL 20   // ==
-#define AST_LOGICO_COMP_LE 21      // <=
-#define AST_LOGICO_COMP_GE 22      // >=
-#define AST_LOGICO_COMP_L 23       // <
-#define AST_LOGICO_COMP_G 24       // >
-#define AST_LOGICO_COMP_NEGACAO 25 // !
-#define AST_VETOR_INDEXADO                                                     \
-    26 // para var[exp] quando o índice exp é acessado no vetor var
-#define AST_CHAMADA_DE_FUNCAO 27
-#define AST_SHIFT_RIGHT 28
-#define AST_SHIFT_LEFT 29
+#ifndef AST_TYPES
+#define AST_TYPES						\
+        AST_TYPE(AST_PROGRAMA,            "Program"),		\
+	AST_TYPE(AST_FUNCAO,              "Function"),		\
+	AST_TYPE(AST_IF_ELSE,             "If Else"),		\
+	AST_TYPE(AST_DO_WHILE,            "Do While"),		\
+	AST_TYPE(AST_WHILE_DO,            "While Do"),		\
+	AST_TYPE(AST_INPUT,               "Input"),	        \
+	AST_TYPE(AST_OUTPUT,              "Output"),		\
+	AST_TYPE(AST_ATRIBUICAO,          "Assignment"),	\
+	AST_TYPE(AST_RETURN,              "Return"),		\
+	AST_TYPE(AST_BLOCO,               "Block"),		\
+	AST_TYPE(AST_IDENTIFICADOR,       "Identifier"),	\
+	AST_TYPE(AST_LITERAL,             "Literal"),		\
+	AST_TYPE(AST_ARIM_SOMA,           "+"),			\
+	AST_TYPE(AST_ARIM_SUBTRACAO,      "-"),			\
+	AST_TYPE(AST_ARIM_MULTIPLICACAO,  "*"),			\
+	AST_TYPE(AST_ARIM_DIVISAO,        "/"),			\
+	AST_TYPE(AST_ARIM_INVERSAO,       "Inversion"),		\
+	AST_TYPE(AST_LOGICO_E,            "&&"),		\
+	AST_TYPE(AST_LOGICO_OU,           "||"),		\
+	AST_TYPE(AST_LOGICO_COMP_DIF,     "!="),		\
+	AST_TYPE(AST_LOGICO_COMP_IGUAL,   "=="),		\
+	AST_TYPE(AST_LOGICO_COMP_LE,      "<="),		\
+	AST_TYPE(AST_LOGICO_COMP_GE,      ">="),		\
+	AST_TYPE(AST_LOGICO_COMP_L,       "<"),			\
+	AST_TYPE(AST_LOGICO_COMP_G,       ">"),			\
+	AST_TYPE(AST_LOGICO_COMP_NEGACAO, "!"),			\
+	AST_TYPE(AST_VETOR_INDEXADO,      "Indexed Vector"),	\
+	AST_TYPE(AST_CHAMADA_DE_FUNCAO,   "Function Call"),	\
+	AST_TYPE(AST_SHIFT_RIGHT,         "<<"),		\
+	AST_TYPE(AST_SHIFT_LEFT,          ">>"),
+#endif
+
+enum {
+#define AST_TYPE(t, s) t
+    AST_TYPES
+#undef AST_TYPE
+};
+
+static char *g_ast_names[] = {
+#define AST_TYPE(t, s) s
+    AST_TYPES
+#undef AST_TYPE
+};
 
 typedef struct comp_dict_item comp_dict_item_t;
 typedef struct AST_CommandHeader AST_CommandHeader;
