@@ -1,5 +1,6 @@
 #include "main.h"
 #include "cc_ast.h"
+#include "macros.h"
 
 extern AST_Program *g_program;
 extern FILE *yyin;
@@ -194,8 +195,76 @@ int main_avaliacao_etapa_2(int argc, char **argv) {
     return ret;
 }
 
-void print_command_to_graph(AST_CommandHeader *cmd) {
-    // @Todo: Implement this function.
+void print_expression_to_graph(void *parent, AST_ExprHeader *expr) {
+}
+
+void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
+    gv_declare(cmd->type, cmd, g_ast_names[cmd->type]);
+    gv_connect(parent, cmd);
+
+    switch (cmd->type) {
+    case AST_IF_ELSE: {
+	AST_IfElse *if_else = (AST_IfElse *)cmd;
+	print_expression_to_graph(cmd, if_else->condition);
+	print_command_to_graph(cmd, if_else->then_command);
+	print_command_to_graph(cmd, if_else->else_command);
+    } break;
+    case AST_SHIFT_LEFT:
+    case AST_SHIFT_RIGHT: {
+	AST_Shift *shift = (AST_Shift *)cmd;
+	print_expression_to_graph(cmd, &shift->identifier->header);
+	print_expression_to_graph(cmd, &shift->number->header);
+    } break;
+    case AST_WHILE_DO: 
+    case AST_DO_WHILE: {
+	AST_While *w = (AST_While *)cmd;
+	print_expression_to_graph(cmd, w->condition);
+	print_command_to_graph(cmd, w->first_command);
+    } break;
+    case AST_ATRIBUICAO: {
+	AST_Assignment *assign = (AST_Assignment *)cmd;
+	if (assign->is_user_type_assignment) {
+	    print_expression_to_graph(cmd, &assign->user_type_identifier->header);
+	}
+	print_expression_to_graph(cmd, assign->identifier);
+	print_expression_to_graph(cmd, assign->expr);
+    } break;
+    case AST_RETURN: {
+	AST_Return *ret = (AST_Return *)cmd;
+	print_expression_to_graph(cmd, ret->expr);
+    } break;
+    case AST_BLOCO: {
+	AST_Block *block = (AST_Block *)cmd;
+	print_command_to_graph(cmd, block->first_command);
+    } break;
+    case AST_INPUT: {
+	// @Todo
+    } break;
+    case AST_OUTPUT: {
+	// @Todo
+    } break;
+    case AST_CASE:
+	break;
+    case AST_FOR:
+	break;
+    case AST_FOREACH:
+	break;
+    case AST_SWITCH:
+	break;
+    case AST_CHAMADA_DE_FUNCAO: {
+	AST_FunctionCall *funcall = (AST_FunctionCall *)cmd;
+	print_expression_to_graph(cmd, &funcall->identifier->header);
+	print_expression_to_graph(cmd, funcall->first_param);
+    } break;
+    // @Todo: Other AST types
+    case AST_CONTINUE:
+    case AST_BREAK: {
+	// No need to do anything, since this command does not have any children.
+	// It was already gv_declared at the beginning of the function.
+    } break;
+    default:
+	Assert(false);
+    }
 }
 
 void print_ast_to_graph(AST_Program *program) {
@@ -213,10 +282,7 @@ void print_ast_to_graph(AST_Program *program) {
 	AST_CommandHeader *cmd = func->first_command;
 	void *cmd_parent = func;
 	while (cmd) {
-	    gv_declare(cmd->type, cmd, g_ast_names[cmd->type]);
-	    gv_connect(cmd_parent, cmd);
-
-	    print_command_to_graph(cmd);
+	    print_command_to_graph(cmd_parent, cmd);
 
 	    cmd_parent = cmd;
 	    cmd = cmd->next;
