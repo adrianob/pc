@@ -24,6 +24,12 @@
 	AST_TYPE(AST_ATRIBUICAO,          "Assignment"),	\
 	AST_TYPE(AST_RETURN,              "Return"),		\
 	AST_TYPE(AST_BLOCO,               "Block"),		\
+	AST_TYPE(AST_BREAK,               "Break"),		\
+	AST_TYPE(AST_CONTINUE,            "Continue"),	        \
+	AST_TYPE(AST_CASE,                "Case"),		\
+	AST_TYPE(AST_FOR,                 "For"),		\
+	AST_TYPE(AST_FOREACH,             "Foreach"),		\
+	AST_TYPE(AST_SWITCH,              "Switch"),	        \
 	AST_TYPE(AST_IDENTIFICADOR,       "Identifier"),	\
 	AST_TYPE(AST_LITERAL,             "Literal"),		\
 	AST_TYPE(AST_ARIM_SOMA,           "+"),			\
@@ -207,6 +213,35 @@ static AST_CommandHeader *ast_block_make() {
 static void ast_block_free(AST_Block *b) {
     free(b);
 }
+
+typedef struct AST_Break {
+    AST_CommandHeader header;
+} AST_Break;
+
+static AST_CommandHeader *ast_break_make() {
+    AST_Break *b = calloc(1, sizeof(*b));
+    b->header.type = AST_BREAK;
+    return &b->header;
+}
+
+static void ast_break_free(AST_CommandHeader *b) {
+    free(b);
+}
+
+typedef struct AST_Continue {
+    AST_CommandHeader header;
+} AST_Continue;
+
+static AST_CommandHeader *ast_continue_make() {
+    AST_Continue *c = calloc(1, sizeof(*c));
+    c->header.type = AST_CONTINUE;
+    return &c->header;
+}
+
+static void ast_continue_free(AST_CommandHeader *c) {
+    free(c);
+}
+
 
 /* ------------------------------------------------
  * Expressions
