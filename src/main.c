@@ -194,18 +194,52 @@ int main_avaliacao_etapa_2(int argc, char **argv) {
     return ret;
 }
 
+void print_command_to_graph(AST_CommandHeader *cmd) {
+    // @Todo: Implement this function.
+}
+
+void print_ast_to_graph(AST_Program *program) {
+    assert(program->type == AST_PROGRAMA);
+    gv_declare(program->type, program, g_ast_names[program->type]);
+
+    void *func_parent = program;
+    AST_Function *func = program->first_func;
+    while (func) {
+	assert(func->type == AST_FUNCAO);
+	gv_declare(func->type, func, g_ast_names[func->type]);
+	gv_connect(func_parent, func);
+
+	// Start printing list of commands from the function
+	AST_CommandHeader *cmd = func->first_command;
+	void *cmd_parent = func;
+	while (cmd) {
+	    gv_declare(cmd->type, cmd, g_ast_names[cmd->type]);
+	    gv_connect(cmd_parent, cmd);
+
+	    print_command_to_graph(cmd);
+
+	    cmd_parent = cmd;
+	    cmd = cmd->next;
+	}
+	
+	func_parent = func;
+	func = func->next;
+    }
+}
+
 int main_avaliacao_etapa_3(int argc, char **argv) {
     gv_init(NULL);
     int ret = yyparse();
+    print_ast_to_graph(g_program);
     gv_close();
 
-    int num_funcs = 0;
-    AST_Function *func = g_program->first_func;
-    while (func) {
-        ++num_funcs;
-        func = func->next;
-    }
-    printf("Number of functions declared: %d\n", num_funcs);
+    /* int num_funcs = 0; */
+    /* AST_Function *func = g_program->first_func; */
+    /* while (func) { */
+    /*     ++num_funcs; */
+    /*     func = func->next; */
+    /* } */
+    /* printf("Number of functions declared: %d\n", num_funcs); */
 
     return ret;
 }
