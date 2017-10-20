@@ -18,6 +18,7 @@ AST_Program *g_program = NULL;
     AST_Function *ast_function;
     AST_CommandHeader *ast_command_header;
     AST_ExprHeader *ast_expr_header;
+    AST_Identifier *ast_identifier;
     int op;
 }
 
@@ -96,6 +97,7 @@ AST_Program *g_program = NULL;
 %type<ast_expr_header>    chamada_func;
 %type<ast_expr_header>    lista_expressoes;
 %type<ast_expr_header>    lit_numerico;
+%type<ast_identifier>     cabecalho;
 %type<op>                 operator_relacional;
 
 %type<ast_expr_header>    expressao_logica;
@@ -156,9 +158,8 @@ decl_global_non_static:
         ;
 
 decl_func: cabecalho bloco_comandos {
-
-               AST_Identifier *id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
-               $$ = ast_function_make(id);
+	       // cabecalho returns a AST_Identifier*
+               $$ = ast_function_make($1);
                $$->first_command = ((AST_Block*)$2)->first_command;
                // Free block, since inside function we use the pointer to the command
                // directly.
@@ -166,10 +167,18 @@ decl_func: cabecalho bloco_comandos {
           };
 
 cabecalho:
-                       tipo_primitivo TK_IDENTIFICADOR lista_entrada
-        | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR lista_entrada
-        |              TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada
-        | TK_PR_STATIC TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada
+                       tipo_primitivo TK_IDENTIFICADOR lista_entrada {
+	      $$ = (AST_Identifier*)ast_identifier_make($2);
+	  }
+        | TK_PR_STATIC tipo_primitivo TK_IDENTIFICADOR lista_entrada {
+	      $$ = (AST_Identifier*)ast_identifier_make($3);
+	  }
+        |              TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada {
+	      $$ = (AST_Identifier*)ast_identifier_make($2);
+	  }
+        | TK_PR_STATIC TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada {
+	      $$ = (AST_Identifier*)ast_identifier_make($3);
+	  }
         ;
 
 lista_entrada:
