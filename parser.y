@@ -156,7 +156,9 @@ decl_global_non_static:
         ;
 
 decl_func: cabecalho bloco_comandos {
-               $$ = ast_function_make();
+
+               AST_Identifier *id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
+               $$ = ast_function_make(id);
                $$->first_command = ((AST_Block*)$2)->first_command;
                // Free block, since inside function we use the pointer to the command
                // directly.

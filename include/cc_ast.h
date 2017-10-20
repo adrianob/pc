@@ -70,15 +70,27 @@ typedef struct AST_ExprHeader AST_ExprHeader;
 typedef struct AST_Identifier AST_Identifier;
 typedef struct AST_Literal AST_Literal;
 
+typedef struct AST_ExprHeader {
+    int type;
+    struct AST_ExprHeader *next;
+} AST_ExprHeader;
+
+typedef struct AST_Identifier {
+    AST_ExprHeader    header;
+    comp_dict_item_t *entry;
+} AST_Identifier;
+
 typedef struct AST_Function {
     int type;
     AST_CommandHeader *first_command;
+    AST_Identifier      *identifier;
     struct AST_Function *next;
 } AST_Function;
 
-static AST_Function *ast_function_make() {
+static AST_Function *ast_function_make(AST_Identifier *id) {
     AST_Function *f = calloc(1, sizeof(*f));
     f->type = AST_FUNCAO;
+    f->identifier = id;
     return f;
 }
 
@@ -246,15 +258,7 @@ static void ast_continue_free(AST_CommandHeader *c) {
 /* ------------------------------------------------
  * Expressions
  * ------------------------------------------------ */
-typedef struct AST_ExprHeader {
-    int type;
-    struct AST_ExprHeader *next;
-} AST_ExprHeader;
 
-typedef struct AST_Identifier {
-    AST_ExprHeader    header;
-    comp_dict_item_t *entry;
-} AST_Identifier;
 
 static AST_ExprHeader *ast_identifier_make(comp_dict_item_t *entry) {
     AST_Identifier *i = calloc(1, sizeof(*i));
