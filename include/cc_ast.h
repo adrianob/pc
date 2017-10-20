@@ -216,10 +216,10 @@ typedef struct AST_Block {
     AST_CommandHeader *first_command;
 } AST_Block;
 
-static AST_CommandHeader *ast_block_make() {
+static AST_Block *ast_block_make() {
     AST_Block *b = calloc(1, sizeof(*b));
     b->header.type = AST_BLOCO;
-    return &b->header;
+    return b;
 }
 
 static void ast_block_free(AST_Block *b) {
