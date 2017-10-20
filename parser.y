@@ -58,13 +58,13 @@ AST_Program *g_program = NULL;
 %token TK_OC_OR
 %token TK_OC_SL
 %token TK_OC_SR
-%token TK_LIT_INT
-%token TK_LIT_FLOAT
-%token TK_LIT_FALSE
-%token TK_LIT_TRUE
-%token TK_LIT_CHAR
-%token TK_LIT_STRING
-%token TK_IDENTIFICADOR
+%token<valor_lexico> TK_LIT_INT
+%token<valor_lexico> TK_LIT_FLOAT
+%token<valor_lexico> TK_LIT_FALSE
+%token<valor_lexico> TK_LIT_TRUE
+%token<valor_lexico> TK_LIT_CHAR
+%token<valor_lexico> TK_LIT_STRING
+%token<valor_lexico> TK_IDENTIFICADOR
 %token TOKEN_ERRO
 
 %right '='
@@ -267,10 +267,10 @@ token_lit:
 
 lit_numerico:
           TK_LIT_INT {
-	      $$ = ast_literal_make(yylval.valor_lexico);
+	      $$ = ast_literal_make($1);
 	  }
         | TK_LIT_FLOAT {
-	      $$ = ast_literal_make(yylval.valor_lexico);
+	      $$ = ast_literal_make($1);
 	  }
         ;
 
@@ -325,17 +325,13 @@ comando_switch_case:
 
 comando_shift:
           TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT {
-	      // @Todo: What to do here?
-	      // yyvlval.valor_lexico will always point to the last entry in the table.
-	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
-	      AST_Literal *number = (AST_Literal*)ast_literal_make(yylval.valor_lexico);
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+	      AST_Literal *number = (AST_Literal*)ast_literal_make($3);
 	      $$ = ast_shift_make(id, number, false);
 	  }
         | TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT {
-	      // @Todo: What to do here?
-	      // yyvlval.valor_lexico will always point to the last entry in the table.
-	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
-	      AST_Literal *number = (AST_Literal*)ast_literal_make(yylval.valor_lexico);
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+	      AST_Literal *number = (AST_Literal*)ast_literal_make($3);
 	      $$ = ast_shift_make(id, number, true);
 	  }
         ;
@@ -347,10 +343,10 @@ comando_entrada_saida:
 
 chamada_func:
           TK_IDENTIFICADOR '(' lista_expressoes ')' {
-              $$ = ast_function_call_make(yylval.valor_lexico, $3);
+              $$ = ast_function_call_make($1, $3);
           }
         | TK_IDENTIFICADOR '(' ')' {
-              $$ = ast_function_call_make(yylval.valor_lexico, NULL);
+              $$ = ast_function_call_make($1, NULL);
           }
         ;
 
@@ -364,19 +360,16 @@ lista_expressoes:
 
 comando_atribuicao:
           TK_IDENTIFICADOR '=' expressao {
-	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
 	      $$ = ast_assignment_make(&id->header, $3);
 	  }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
-	      AST_ExprHeader *vec = ast_indexed_vector_make(yylval.valor_lexico, $3);
+	      AST_ExprHeader *vec = ast_indexed_vector_make($1, $3);
 	      $$ = ast_assignment_make(vec, $6);
 	  }
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
-	      // @Todo: Acho que aqui o yylval.valor_lexico nao funciona corretamente, já que
-	      // ele aponta para a ultima entrada na tabela de símbolos, e aqui existem 2 identificadores.
-	      // @Fixme: Perguntar para o professor.
-	      AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make(yylval.valor_lexico);
-	      AST_ExprHeader *id = ast_identifier_make(yylval.valor_lexico);
+	      AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
+	      AST_ExprHeader *id = ast_identifier_make($3);
 	      $$ = ast_assignment_user_type_make(user_type_id, id, $5);
 	  }
         ;
@@ -384,8 +377,8 @@ comando_atribuicao:
 expressao:
           expressao_arit
         | expressao_logica
-        | TK_LIT_CHAR {$$ = ast_literal_make(yylval.valor_lexico);}
-        | TK_LIT_STRING {$$ = ast_literal_make(yylval.valor_lexico);}
+        | TK_LIT_CHAR {$$ = ast_literal_make($1);}
+        | TK_LIT_STRING {$$ = ast_literal_make($1);}
         ;
 
 expressao_arit:
@@ -417,9 +410,9 @@ expressao_arit_term3:
         ;
 
 expressao_arit_operando:
-          TK_IDENTIFICADOR {$$ = ast_identifier_make(yyval.valor_lexico);}
-        | TK_IDENTIFICADOR '[' expressao ']' {$$ = ast_indexed_vector_make(yyval.valor_lexico, $3);}
-        | lit_numerico {$$ = ast_literal_make(yyval.valor_lexico);}
+          TK_IDENTIFICADOR {$$ = ast_identifier_make($1);}
+        | TK_IDENTIFICADOR '[' expressao ']' {$$ = ast_indexed_vector_make($1, $3);}
+        | lit_numerico
         | '-' lit_numerico {$$ = ast_arit_expr_make(AST_ARIM_INVERSAO, $2, NULL);}
         | chamada_func
         | '(' expressao_arit ')' {$$ = $2;}
@@ -464,8 +457,8 @@ expressao_logica4:
         ;
 
 expressao_logica_operando:
-          TK_LIT_FALSE {$$ = ast_literal_make(yylval.valor_lexico);}
-        | TK_LIT_TRUE {$$ = ast_literal_make(yylval.valor_lexico);}
+          TK_LIT_FALSE {$$ = ast_literal_make($1);}
+        | TK_LIT_TRUE {$$ = ast_literal_make($1);}
         | '(' expressao_logica ')' {$$ = $2;}
        ;
 
