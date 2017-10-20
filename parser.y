@@ -17,6 +17,7 @@ AST_Program *g_program = NULL;
     comp_dict_item_t *valor_lexico;
     AST_Function *ast_function;
     AST_CommandHeader *ast_command_header;
+    AST_Block *ast_block;
     AST_ExprHeader *ast_expr_header;
     AST_Identifier *ast_identifier;
     int op;
@@ -80,14 +81,19 @@ AST_Program *g_program = NULL;
 
 %type<ast_function>       decl_func;
 %type<ast_command_header> comando_if;
+%type<ast_command_header> comando;
+%type<ast_command_header> comando_case;
+%type<ast_command_header> seq_comandos;
 %type<ast_command_header> comando_shift;
 %type<ast_command_header> comando_while;
 %type<ast_command_header> comando_do_while;
 %type<ast_command_header> comando_atribuicao;
 %type<ast_command_header> comando_return;
+%type<ast_command_header> comando_decl_var_init;
+%type<ast_command_header> comando_sem_entrada_saida;
 %type<ast_command_header> comando_continue;
 %type<ast_command_header> comando_break;
-%type<ast_command_header> bloco_comandos;
+%type<ast_block>          bloco_comandos;
 %type<ast_expr_header>    expressao;
 %type<ast_expr_header>    expressao_arit;
 %type<ast_expr_header>    expressao_arit_term1;
@@ -199,24 +205,41 @@ parametro_entrada:
 bloco_comandos:
           '{' seq_comandos '}' {
               $$ = ast_block_make();
+              $$->first_command  = $2;
           }
         | '{' '}' {$$ = ast_block_make();}
         ;
 
 seq_comandos:
           comando ';'
+          {
+          $$ = $1;
+          }
         | comando_case
+          {
+          $$ = $1;
+          }
         | seq_comandos comando ';'
+          {
+          $$ = $1;
+          }
         | seq_comandos comando_case
+          {
+          $$ = $1;
+          }
         ;
 
 comando_case:
-        TK_PR_CASE TK_LIT_INT ':';
+        TK_PR_CASE TK_LIT_INT ':' {$$ = $$;};
 
 comando_sem_entrada_saida:
           comando_decl_var
+          {}
         | comando_decl_var_init
         | bloco_comandos
+        {
+         $$ = $1->first_command;
+        }
         | chamada_func
         | comando_continue
         | comando_break
@@ -257,13 +280,23 @@ comando_decl_var_2:
 
 comando_decl_var_init:
                                    tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+                                   {
+                                   $$ = $$;
+                                   }
         |                          tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+                                   {$$ = $$;}
         | TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+                                   {$$ = $$;}
         | TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+                                   {$$ = $$;}
         |              TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+                                   {$$ = $$;}
         |              TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+                                   {$$ = $$;}
         | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+                                   {$$ = $$;}
         | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+                                   {$$ = $$;}
         ;
 
 token_lit:
