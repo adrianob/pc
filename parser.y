@@ -87,7 +87,10 @@ AST_Program *g_program = NULL;
 %type<ast_command_header> comando_return;
 %type<ast_command_header> comando_continue;
 %type<ast_command_header> comando_break;
+%type<ast_command_header> comando_case;
 %type<ast_command_header> bloco_comandos;
+%type<ast_command_header> seq_comandos;
+%type<ast_command_header> comando;
 %type<ast_expr_header>    expressao;
 %type<ast_expr_header>    expressao_arit;
 %type<ast_expr_header>    expressao_arit_term1;
@@ -198,16 +201,22 @@ parametro_entrada:
 
 bloco_comandos:
           '{' seq_comandos '}' {
-              $$ = ast_block_make();
+              $$ = ast_block_make($2);
           }
-        | '{' '}' {$$ = ast_block_make();}
+        | '{' '}' {$$ = ast_block_make(NULL);}
         ;
 
 seq_comandos:
-          comando ';'
+	  comando ';' {/* Default value for bison is always $$ = $1, so you dont have to write that */ }
         | comando_case
-        | seq_comandos comando ';'
-        | seq_comandos comando_case
+        | seq_comandos comando ';' {
+	      $$ = $2;
+	      $$->next = $1;
+	  } 
+        | seq_comandos comando_case {
+	      $$ = $2;
+	      $$->next = $1;
+	  }
         ;
 
 comando_case:
