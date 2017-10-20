@@ -211,9 +211,17 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
     } break;
     case AST_SHIFT_LEFT:
     case AST_SHIFT_RIGHT: {
+	  AST_Shift *shift = (AST_Shift *)cmd;
+	  AST_Literal *literal = (AST_Literal *)shift->number;
+	  AST_Literal *ident = (AST_Literal *)shift->identifier;
+
     gv_declare(cmd->type, cmd, NULL);
     gv_connect(parent, cmd);
-	AST_Shift *shift = (AST_Shift *)cmd;
+
+    gv_declare(AST_IDENTIFICADOR, ident, (const char *)ident->entry->key);
+    gv_connect(cmd, ident);
+    gv_declare(AST_LITERAL, literal, (const char *)literal->entry->key);
+    gv_connect(cmd, literal);
 	print_expression_to_graph(cmd, &shift->identifier->header);
 	print_expression_to_graph(cmd, &shift->number->header);
     } break;
