@@ -168,6 +168,20 @@ static AST_CommandHeader *ast_while_make(AST_ExprHeader *cond, AST_CommandHeader
     return &w->header;
 }
 
+typedef struct AST_Switch {
+    AST_CommandHeader  header;
+    AST_ExprHeader    *condition;
+    AST_CommandHeader *first_command;
+} AST_Switch;
+
+static AST_CommandHeader *ast_switch_make(AST_ExprHeader *cond, AST_CommandHeader *first_command) {
+    AST_Switch *s = calloc(1, sizeof(*s));
+    s->header.type = AST_SWITCH;
+    s->condition = cond;
+    s->first_command = first_command;
+    return &s->header;
+}
+
 static void ast_while_free(AST_While *w) {
     free(w);
 }

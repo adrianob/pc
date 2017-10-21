@@ -298,8 +298,11 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
         break;
     case AST_FOREACH:
         break;
-    case AST_SWITCH:
-        break;
+    case AST_SWITCH: {
+        AST_Switch *s = (AST_Switch *)cmd;
+        print_expression_to_graph(cmd, s->condition);
+        print_command_to_graph(cmd, s->first_command);
+    } break;
     case AST_CHAMADA_DE_FUNCAO: {
         AST_FunctionCall *funcall = (AST_FunctionCall *)cmd;
         print_expression_to_graph(cmd, &funcall->identifier->header);

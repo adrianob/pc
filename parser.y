@@ -84,6 +84,7 @@ AST_Program *g_program = NULL;
 %type<ast_command_header> comando_decl_var_init;
 %type<ast_command_header> comando_while;
 %type<ast_command_header> comando_entrada_saida;
+%type<ast_command_header> comando_switch_case;
 %type<ast_command_header> comando_do_while;
 %type<ast_command_header> comando_atribuicao;
 %type<ast_command_header> comando_return;
@@ -381,7 +382,11 @@ comando_do_while:
         };
 
 comando_switch_case:
-          TK_PR_SWITCH '(' expressao ')' bloco_comandos;
+          TK_PR_SWITCH '(' expressao ')' bloco_comandos {
+            AST_Block *block = (AST_Block*)$5;
+            $$ = ast_switch_make($3, block->first_command);
+            ast_block_free((AST_Block*)$5);
+          };
 
 comando_shift:
           TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT {
