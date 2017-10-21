@@ -206,12 +206,27 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
         gv_declare(cmd->type, cmd, (const char *)literal->entry->key);
         gv_connect(parent, cmd);
     } break;
+    case AST_LOGICO_COMP_DIF:
+    case AST_LOGICO_COMP_IGUAL:
+    case AST_LOGICO_COMP_LE:
+    case AST_LOGICO_COMP_GE:
+    case AST_LOGICO_E:
+    case AST_LOGICO_COMP_L:
+    case AST_LOGICO_COMP_G:
+    case AST_LOGICO_COMP_NEGACAO:
+    case AST_LOGICO_OU: {
+        gv_declare(cmd->type, cmd, NULL);
+        gv_connect(parent, cmd);
+        AST_LogicExpr * express = (AST_LogicExpr *)cmd;
+        print_command_to_graph(cmd, (AST_CommandHeader *)express->first);
+        print_command_to_graph(cmd, (AST_CommandHeader *)express->second);
+    } break;
     case AST_IF_ELSE: {
         gv_declare(cmd->type, cmd, NULL);
         gv_connect(parent, cmd);
         AST_IfElse *if_else = (AST_IfElse *)cmd;
 
-        print_command_to_graph(cmd,(AST_CommandHeader *) if_else->condition);
+        print_command_to_graph(cmd, (AST_CommandHeader *) if_else->condition);
         print_command_to_graph(cmd, if_else->then_command);
         /*print_command_to_graph(cmd, if_else->else_command);*/
     } break;
