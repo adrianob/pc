@@ -438,7 +438,7 @@ expressao:
 
 expressao_arit:
           expressao_arit '+' expressao_arit_term1 {
-              $$ = ast_arit_expr_make('+', $1, $3);
+              $$ = ast_arit_expr_make(AST_ARIM_SOMA, $1, $3);
           }
         | expressao_arit_term1
         ;

@@ -199,8 +199,23 @@ void print_expression_to_graph(void *parent, AST_ExprHeader *expr) {}
 
 void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
 
-    /*printf("%d\n", cmd->type);*/
     switch (cmd->type) {
+    case AST_ARIM_SUBTRACAO:
+    case AST_ARIM_MULTIPLICACAO:
+    case AST_ARIM_DIVISAO:
+    case AST_ARIM_INVERSAO:
+    case AST_ARIM_SOMA: {
+        gv_declare(cmd->type, cmd, NULL);
+        gv_connect(parent, cmd);
+        AST_AritExpr * express = (AST_AritExpr *)cmd;
+        print_command_to_graph(cmd, (AST_CommandHeader *)express->first);
+        print_command_to_graph(cmd, (AST_CommandHeader *)express->second);
+    } break;
+    case AST_IDENTIFICADOR: {
+        AST_Identifier *ident = (AST_Identifier *)cmd;
+        gv_declare(cmd->type, cmd, (const char *)ident->entry->key);
+        gv_connect(parent, cmd);
+    } break;
     case AST_LITERAL: {
         AST_Literal *literal = (AST_Literal *)cmd;
         gv_declare(cmd->type, cmd, (const char *)literal->entry->key);
@@ -261,13 +276,11 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
         gv_connect(parent, cmd);
         AST_Assignment *assign = (AST_Assignment *)cmd;
         AST_Literal *ident = (AST_Literal *)assign->identifier;
-        AST_Literal *ident2 = (AST_Literal *)assign->expr;
+        AST_ExprHeader *express = (AST_ExprHeader *)assign->expr;
 
-        gv_declare(AST_IDENTIFICADOR, ident, (const char *)ident->entry->key);
-        gv_connect(cmd, ident);
+        print_command_to_graph(cmd, (AST_CommandHeader *)ident);
+        print_command_to_graph(cmd, (AST_CommandHeader *)express);
 
-        gv_declare(AST_IDENTIFICADOR, ident2, (const char *)ident2->entry->key);
-        gv_connect(cmd, ident2);
         if (assign->is_user_type_assignment) {
             print_expression_to_graph(cmd,
                                       &assign->user_type_identifier->header);
