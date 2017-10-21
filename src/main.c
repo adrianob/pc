@@ -195,31 +195,28 @@ int main_avaliacao_etapa_2(int argc, char **argv) {
     return ret;
 }
 
-void print_expression_to_graph(void *parent, AST_ExprHeader *expr) {}
-
-void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
-
-    switch (cmd->type) {
+void print_expression_to_graph(void *parent, AST_ExprHeader *expr) {
+    switch (expr->type) {
+    case AST_IDENTIFICADOR: {
+        AST_Identifier *ident = (AST_Identifier *)expr;
+        gv_declare(expr->type, expr, (const char *)ident->entry->key);
+        gv_connect(parent, expr);
+    } break;
+    case AST_LITERAL: {
+        AST_Literal *literal = (AST_Literal *)expr;
+        gv_declare(expr->type, expr, (const char *)literal->entry->key);
+        gv_connect(parent, expr);
+    } break;
     case AST_ARIM_SUBTRACAO:
     case AST_ARIM_MULTIPLICACAO:
     case AST_ARIM_DIVISAO:
     case AST_ARIM_INVERSAO:
     case AST_ARIM_SOMA: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
-        AST_AritExpr * express = (AST_AritExpr *)cmd;
-        print_command_to_graph(cmd, (AST_CommandHeader *)express->first);
-        print_command_to_graph(cmd, (AST_CommandHeader *)express->second);
-    } break;
-    case AST_IDENTIFICADOR: {
-        AST_Identifier *ident = (AST_Identifier *)cmd;
-        gv_declare(cmd->type, cmd, (const char *)ident->entry->key);
-        gv_connect(parent, cmd);
-    } break;
-    case AST_LITERAL: {
-        AST_Literal *literal = (AST_Literal *)cmd;
-        gv_declare(cmd->type, cmd, (const char *)literal->entry->key);
-        gv_connect(parent, cmd);
+        gv_declare(expr->type, expr, NULL);
+        gv_connect(parent, expr);
+        AST_AritExpr * express = (AST_AritExpr *)expr;
+        print_expression_to_graph(expr, express->first);
+        print_expression_to_graph(expr, express->second);
     } break;
     case AST_LOGICO_COMP_DIF:
     case AST_LOGICO_COMP_IGUAL:
@@ -230,18 +227,26 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
     case AST_LOGICO_COMP_G:
     case AST_LOGICO_COMP_NEGACAO:
     case AST_LOGICO_OU: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
-        AST_LogicExpr * express = (AST_LogicExpr *)cmd;
-        print_command_to_graph(cmd, (AST_CommandHeader *)express->first);
-        print_command_to_graph(cmd, (AST_CommandHeader *)express->second);
+        gv_declare(expr->type, expr, NULL);
+        gv_connect(parent, expr);
+        AST_LogicExpr * express = (AST_LogicExpr *)expr;
+        print_expression_to_graph(expr, express->first);
+        print_expression_to_graph(expr, express->second);
     } break;
+    default:
+        Assert(false);
+    }
+}
+
+void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
+
+    switch (cmd->type) {
     case AST_IF_ELSE: {
         gv_declare(cmd->type, cmd, NULL);
         gv_connect(parent, cmd);
         AST_IfElse *if_else = (AST_IfElse *)cmd;
 
-        print_command_to_graph(cmd, (AST_CommandHeader *) if_else->condition);
+        print_expression_to_graph(cmd, if_else->condition);
         print_command_to_graph(cmd, if_else->then_command);
         if(if_else->else_command){
           print_command_to_graph(cmd, if_else->else_command);
@@ -250,16 +255,10 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
     case AST_SHIFT_LEFT:
     case AST_SHIFT_RIGHT: {
         AST_Shift *shift = (AST_Shift *)cmd;
-        AST_Literal *literal = (AST_Literal *)shift->number;
-        AST_Literal *ident = (AST_Literal *)shift->identifier;
 
         gv_declare(cmd->type, cmd, NULL);
         gv_connect(parent, cmd);
 
-        gv_declare(AST_IDENTIFICADOR, ident, (const char *)ident->entry->key);
-        gv_connect(cmd, ident);
-        gv_declare(AST_LITERAL, literal, (const char *)literal->entry->key);
-        gv_connect(cmd, literal);
         print_expression_to_graph(cmd, &shift->identifier->header);
         print_expression_to_graph(cmd, &shift->number->header);
     } break;
@@ -275,11 +274,6 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
         gv_declare(cmd->type, cmd, NULL);
         gv_connect(parent, cmd);
         AST_Assignment *assign = (AST_Assignment *)cmd;
-        AST_Literal *ident = (AST_Literal *)assign->identifier;
-        AST_ExprHeader *express = (AST_ExprHeader *)assign->expr;
-
-        print_command_to_graph(cmd, (AST_CommandHeader *)ident);
-        print_command_to_graph(cmd, (AST_CommandHeader *)express);
 
         if (assign->is_user_type_assignment) {
             print_expression_to_graph(cmd,
