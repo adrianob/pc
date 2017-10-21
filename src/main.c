@@ -228,7 +228,9 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
 
         print_command_to_graph(cmd, (AST_CommandHeader *) if_else->condition);
         print_command_to_graph(cmd, if_else->then_command);
-        /*print_command_to_graph(cmd, if_else->else_command);*/
+        if(if_else->else_command){
+          print_command_to_graph(cmd, if_else->else_command);
+        }
     } break;
     case AST_SHIFT_LEFT:
     case AST_SHIFT_RIGHT: {
