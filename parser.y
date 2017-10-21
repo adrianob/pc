@@ -16,8 +16,7 @@ AST_Program *g_program = NULL;
 %union {
     comp_dict_item_t *valor_lexico;
     AST_Function *ast_function;
-    AST_CommandHeader *ast_command_header;
-    AST_ExprHeader *ast_expr_header;
+    AST_Header *ast_header;
     AST_Identifier *ast_identifier;
     int op;
 }
@@ -78,40 +77,41 @@ AST_Program *g_program = NULL;
 %nonassoc "end_list_expressions"
 %nonassoc ','
 
-%type<ast_function>       decl_func;
-%type<ast_command_header> comando_if;
-%type<ast_command_header> comando_shift;
-%type<ast_command_header> comando_decl_var_init;
-%type<ast_command_header> comando_while;
-%type<ast_command_header> comando_entrada_saida;
-%type<ast_command_header> comando_switch_case;
-%type<ast_command_header> comando_do_while;
-%type<ast_command_header> comando_atribuicao;
-%type<ast_command_header> comando_return;
-%type<ast_command_header> comando_continue;
-%type<ast_command_header> comando_break;
-%type<ast_command_header> comando_case;
-%type<ast_command_header> bloco_comandos;
-%type<ast_command_header> seq_comandos;
-%type<ast_command_header> comando;
-%type<ast_expr_header>    expressao;
-%type<ast_expr_header>    expressao_arit;
-%type<ast_expr_header>    expressao_arit_term1;
-%type<ast_expr_header>    expressao_arit_term2;
-%type<ast_expr_header>    expressao_arit_term3;
-%type<ast_expr_header>    expressao_arit_operando;
-%type<ast_expr_header>    chamada_func;
-%type<ast_expr_header>    lista_expressoes;
-%type<ast_expr_header>    lit_numerico;
+%type<ast_function>  decl_func;
+%type<ast_header>    comando_if;
+%type<ast_header>    comando_shift;
+%type<ast_header>    comando_decl_var_init;
+%type<ast_header>    comando_while;
+%type<ast_header>    comando_entrada_saida;
+%type<ast_header>    comando_switch_case;
+%type<ast_header>    comando_do_while;
+%type<ast_header>    comando_atribuicao;
+%type<ast_header>    comando_return;
+%type<ast_header>    comando_continue;
+%type<ast_header>    comando_break;
+%type<ast_header>    comando_case;
+%type<ast_header>    bloco_comandos;
+%type<ast_header>    seq_comandos;
+%type<ast_header>    comando;
+%type<ast_header>    comando_sem_entrada_saida;
+%type<ast_header>    expressao;
+%type<ast_header>    expressao_arit;
+%type<ast_header>    expressao_arit_term1;
+%type<ast_header>    expressao_arit_term2;
+%type<ast_header>    expressao_arit_term3;
+%type<ast_header>    expressao_arit_operando;
+%type<ast_header>    chamada_func;
+%type<ast_header>    lista_expressoes;
+%type<ast_header>    lit_numerico;
 %type<ast_identifier>     cabecalho;
 %type<op>                 operator_relacional;
 
-%type<ast_expr_header>    expressao_logica;
-%type<ast_expr_header>    expressao_logica1;
-%type<ast_expr_header>    expressao_logica2;
-%type<ast_expr_header>    expressao_logica3;
-%type<ast_expr_header>    expressao_logica4;
-%type<ast_expr_header>    expressao_logica_operando;
+%type<ast_header>    expressao_logica;
+%type<ast_header>    expressao_logica1;
+%type<ast_header>    expressao_logica2;
+%type<ast_header>    expressao_logica3;
+%type<ast_header>    expressao_logica4;
+%type<ast_header>    expressao_logica_operando;
 
 %%
 programa:
@@ -268,51 +268,51 @@ comando_decl_var_2:
         ;
 
 comando_decl_var_init:
-                                   tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
-                                   {
-	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-	      AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($4);
-	      $$ = ast_assignment_make(&id->header, &id2->header);
-                                   }
-        |                          tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
-                                   {
-				/*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);*/
-				/*$$ = ast_assignment_make(&id->header, $4);*/
-                                   }
-        | TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
-                                   {
-	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-	      AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
-	      $$ = ast_assignment_make(&id->header, &id2->header);
-                                   }
-        | TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
-                                   {
-				/*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
-				/*$$ = ast_assignment_make(&id->header, $5);*/
-                                   }
-        |              TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
-                                   {
-	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-	      AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
-	      $$ = ast_assignment_make(&id->header, &id2->header);
-                                   }
-        |              TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
-                                   {
-				/*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
-				/*$$ = ast_assignment_make(&id->header, $5);*/
-                                   }
-        | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
-                                   {
-	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
-	      AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($6);
-	      $$ = ast_assignment_make(&id->header, &id2->header);
-                                   }
-        | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
-                                   {
-				/*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);*/
-				/*$$ = ast_assignment_make(&id->header, $6);*/
-                                   }
-        ;
+		tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+		{
+		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+		    AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($4);
+		    $$ = ast_assignment_make(&id->header, &id2->header);
+		}
+        |	tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+		{
+		    /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);*/
+		    /*$$ = ast_assignment_make(&id->header, $4);*/
+		}
+        | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+		{
+		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+		    AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
+		    $$ = ast_assignment_make(&id->header, &id2->header);
+		}
+        | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+		{
+		    /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
+		    /*$$ = ast_assignment_make(&id->header, $5);*/
+		}
+        |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+		{
+		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+		    AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
+		    $$ = ast_assignment_make(&id->header, &id2->header);
+		}
+        |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+		{
+		    /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
+		    /*$$ = ast_assignment_make(&id->header, $5);*/
+		}
+        | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+		{
+		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
+		    AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($6);
+		    $$ = ast_assignment_make(&id->header, &id2->header);
+		}
+        | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+		{
+		    /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);*/
+		    /*$$ = ast_assignment_make(&id->header, $6);*/
+		}
+		;
 
 token_lit:
           lit_numerico
@@ -403,11 +403,11 @@ comando_shift:
 
 comando_entrada_saida:
           TK_PR_INPUT expressao {
-            $$ = ast_io_make($2, true);
+              $$ = ast_input_make($2);
           }
         | TK_PR_OUTPUT lista_expressoes      %prec "end_list_expressions" {
-            $$ = ast_io_make($2, false);
-        }
+              $$ = ast_output_make($2);
+          }
         ;
 
 chamada_func:
@@ -433,12 +433,12 @@ comando_atribuicao:
 	      $$ = ast_assignment_make(&id->header, $3);
 	  }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
-	      AST_ExprHeader *vec = ast_indexed_vector_make($1, $3);
+	      AST_Header *vec = ast_indexed_vector_make($1, $3);
 	      $$ = ast_assignment_make(vec, $6);
 	  }
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
 	      AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
-	      AST_ExprHeader *id = ast_identifier_make($3);
+	      AST_Header *id = ast_identifier_make($3);
 	      $$ = ast_assignment_user_type_make(user_type_id, id, $5);
 	  }
         ;

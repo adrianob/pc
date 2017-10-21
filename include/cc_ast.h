@@ -65,24 +65,23 @@ static char *g_ast_names[] = {
 };
 
 typedef struct comp_dict_item comp_dict_item_t;
-typedef struct AST_CommandHeader AST_CommandHeader;
-typedef struct AST_ExprHeader AST_ExprHeader;
+typedef struct AST_Header AST_Header;
 typedef struct AST_Identifier AST_Identifier;
 typedef struct AST_Literal AST_Literal;
 
-typedef struct AST_ExprHeader {
-    int type;
-    struct AST_ExprHeader *next;
-} AST_ExprHeader;
+typedef struct AST_Header {
+    int                type;
+    struct AST_Header *next;
+} AST_Header;
 
 typedef struct AST_Identifier {
-    AST_ExprHeader    header;
+    AST_Header        header;
     comp_dict_item_t *entry;
 } AST_Identifier;
 
 typedef struct AST_Function {
     int type;
-    AST_CommandHeader *first_command;
+    AST_Header          *first_command;
     AST_Identifier      *identifier;
     struct AST_Function *next;
 } AST_Function;
@@ -116,20 +115,15 @@ static void ast_program_free(AST_Program *p) {
 /* ------------------------------------------------
  * Commands
  * ------------------------------------------------ */
-typedef struct AST_CommandHeader {
-    int type;
-    struct AST_CommandHeader *next;
-} AST_CommandHeader ;
-
 typedef struct AST_IfElse {
-    AST_CommandHeader     header;
-    AST_ExprHeader       *condition;
-    AST_CommandHeader    *then_command;
-    AST_CommandHeader    *else_command;
+    AST_Header     header;
+    AST_Header    *condition;
+    AST_Header    *then_command;
+    AST_Header    *else_command;
 } AST_IfElse;
 
-static AST_CommandHeader *ast_if_make(AST_ExprHeader *cond, AST_CommandHeader *then_command,
-				      AST_CommandHeader *else_command) {
+static AST_Header *ast_if_make(AST_Header *cond, AST_Header *then_command,
+				      AST_Header *else_command) {
     AST_IfElse *i = calloc(1, sizeof(*i));
     i->header.type = AST_IF_ELSE;
     i->condition = cond;
@@ -139,13 +133,13 @@ static AST_CommandHeader *ast_if_make(AST_ExprHeader *cond, AST_CommandHeader *t
 }
 
 typedef struct AST_Shift {
-    AST_CommandHeader    header;
+    AST_Header           header;
     AST_Identifier      *identifier;
     AST_Literal         *number;
-    bool shift_right;
+    bool                 shift_right;
 } AST_Shift;
 
-static AST_CommandHeader *ast_shift_make(AST_Identifier *id, AST_Literal *number, bool shift_right) {
+static AST_Header *ast_shift_make(AST_Identifier *id, AST_Literal *number, bool shift_right) {
     AST_Shift *s = calloc(1, sizeof(*s));
     s->header.type = (shift_right) ? AST_SHIFT_RIGHT : AST_SHIFT_LEFT;
     s->identifier = id;
@@ -154,13 +148,13 @@ static AST_CommandHeader *ast_shift_make(AST_Identifier *id, AST_Literal *number
 }
 
 typedef struct AST_While {
-    AST_CommandHeader  header;
-    AST_ExprHeader    *condition;
-    AST_CommandHeader *first_command;
+    AST_Header         header;
+    AST_Header        *condition;
+    AST_Header        *first_command;
     bool               is_do_while;
 } AST_While;
 
-static AST_CommandHeader *ast_while_make(AST_ExprHeader *cond, AST_CommandHeader *first_command) {
+static AST_Header *ast_while_make(AST_Header *cond, AST_Header *first_command) {
     AST_While *w = calloc(1, sizeof(*w));
     w->header.type = AST_WHILE_DO;
     w->condition = cond;
@@ -169,12 +163,12 @@ static AST_CommandHeader *ast_while_make(AST_ExprHeader *cond, AST_CommandHeader
 }
 
 typedef struct AST_Switch {
-    AST_CommandHeader  header;
-    AST_ExprHeader    *condition;
-    AST_CommandHeader *first_command;
+    AST_Header     header;
+    AST_Header    *condition;
+    AST_Header    *first_command;
 } AST_Switch;
 
-static AST_CommandHeader *ast_switch_make(AST_ExprHeader *cond, AST_CommandHeader *first_command) {
+static AST_Header *ast_switch_make(AST_Header *cond, AST_Header *first_command) {
     AST_Switch *s = calloc(1, sizeof(*s));
     s->header.type = AST_SWITCH;
     s->condition = cond;
@@ -187,29 +181,39 @@ static void ast_while_free(AST_While *w) {
 }
 
 typedef struct AST_Input {
-    AST_CommandHeader  header;
-    AST_ExprHeader    *expr;
-    bool               is_input;
+    AST_Header     header;
+    AST_Header    *expr;
 } AST_Input;
 
-static AST_CommandHeader *ast_io_make(AST_ExprHeader *expr, bool is_input) {
-    AST_Input *w = calloc(1, sizeof(*w));
-    w->header.type = is_input ? AST_INPUT : AST_OUTPUT;
-    w->expr = expr;
-    return &w->header;
+static AST_Header *ast_input_make(AST_Header *expr) {
+    AST_Input *i = calloc(1, sizeof(*i));
+    i->header.type = AST_INPUT;
+    i->expr = expr;
+    return &i->header;
+}
+
+typedef struct AST_Output {
+    AST_Header  header;
+    AST_Header    *expr;
+} AST_Output;
+
+static AST_Header *ast_output_make(AST_Header *expr) {
+    AST_Output *o = calloc(1, sizeof(*o));
+    o->header.type = AST_OUTPUT;
+    o->expr = expr;
+    return &o->header;
 }
 
 typedef struct AST_Assignment {
-    AST_CommandHeader  header;
+    AST_Header         header;
     // This field is NULL when is_user_type_assignment is false
     AST_Identifier    *user_type_identifier;
-    AST_ExprHeader    *identifier;
-    AST_ExprHeader    *expr;
-
-    bool is_user_type_assignment;
+    AST_Header        *identifier;
+    AST_Header        *expr;
+    bool               is_user_type_assignment;
 } AST_Assignment;
 
-static AST_CommandHeader *ast_assignment_make(AST_ExprHeader *id, AST_ExprHeader *expr) {
+static AST_Header *ast_assignment_make(AST_Header *id, AST_Header *expr) {
     AST_Assignment *a = calloc(1, sizeof(*a));
     a->header.type = AST_ATRIBUICAO;
     a->identifier = id;
@@ -217,8 +221,8 @@ static AST_CommandHeader *ast_assignment_make(AST_ExprHeader *id, AST_ExprHeader
     return &a->header;
 }
 
-static AST_CommandHeader *ast_assignment_user_type_make(AST_Identifier *user_type_id,
-							AST_ExprHeader *id, AST_ExprHeader *expr) {
+static AST_Header *ast_assignment_user_type_make(AST_Identifier *user_type_id,
+							AST_Header *id, AST_Header *expr) {
     AST_Assignment *a = calloc(1, sizeof(*a));
     a->header.type = AST_ATRIBUICAO;
     a->is_user_type_assignment = true;
@@ -229,11 +233,11 @@ static AST_CommandHeader *ast_assignment_user_type_make(AST_Identifier *user_typ
 }
 
 typedef struct AST_Return {
-    AST_CommandHeader header;
-    AST_ExprHeader   *expr;
+    AST_Header    header;
+    AST_Header   *expr;
 } AST_Return;
 
-static AST_CommandHeader *ast_return_make(AST_ExprHeader *expr) {
+static AST_Header *ast_return_make(AST_Header *expr) {
     AST_Return *r = calloc(1, sizeof(*r));
     r->header.type = AST_RETURN;
     r->expr = expr;
@@ -241,11 +245,11 @@ static AST_CommandHeader *ast_return_make(AST_ExprHeader *expr) {
 }
 
 typedef struct AST_Block {
-    AST_CommandHeader header;
-    AST_CommandHeader *first_command;
+    AST_Header  header;
+    AST_Header *first_command;
 } AST_Block;
 
-static AST_CommandHeader *ast_block_make(AST_CommandHeader *cmd) {
+static AST_Header *ast_block_make(AST_Header *cmd) {
     AST_Block *b = calloc(1, sizeof(*b));
     b->header.type = AST_BLOCO;
     b->first_command = cmd;
@@ -257,30 +261,30 @@ static void ast_block_free(AST_Block *b) {
 }
 
 typedef struct AST_Break {
-    AST_CommandHeader header;
+    AST_Header header;
 } AST_Break;
 
-static AST_CommandHeader *ast_break_make() {
+static AST_Header *ast_break_make() {
     AST_Break *b = calloc(1, sizeof(*b));
     b->header.type = AST_BREAK;
     return &b->header;
 }
 
-static void ast_break_free(AST_CommandHeader *b) {
+static void ast_break_free(AST_Header *b) {
     free(b);
 }
 
 typedef struct AST_Continue {
-    AST_CommandHeader header;
+    AST_Header header;
 } AST_Continue;
 
-static AST_CommandHeader *ast_continue_make() {
+static AST_Header *ast_continue_make() {
     AST_Continue *c = calloc(1, sizeof(*c));
     c->header.type = AST_CONTINUE;
     return &c->header;
 }
 
-static void ast_continue_free(AST_CommandHeader *c) {
+static void ast_continue_free(AST_Header *c) {
     free(c);
 }
 
@@ -290,7 +294,7 @@ static void ast_continue_free(AST_CommandHeader *c) {
  * ------------------------------------------------ */
 
 
-static AST_ExprHeader *ast_identifier_make(comp_dict_item_t *entry) {
+static AST_Header *ast_identifier_make(comp_dict_item_t *entry) {
     AST_Identifier *i = calloc(1, sizeof(*i));
     i->header.type = AST_IDENTIFICADOR;
     i->entry = entry;
@@ -302,11 +306,11 @@ static void ast_identifier_free(AST_Identifier *i) {
 }
 
 typedef struct AST_Literal {
-    AST_ExprHeader    header;
+    AST_Header    header;
     comp_dict_item_t *entry;
 } AST_Literal;
 
-static AST_ExprHeader *ast_literal_make(comp_dict_item_t *entry) {
+static AST_Header *ast_literal_make(comp_dict_item_t *entry) {
     AST_Literal *l = calloc(1, sizeof(*l));
     l->header.type = AST_LITERAL;
     l->entry = entry;
@@ -314,12 +318,12 @@ static AST_ExprHeader *ast_literal_make(comp_dict_item_t *entry) {
 }
 
 typedef struct AST_AritExpr {
-    AST_ExprHeader   header;
-    AST_ExprHeader  *first;
-    AST_ExprHeader  *second;
+    AST_Header   header;
+    AST_Header  *first;
+    AST_Header  *second;
 } AST_AritExpr;
 
-static AST_ExprHeader *ast_arit_expr_make(int op, AST_ExprHeader *lhs, AST_ExprHeader *rhs) {
+static AST_Header *ast_arit_expr_make(int op, AST_Header *lhs, AST_Header *rhs) {
     AST_AritExpr *a = calloc(1, sizeof(*a));
     a->header.type = op;
     a->first = lhs;
@@ -328,12 +332,12 @@ static AST_ExprHeader *ast_arit_expr_make(int op, AST_ExprHeader *lhs, AST_ExprH
 }
 
 typedef struct AST_LogicExpr {
-    AST_ExprHeader  header;
-    AST_ExprHeader  *first;
-    AST_ExprHeader  *second;
+    AST_Header  header;
+    AST_Header  *first;
+    AST_Header  *second;
 } AST_LogicExpr;
 
-static AST_ExprHeader *ast_logic_expr_make(int op, AST_ExprHeader *lhs, AST_ExprHeader *rhs) {
+static AST_Header *ast_logic_expr_make(int op, AST_Header *lhs, AST_Header *rhs) {
     AST_LogicExpr *a = calloc(1, sizeof(*a));
     a->header.type = op;
     a->first = lhs;
@@ -342,12 +346,12 @@ static AST_ExprHeader *ast_logic_expr_make(int op, AST_ExprHeader *lhs, AST_Expr
 }
 
 typedef struct AST_IndexedVector {
-    AST_ExprHeader  header;
+    AST_Header  header;
     AST_Identifier *identifier;
-    AST_ExprHeader *expr;
+    AST_Header *expr;
 } AST_IndexedVector;
 
-static AST_ExprHeader *ast_indexed_vector_make(comp_dict_item_t *entry, AST_ExprHeader *expr) {
+static AST_Header *ast_indexed_vector_make(comp_dict_item_t *entry, AST_Header *expr) {
     AST_IndexedVector *iv = calloc(1, sizeof(*iv));
     iv->header.type = AST_VETOR_INDEXADO;
     iv->identifier = (AST_Identifier*)ast_identifier_make(entry);
@@ -355,7 +359,7 @@ static AST_ExprHeader *ast_indexed_vector_make(comp_dict_item_t *entry, AST_Expr
     return &iv->header;
 }
 
-static void ast_expr_free(AST_ExprHeader *expr) {
+static void ast_expr_free(AST_Header *expr) {
     switch (expr->type) {
     case AST_IDENTIFICADOR: ast_identifier_free((AST_Identifier*)expr); break;
     default: Assert(false);
@@ -369,12 +373,12 @@ static void ast_indexed_vector_free(AST_IndexedVector *iv) {
 }
 
 typedef struct AST_FunctionCall {
-    AST_ExprHeader  header;
+    AST_Header  header;
     AST_Identifier *identifier;
-    AST_ExprHeader *first_param;
+    AST_Header *first_param;
 } AST_FunctionCall;
 
-static AST_ExprHeader *ast_function_call_make(comp_dict_item_t *entry, AST_ExprHeader *param) {
+static AST_Header *ast_function_call_make(comp_dict_item_t *entry, AST_Header *param) {
     AST_FunctionCall *f = calloc(1, sizeof(*f));
     f->header.type = AST_CHAMADA_DE_FUNCAO;
     f->identifier = (AST_Identifier*)ast_identifier_make(entry);

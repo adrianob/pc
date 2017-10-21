@@ -195,7 +195,7 @@ int main_avaliacao_etapa_2(int argc, char **argv) {
     return ret;
 }
 
-void print_expression_to_graph(void *parent, AST_ExprHeader *expr) {
+void print_expression_to_graph(void *parent, AST_Header *expr) {
     switch (expr->type) {
     case AST_IDENTIFICADOR: {
         AST_Identifier *ident = (AST_Identifier *)expr;
@@ -238,8 +238,7 @@ void print_expression_to_graph(void *parent, AST_ExprHeader *expr) {
     }
 }
 
-void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
-
+void print_command_to_graph(void *parent, AST_Header *cmd) {
     gv_declare(cmd->type, cmd, NULL);
     gv_connect(parent, cmd);
     switch (cmd->type) {
@@ -331,7 +330,7 @@ void print_ast_to_graph(AST_Program *program) {
         // Start printing list of commands from the function
         gv_declare(func->type, func, func->identifier->entry->key);
         gv_connect(func_parent, func);
-        AST_CommandHeader *cmd = func->first_command;
+        AST_Header *cmd = func->first_command;
         void *cmd_parent = func;
         while (cmd) {
             print_command_to_graph(cmd_parent, cmd);
