@@ -81,6 +81,7 @@ AST_Program *g_program = NULL;
 %type<ast_function>       decl_func;
 %type<ast_command_header> comando_if;
 %type<ast_command_header> comando_shift;
+%type<ast_command_header> comando_decl_var_init;
 %type<ast_command_header> comando_while;
 %type<ast_command_header> comando_do_while;
 %type<ast_command_header> comando_atribuicao;
@@ -266,13 +267,49 @@ comando_decl_var_2:
 
 comando_decl_var_init:
                                    tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+                                   {
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+	      AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($4);
+	      $$ = ast_assignment_make(&id->header, &id2->header);
+                                   }
         |                          tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+                                   {
+				/*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);*/
+				/*$$ = ast_assignment_make(&id->header, $4);*/
+                                   }
         | TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+                                   {
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+	      AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
+	      $$ = ast_assignment_make(&id->header, &id2->header);
+                                   }
         | TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+                                   {
+				/*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
+				/*$$ = ast_assignment_make(&id->header, $5);*/
+                                   }
         |              TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+                                   {
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+	      AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
+	      $$ = ast_assignment_make(&id->header, &id2->header);
+                                   }
         |              TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+                                   {
+				/*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
+				/*$$ = ast_assignment_make(&id->header, $5);*/
+                                   }
         | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+                                   {
+	      AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
+	      AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($6);
+	      $$ = ast_assignment_make(&id->header, &id2->header);
+                                   }
         | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+                                   {
+				/*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);*/
+				/*$$ = ast_assignment_make(&id->header, $6);*/
+                                   }
         ;
 
 token_lit:

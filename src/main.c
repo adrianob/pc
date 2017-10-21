@@ -200,6 +200,7 @@ void print_expression_to_graph(void *parent, AST_ExprHeader *expr) {
 
 void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
 
+  /*printf("%d\n", cmd->type);*/
     switch (cmd->type) {
     case AST_IF_ELSE: {
     gv_declare(cmd->type, cmd, NULL);
@@ -236,7 +237,15 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
     case AST_ATRIBUICAO: {
     gv_declare(cmd->type, cmd, NULL);
     gv_connect(parent, cmd);
-	AST_Assignment *assign = (AST_Assignment *)cmd;
+	  AST_Assignment *assign = (AST_Assignment *)cmd;
+	  AST_Literal *ident = (AST_Literal *)assign->identifier;
+	  AST_Literal *ident2 = (AST_Literal *)assign->expr;
+
+    gv_declare(AST_IDENTIFICADOR, ident, (const char *)ident->entry->key);
+    gv_connect(cmd, ident);
+
+    gv_declare(AST_IDENTIFICADOR, ident2, (const char *)ident2->entry->key);
+    gv_connect(cmd, ident2);
 	if (assign->is_user_type_assignment) {
 	    print_expression_to_graph(cmd, &assign->user_type_identifier->header);
 	}
