@@ -240,10 +240,10 @@ void print_expression_to_graph(void *parent, AST_ExprHeader *expr) {
 
 void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
 
+    gv_declare(cmd->type, cmd, NULL);
+    gv_connect(parent, cmd);
     switch (cmd->type) {
     case AST_IF_ELSE: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
         AST_IfElse *if_else = (AST_IfElse *)cmd;
 
         print_expression_to_graph(cmd, if_else->condition);
@@ -256,23 +256,16 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
     case AST_SHIFT_RIGHT: {
         AST_Shift *shift = (AST_Shift *)cmd;
 
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
-
         print_expression_to_graph(cmd, &shift->identifier->header);
         print_expression_to_graph(cmd, &shift->number->header);
     } break;
     case AST_WHILE_DO:
     case AST_DO_WHILE: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
         AST_While *w = (AST_While *)cmd;
         print_expression_to_graph(cmd, w->condition);
         print_command_to_graph(cmd, w->first_command);
     } break;
     case AST_ATRIBUICAO: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
         AST_Assignment *assign = (AST_Assignment *)cmd;
 
         if (assign->is_user_type_assignment) {
@@ -283,14 +276,10 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
         print_expression_to_graph(cmd, assign->expr);
     } break;
     case AST_RETURN: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
         AST_Return *ret = (AST_Return *)cmd;
         print_expression_to_graph(cmd, ret->expr);
     } break;
     case AST_BLOCO: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
         AST_Block *block = (AST_Block *)cmd;
         print_command_to_graph(cmd, block->first_command);
     } break;
@@ -309,8 +298,6 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
     case AST_SWITCH:
         break;
     case AST_CHAMADA_DE_FUNCAO: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
         AST_FunctionCall *funcall = (AST_FunctionCall *)cmd;
         print_expression_to_graph(cmd, &funcall->identifier->header);
         print_expression_to_graph(cmd, funcall->first_param);
@@ -318,8 +305,6 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
     // @Todo: Other AST types
     case AST_CONTINUE:
     case AST_BREAK: {
-        gv_declare(cmd->type, cmd, NULL);
-        gv_connect(parent, cmd);
         // No need to do anything, since this command does not have any
         // children.
     } break;
