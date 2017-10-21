@@ -284,10 +284,13 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
         print_command_to_graph(cmd, block->first_command);
     } break;
     case AST_INPUT: {
-        // @Todo
+        AST_Input *in = (AST_Input *)cmd;
+        print_expression_to_graph(cmd, in->expr);
     } break;
     case AST_OUTPUT: {
-        // @Todo
+        /*@TODO fix multiple expressions*/
+        AST_Input *in = (AST_Input *)cmd;
+        print_expression_to_graph(cmd, in->expr);
     } break;
     case AST_CASE:
         break;

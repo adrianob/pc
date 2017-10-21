@@ -172,6 +172,19 @@ static void ast_while_free(AST_While *w) {
     free(w);
 }
 
+typedef struct AST_Input {
+    AST_CommandHeader  header;
+    AST_ExprHeader    *expr;
+    bool               is_input;
+} AST_Input;
+
+static AST_CommandHeader *ast_io_make(AST_ExprHeader *expr, bool is_input) {
+    AST_Input *w = calloc(1, sizeof(*w));
+    w->header.type = is_input ? AST_INPUT : AST_OUTPUT;
+    w->expr = expr;
+    return &w->header;
+}
+
 typedef struct AST_Assignment {
     AST_CommandHeader  header;
     // This field is NULL when is_user_type_assignment is false

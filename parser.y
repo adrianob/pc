@@ -83,6 +83,7 @@ AST_Program *g_program = NULL;
 %type<ast_command_header> comando_shift;
 %type<ast_command_header> comando_decl_var_init;
 %type<ast_command_header> comando_while;
+%type<ast_command_header> comando_entrada_saida;
 %type<ast_command_header> comando_do_while;
 %type<ast_command_header> comando_atribuicao;
 %type<ast_command_header> comando_return;
@@ -396,8 +397,12 @@ comando_shift:
         ;
 
 comando_entrada_saida:
-          TK_PR_INPUT expressao
-        | TK_PR_OUTPUT lista_expressoes      %prec "end_list_expressions"
+          TK_PR_INPUT expressao {
+            $$ = ast_io_make($2, true);
+          }
+        | TK_PR_OUTPUT lista_expressoes      %prec "end_list_expressions" {
+            $$ = ast_io_make($2, false);
+        }
         ;
 
 chamada_func:
