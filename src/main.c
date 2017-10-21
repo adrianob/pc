@@ -201,13 +201,19 @@ void print_command_to_graph(void *parent, AST_CommandHeader *cmd) {
 
     /*printf("%d\n", cmd->type);*/
     switch (cmd->type) {
+    case AST_LITERAL: {
+        AST_Literal *literal = (AST_Literal *)cmd;
+        gv_declare(cmd->type, cmd, (const char *)literal->entry->key);
+        gv_connect(parent, cmd);
+    } break;
     case AST_IF_ELSE: {
         gv_declare(cmd->type, cmd, NULL);
         gv_connect(parent, cmd);
         AST_IfElse *if_else = (AST_IfElse *)cmd;
-        print_expression_to_graph(cmd, if_else->condition);
+
+        print_command_to_graph(cmd,(AST_CommandHeader *) if_else->condition);
         print_command_to_graph(cmd, if_else->then_command);
-        print_command_to_graph(cmd, if_else->else_command);
+        /*print_command_to_graph(cmd, if_else->else_command);*/
     } break;
     case AST_SHIFT_LEFT:
     case AST_SHIFT_RIGHT: {
