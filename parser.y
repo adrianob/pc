@@ -367,12 +367,16 @@ lista_comandos:
 
 comando_while:
         TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {
-            $$ = ast_while_make();
+            AST_Block *block = (AST_Block*)$6;
+            $$ = ast_while_make($3, block->first_command);
+            ast_block_free((AST_Block*)$6);
         };
 
 comando_do_while:
         TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')' {
-            $$ = ast_while_make();
+            AST_Block *block = (AST_Block*)$2;
+            $$ = ast_while_make($5, block->first_command);
+            ast_block_free((AST_Block*)$2);
         };
 
 comando_switch_case:
