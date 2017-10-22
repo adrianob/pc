@@ -287,9 +287,8 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
         print_expression_to_graph(cmd, in->expr);
     } break;
     case AST_OUTPUT: {
-        /*@TODO fix multiple expressions*/
-        AST_Input *in = (AST_Input *)cmd;
-        print_expression_to_graph(cmd, in->expr);
+        AST_Output *out = (AST_Output *)cmd;
+        print_expression_to_graph(cmd, out->expr);
     } break;
     case AST_CASE:
         break;

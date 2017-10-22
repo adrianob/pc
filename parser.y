@@ -78,6 +78,7 @@ AST_Program *g_program = NULL;
 %nonassoc ','
 
 %type<ast_function>  decl_func;
+%type<ast_header>    token_lit;
 %type<ast_header>    comando_if;
 %type<ast_header>    comando_shift;
 %type<ast_header>    comando_decl_var_init;
@@ -276,8 +277,8 @@ comando_decl_var_init:
 		}
         |	tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
 		{
-		    /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);*/
-		    /*$$ = ast_assignment_make(&id->header, $4);*/
+		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+        $$ = ast_assignment_make(&id->header, $4);
 		}
         | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
 		{
@@ -287,8 +288,8 @@ comando_decl_var_init:
 		}
         | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
 		{
-		    /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
-		    /*$$ = ast_assignment_make(&id->header, $5);*/
+		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+        $$ = ast_assignment_make(&id->header, $5);
 		}
         |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
 		{
@@ -298,8 +299,8 @@ comando_decl_var_init:
 		}
         |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
 		{
-		    /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
-		    /*$$ = ast_assignment_make(&id->header, $5);*/
+		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+        $$ = ast_assignment_make(&id->header, $5);
 		}
         | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
 		{
@@ -309,17 +310,17 @@ comando_decl_var_init:
 		}
         | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
 		{
-		    /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);*/
-		    /*$$ = ast_assignment_make(&id->header, $6);*/
+		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
+        $$ = ast_assignment_make(&id->header, $6);
 		}
 		;
 
 token_lit:
           lit_numerico
-        | TK_LIT_FALSE
-        | TK_LIT_TRUE
-        | TK_LIT_CHAR
-        | TK_LIT_STRING
+        | TK_LIT_FALSE {$$ = ast_literal_make($1);}
+        | TK_LIT_TRUE {$$ = ast_literal_make($1);}
+        | TK_LIT_CHAR {$$ = ast_literal_make($1);}
+        | TK_LIT_STRING {$$ = ast_literal_make($1);}
         ;
 
 lit_numerico:
