@@ -154,9 +154,9 @@ typedef struct AST_While {
     bool               is_do_while;
 } AST_While;
 
-static AST_Header *ast_while_make(AST_Header *cond, AST_Header *first_command) {
+static AST_Header *ast_while_make(AST_Header *cond, AST_Header *first_command, bool is_do_while) {
     AST_While *w = calloc(1, sizeof(*w));
-    w->header.type = AST_WHILE_DO;
+    w->header.type = (is_do_while) ? AST_DO_WHILE : AST_WHILE_DO;
     w->condition = cond;
     w->first_command = first_command;
     return &w->header;

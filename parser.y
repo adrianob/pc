@@ -211,15 +211,21 @@ bloco_comandos:
         ;
 
 seq_comandos:
-	  comando ';' {/* Default value for bison is always $$ = $1, so you dont have to write that */ }
+	  comando ';'
         | comando_case
         | seq_comandos comando ';' {
-	      $$ = $2;
-	      $$->next = $1;
+	      $$ = $1;
+	      // Jump to the end of list and append $2.
+	      AST_Header *header = $$;
+	      while (header->next) header = header->next;
+	      header->next = $2;
 	  } 
         | seq_comandos comando_case {
-	      $$ = $2;
-	      $$->next = $1;
+	      $$ = $1;
+	      // Jump to the end of list and append $2.
+	      AST_Header *header = $$;
+	      while (header->next) header = header->next;
+	      header->next = $2;
 	  }
         ;
 
@@ -371,14 +377,14 @@ lista_comandos:
 comando_while:
         TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {
             AST_Block *block = (AST_Block*)$6;
-            $$ = ast_while_make($3, block->first_command);
+            $$ = ast_while_make($3, block->first_command, false);
             ast_block_free((AST_Block*)$6);
         };
 
 comando_do_while:
         TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')' {
             AST_Block *block = (AST_Block*)$2;
-            $$ = ast_while_make($5, block->first_command);
+            $$ = ast_while_make($5, block->first_command, true);
             ast_block_free((AST_Block*)$2);
         };
 
@@ -424,11 +430,10 @@ lista_expressoes:
           expressao
         | lista_expressoes ',' expressao {
               $$ = $1;
-	      // Jump to the end of the $1 expression list.
-	      AST_Header *expr = $$;
-	      while (expr->next) expr = expr->next;
-	      // Add $3 to the end.
-              expr->next = $3;
+	      // Jump to the end of the $1 expression list and append $3.
+	      AST_Header *header = $$;
+	      while (header->next) header = header->next;
+              header->next = $3;
           }
         ;
 
