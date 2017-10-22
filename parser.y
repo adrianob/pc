@@ -115,6 +115,9 @@ AST_Program *g_program = NULL;
 %type<ast_header>    comando_decl_var;
 %type<ast_header>    comando_while;
 %type<ast_header>    comando_entrada_saida;
+%type<ast_header>    comando_controle_fluxo;
+%type<ast_header>    comando_for;
+%type<ast_header>    comando_foreach;
 %type<ast_header>    comando_switch_case;
 %type<ast_header>    comando_do_while;
 %type<ast_header>    comando_atribuicao;
@@ -133,6 +136,7 @@ AST_Program *g_program = NULL;
 %type<ast_header>    expressao_arit_operando;
 %type<ast_header>    chamada_func;
 %type<ast_header>    lista_expressoes;
+%type<ast_header>    lista_comandos;
 %type<ast_header>    lit_numerico;
 %type<ast_identifier>     cabecalho;
 %type<op>                 operator_relacional;
@@ -402,10 +406,23 @@ comando_if:
 
 /* @Todo: Finish for and foreach */
 comando_foreach:
-        TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos;
+        TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos {
+          /*AST_Block *block = (AST_Block*)$7;*/
+          /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
+          /*$$ = ast_foreach_make(id, $5, block->first_command);*/
+          /*ast_block_free((AST_Block*)$7);*/
+          //@TODO remover para proxima etapa
+          $$ = NULL;
+        };
 
 comando_for:
-        TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos;
+        TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos{
+          /*AST_Block *block = (AST_Block*)$9;*/
+          /*$$ = ast_for_make($5, block->first_command, $3, $7);*/
+          /*ast_block_free((AST_Block*)$9);*/
+          //@TODO remover para proxima etapa
+          $$ = NULL;
+        };
 
 lista_comandos:
           comando_sem_entrada_saida

@@ -192,6 +192,40 @@ static AST_Header *ast_input_make(AST_Header *expr) {
     return &i->header;
 }
 
+typedef struct AST_For {
+    AST_Header        header;
+    AST_Header        *first_command;
+    AST_Header        *list_first_command;
+    AST_Header        *second_list_first_command;
+    AST_Header        *expr;
+} AST_For;
+
+static AST_Header *ast_for_make(AST_Header *expr, AST_Header *first_command, AST_Header *list_first_command, AST_Header *second_list_first_command) {
+    AST_For *o = calloc(1, sizeof(*o));
+    o->header.type = AST_FOR;
+    o->expr = expr;
+    o->first_command = first_command;
+    o->list_first_command = list_first_command;
+    o->second_list_first_command = second_list_first_command;
+    return &o->header;
+}
+
+typedef struct AST_Foreach {
+    AST_Header        header;
+    AST_Identifier    *identifier;
+    AST_Header        *first_command;
+    AST_Header        *expr;
+} AST_Foreach;
+
+static AST_Header *ast_foreach_make(AST_Identifier *identifier, AST_Header *expr, AST_Header *first_command) {
+    AST_Foreach *o = calloc(1, sizeof(*o));
+    o->header.type = AST_FOREACH;
+    o->expr = expr;
+    o->identifier = identifier;
+    o->first_command = first_command;
+    return &o->header;
+}
+
 typedef struct AST_Output {
     AST_Header  header;
     AST_Header    *expr;
