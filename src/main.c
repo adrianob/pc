@@ -1,6 +1,7 @@
 #include "main.h"
 #include "cc_ast.h"
 #include "macros.h"
+#include "table_symbol.h"
 
 extern AST_Program *g_program;
 extern FILE *yyin;
@@ -199,12 +200,42 @@ void print_expression_to_graph(void *parent, AST_Header *expr) {
     switch (expr->type) {
     case AST_IDENTIFICADOR: {
         AST_Identifier *ident = (AST_Identifier *)expr;
-        gv_declare(expr->type, expr, (const char *)ident->entry->key);
+
+        TableSymbol *symbol = ident->entry->value;
+        gv_declare(expr->type, expr, symbol->value_string_or_ident);
         gv_connect(parent, expr);
     } break;
     case AST_LITERAL: {
         AST_Literal *literal = (AST_Literal *)expr;
-        gv_declare(expr->type, expr, (const char *)literal->entry->key);
+        TableSymbol *symbol = literal->entry->value;
+        switch (symbol->token_type) {
+        case POA_LIT_INT: {
+            char str[100];
+            sprintf(str, "%d", symbol->value_int);
+            gv_declare(expr->type, expr, str);
+        } break;
+        case POA_LIT_FLOAT: {
+            char str[100];
+            snprintf(str, 100, "%f", symbol->value_float);
+            gv_declare(expr->type, expr, str);
+        } break;
+        case POA_LIT_CHAR: {
+            char str[2];
+            str[0] = symbol->value_char;
+            str[1] = '\0';
+            gv_declare(expr->type, expr, str);
+        } break;
+        case POA_LIT_STRING: {
+            gv_declare(expr->type, expr, (char *)symbol->value_string_or_ident);
+        } break;
+        case POA_LIT_BOOL: {
+            if (symbol->value_bool) {
+                gv_declare(expr->type, expr, "TRUE");
+            } else {
+                gv_declare(expr->type, expr, "FALSE");
+            }
+        } break;
+        }
         gv_connect(parent, expr);
     } break;
     case AST_ARIM_SUBTRACAO:
@@ -214,7 +245,7 @@ void print_expression_to_graph(void *parent, AST_Header *expr) {
     case AST_ARIM_SOMA: {
         gv_declare(expr->type, expr, NULL);
         gv_connect(parent, expr);
-        AST_AritExpr * express = (AST_AritExpr *)expr;
+        AST_AritExpr *express = (AST_AritExpr *)expr;
         print_expression_to_graph(expr, express->first);
         print_expression_to_graph(expr, express->second);
     } break;
@@ -229,7 +260,7 @@ void print_expression_to_graph(void *parent, AST_Header *expr) {
     case AST_LOGICO_OU: {
         gv_declare(expr->type, expr, NULL);
         gv_connect(parent, expr);
-        AST_LogicExpr * express = (AST_LogicExpr *)expr;
+        AST_LogicExpr *express = (AST_LogicExpr *)expr;
         print_expression_to_graph(expr, express->first);
         print_expression_to_graph(expr, express->second);
     } break;
@@ -247,8 +278,8 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
 
         print_expression_to_graph(cmd, if_else->condition);
         print_command_to_graph(cmd, if_else->then_command);
-        if(if_else->else_command){
-          print_command_to_graph(cmd, if_else->else_command);
+        if (if_else->else_command) {
+            print_command_to_graph(cmd, if_else->else_command);
         }
     } break;
     case AST_SHIFT_LEFT:
@@ -327,7 +358,8 @@ void print_ast_to_graph(AST_Program *program) {
         assert(func->type == AST_FUNCAO);
 
         // Start printing list of commands from the function
-        gv_declare(func->type, func, func->identifier->entry->key);
+        TableSymbol *symbol = func->identifier->entry->value;
+        gv_declare(func->type, func, symbol->value_string_or_ident);
         gv_connect(func_parent, func);
         AST_Header *cmd = func->first_command;
         void *cmd_parent = func;
