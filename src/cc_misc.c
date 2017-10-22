@@ -103,8 +103,12 @@ void print_expression_to_graph(void *parent, AST_Header *expr) {
 }
 
 void print_command_to_graph(void *parent, AST_Header *cmd) {
-    gv_declare(cmd->type, cmd, NULL);
-    gv_connect(parent, cmd);
+    if(cmd->type != AST_NOCODE){
+      gv_declare(cmd->type, cmd, NULL);
+      gv_connect(parent, cmd);
+    } else{
+      gv_connect(parent, cmd->next);
+    }
 
     switch (cmd->type) {
     case AST_IF_ELSE: {
@@ -167,6 +171,8 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
     case AST_FOR:
         break;
     case AST_FOREACH:
+        break;
+    case AST_NOCODE:
         break;
     case AST_SWITCH: {
         AST_Switch *s = (AST_Switch *)cmd;
