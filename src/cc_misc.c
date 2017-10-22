@@ -105,6 +105,7 @@ void print_expression_to_graph(void *parent, AST_Header *expr) {
 void print_command_to_graph(void *parent, AST_Header *cmd) {
     gv_declare(cmd->type, cmd, NULL);
     gv_connect(parent, cmd);
+
     switch (cmd->type) {
     case AST_IF_ELSE: {
         AST_IfElse *if_else = (AST_IfElse *)cmd;
@@ -173,8 +174,15 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
     } break;
     case AST_CHAMADA_DE_FUNCAO: {
         AST_FunctionCall *funcall = (AST_FunctionCall *)cmd;
-        print_expression_to_graph(cmd, &funcall->identifier->header);
-        print_expression_to_graph(cmd, funcall->first_param);
+	print_expression_to_graph(cmd, &funcall->identifier->header);
+
+	void *param_parent = funcall;
+	AST_Header *param = funcall->first_param;
+	while (param) {
+	    print_expression_to_graph(param_parent, param);
+	    param_parent = param;
+	    param = param->next;
+	}
     } break;
     case AST_CONTINUE:
     case AST_BREAK: {
