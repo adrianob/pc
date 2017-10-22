@@ -9,6 +9,7 @@
 #include "table_symbol.h"
 #include "cc_dict.h"
 #include "parser.h" //arquivo automaticamente gerado pelo bison
+#include "macros.h"
 
 static inline char *dup_without_first_and_last(char *str) {
     char *new_str = strdup(str+1); //remove first char
@@ -109,11 +110,13 @@ static void add_to_dict(char *lexeme, int line_number, int token_type) {
     char *key = calloc(key_size, 1);
     snprintf(key, key_size, "%s-%d", lexeme, token_type); // append the lexem and the token type together.
 
-    // keep only last entry
-    void *val = dict_remove(dict, key);
-    table_symbol_free(val);
-
-    dict_put(dict, key, symbol);
+    if (dict_get_entry(dict, key) != NULL) {
+        // Entry already exists. Replace it by maintaining the correct pointer value.
+        void *old_val = dict_replace(dict, key, symbol);  
+        table_symbol_free(old_val);
+    } else {
+        dict_put(dict, key, symbol);
+    }
 
     // Add the pointer to the entry to yylval
     yylval.valor_lexico = dict_get_entry(dict, key);

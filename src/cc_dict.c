@@ -218,6 +218,21 @@ comp_dict_item_t *dict_get_entry(const comp_dict_t *dict, char *key) {
     return NULL;
 }
 
+void *dict_replace(comp_dict_t *dict, char *key, void *value) {
+    if (dict == NULL || dict->data == NULL || key == NULL || value == NULL) {
+        ERRO("At least one parameter is NULL");
+    }
+
+    comp_dict_item_t *entry = dict_get_entry(dict, key);
+    if (entry) {
+	void *old_val = entry->value;
+	entry->value = value;
+	return old_val;
+    } else {
+        ERRO("The entry does not exist.");
+    }
+}
+
 void *dict_remove(comp_dict_t *dict, char *key) {
     if (dict == NULL || dict->data == NULL || key == NULL) {
         ERRO("At least one parameter is NULL");

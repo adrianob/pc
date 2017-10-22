@@ -109,6 +109,19 @@ comp_dict_item_t *dict_get_entry(const comp_dict_t *dict, char *key);
 void *dict_remove(comp_dict_t *dict, char *key);
 
 /*
+ * Função: dict_replace, remove o antigo valor e coloca o novo valor no lugar.
+ * Essa funcao preserva o pointeiro. Recebe três parâmetros: o parâmetro _dict_ 
+ * é um ponteiro * para a tabela de símbolos da qual será obtida a entrada (este
+ * ponteiro deve ser obrigatoriamente um retornado pela função
+ * dict_new); o parâmetro _key_ é a chave da entrada na tabela de
+ * símbolos que será removida e o parâmetro _value_ é o novo valor a ser colocado
+ * na tabela. O valor retorno é o ponteiro que foi informado no momento do dict_put, 
+ * e deve ser liberado pelo usuário. Caso qualquer um dos parâmetros seja NULL ou a
+ * entrada com chave _key_ nao exista, a função aborta a execução do programa.
+ */
+void *dict_replace(comp_dict_t *dict, char *key, void *value);
+
+/*
  * Função: dict_debug_print, usada somente para visualizar os
  * ponteiros do dict.
  */

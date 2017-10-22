@@ -33,7 +33,7 @@ void print_expression_to_graph(void *parent, AST_Header *expr) {
     switch (expr->type) {
     case AST_IDENTIFICADOR: {
         AST_Identifier *ident = (AST_Identifier *)expr;
-
+	
         TableSymbol *symbol = ident->entry->value;
         gv_declare(expr->type, expr, symbol->value_string_or_ident);
         gv_connect(parent, expr);
@@ -153,11 +153,12 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
     } break;
     case AST_OUTPUT: {
         AST_Output *out = (AST_Output *)cmd;
-	void *parent = out;
+
+	void *expr_parent = out;
 	AST_Header *expr = out->expr;
 	while (expr) {
-	    print_expression_to_graph(parent, expr);
-	    parent = expr;
+	    print_expression_to_graph(expr_parent, expr);
+	    expr_parent = expr;
 	    expr = expr->next;
 	}
     } break;
