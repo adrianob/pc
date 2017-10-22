@@ -23,6 +23,7 @@
 	AST_TYPE(AST_OUTPUT,              "Output"),		\
 	AST_TYPE(AST_ATRIBUICAO,          "Assignment"),	\
 	AST_TYPE(AST_RETURN,              "Return"),		\
+	AST_TYPE(AST_NOCODE,              "Nocode"),		\
 	AST_TYPE(AST_BLOCO,               "Block"),		\
 	AST_TYPE(AST_BREAK,               "Break"),		\
 	AST_TYPE(AST_CONTINUE,            "Continue"),	        \
@@ -241,6 +242,16 @@ static AST_Header *ast_return_make(AST_Header *expr) {
     AST_Return *r = calloc(1, sizeof(*r));
     r->header.type = AST_RETURN;
     r->expr = expr;
+    return &r->header;
+}
+
+typedef struct AST_Nocode {
+    AST_Header    header;
+} AST_Nocode;
+
+static AST_Header *ast_nocode_make() {
+    AST_Nocode *r = calloc(1, sizeof(*r));
+    r->header.type = AST_NOCODE;
     return &r->header;
 }
 

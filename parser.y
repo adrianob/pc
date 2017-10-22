@@ -81,6 +81,7 @@ AST_Program *g_program = NULL;
 %type<ast_header>    token_lit;
 %type<ast_header>    comando_case;
 %type<ast_header>    comando_if;
+%type<ast_header>    comando_decl_var;
 %type<ast_header>    comando_shift;
 %type<ast_header>    comando_decl_var_init;
 %type<ast_header>    comando_while;
@@ -264,9 +265,21 @@ comando_break:  TK_PR_BREAK {
 
 comando_decl_var:
                                    comando_decl_var_2
+                                   {
+                                    $$ = ast_nocode_make();
+                                   }
         | TK_PR_STATIC             comando_decl_var_2
+                                   {
+                                    $$ = ast_nocode_make();
+                                   }
         |              TK_PR_CONST comando_decl_var_2
+                                   {
+                                    $$ = ast_nocode_make();
+                                   }
         | TK_PR_STATIC TK_PR_CONST comando_decl_var_2
+                                   {
+                                    $$ = ast_nocode_make();
+                                   }
         ;
 
 comando_decl_var_2:
