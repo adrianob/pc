@@ -1,0 +1,6 @@
+int soma(int a, int b) {
+  int resultado;
+  resultado = a + b;
+  output resultado;
+  return resultado;
+}

@@ -1,0 +1,18 @@
+float global_temp;
+
+int find(int a, int b) {
+  float resultado;
+  resultado = (a + b) / global_temp;
+  global_temp = global_temp * 0.9;
+  bool done;
+  done = global_temp >= 0.1;
+  not_done = global_temp <= 0.1;
+  if( done != not_done ) then {
+    find(resultado, b);
+  };
+  return resultado;
+}
+
+int main(){
+  find(1, 5*6);
+}
