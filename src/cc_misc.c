@@ -115,7 +115,11 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
         AST_IfElse *if_else = (AST_IfElse *)cmd;
 
         print_expression_to_graph(cmd, if_else->condition);
-        print_command_to_graph(cmd, if_else->then_command);
+
+	if (if_else->then_command) {
+	    print_command_to_graph(cmd, if_else->then_command);
+	}
+
         if (if_else->else_command) {
             print_command_to_graph(cmd, if_else->else_command);
         }
@@ -149,7 +153,13 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
     } break;
     case AST_BLOCO: {
         AST_Block *block = (AST_Block *)cmd;
-        print_command_to_graph(cmd, block->first_command);
+	AST_Header *block_cmd = block->first_command;
+	void *block_cmd_parent = block;
+	while (block_cmd) {
+	    print_command_to_graph(block_cmd_parent, block_cmd);
+	    block_cmd_parent = block_cmd;
+	    block_cmd = block_cmd->next;
+	}
     } break;
     case AST_INPUT: {
         AST_Input *in = (AST_Input *)cmd;
