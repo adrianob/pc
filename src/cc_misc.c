@@ -3,6 +3,7 @@
 #include "main.h"
 #include "table_symbol.h"
 #include "cc_ast.h"
+#include "macros.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -151,7 +152,13 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
     } break;
     case AST_OUTPUT: {
         AST_Output *out = (AST_Output *)cmd;
-        print_expression_to_graph(cmd, out->expr);
+	void *parent = out;
+	AST_Header *expr = out->expr;
+	while (expr) {
+	    print_expression_to_graph(parent, expr);
+	    parent = expr;
+	    expr = expr->next;
+	}
     } break;
     case AST_CASE:
         break;
@@ -186,7 +193,7 @@ void print_ast_to_graph(AST_Program *program) {
     void *func_parent = program;
     AST_Function *func = program->first_func;
     while (func) {
-        assert(func->type == AST_FUNCAO);
+        Assert(func->type == AST_FUNCAO);
 
         // Start printing list of commands from the function
         TableSymbol *symbol = func->identifier->entry->value;
@@ -205,6 +212,7 @@ void print_ast_to_graph(AST_Program *program) {
         func = func->next;
     }
 }
+
 void main_finalize(void) {
     gv_init(NULL);
     print_ast_to_graph(g_program);

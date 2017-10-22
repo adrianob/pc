@@ -423,8 +423,12 @@ chamada_func:
 lista_expressoes:
           expressao
         | lista_expressoes ',' expressao {
-              $$ = $3;
-              $$->next = $1;
+              $$ = $1;
+	      // Jump to the end of the $1 expression list.
+	      AST_Header *expr = $$;
+	      while (expr->next) expr = expr->next;
+	      // Add $3 to the end.
+              expr->next = $3;
           }
         ;
 
