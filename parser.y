@@ -11,6 +11,35 @@
 #include "table_symbol.h"
 
 AST_Program *g_program = NULL;
+
+/* AST_Header *remove_discards_from_header_list(AST_Header *header_list) { */
+/*     // Remove from the front of the list */
+/*     while (header_list && header_list->type == AST_DISCARD) { */
+/* 	AST_Header *h = header_list; */
+/* 	header_list = header_list->next; */
+/* 	ast_header_free(h); */
+/*     } */
+
+/*     if (header_list == NULL) */
+/*         return NULL; */
+
+/*     AST_Header *prev = header_list; */
+/*     AST_Header *curr = prev->next; */
+/*     while (curr) { */
+/* 	if (curr->type == AST_DISCARD) { */
+/* 	    AST_Header *h = curr; */
+/* 	    prev->next = curr->next; */
+/* 	    curr = prev->next; */
+/* 	    ast_header_free(h); */
+/* 	} else { */
+/* 	    prev = curr; */
+/* 	    curr = prev->next; */
+/* 	} */
+/*     } */
+
+/*     return prev; */
+/* } */
+
 %}
 
 %union {
@@ -83,6 +112,7 @@ AST_Program *g_program = NULL;
 %type<ast_header>    comando_if;
 %type<ast_header>    comando_shift;
 %type<ast_header>    comando_decl_var_init;
+%type<ast_header>    comando_decl_var;
 %type<ast_header>    comando_while;
 %type<ast_header>    comando_entrada_saida;
 %type<ast_header>    comando_switch_case;
@@ -214,18 +244,26 @@ seq_comandos:
 	  comando ';'
         | comando_case
         | seq_comandos comando ';' {
-	      $$ = $1;
-	      // Jump to the end of list and append $2.
-	      AST_Header *header = $$;
-	      while (header->next) header = header->next;
-	      header->next = $2;
+	      if ($$ == NULL) {
+		  $$ = $2;
+	      } else {
+		  $$ = $1;
+		  if ($2) {
+		      AST_Header *search = $$;
+		      while (search->next) search = search->next;
+		      search->next = $2;
+		  }
+	      }
 	  } 
         | seq_comandos comando_case {
-	      $$ = $1;
-	      // Jump to the end of list and append $2.
-	      AST_Header *header = $$;
-	      while (header->next) header = header->next;
-	      header->next = $2;
+	      if ($$ == NULL) {
+		  $$ = $2;
+	      } else {
+		  $$ = $1;
+		  AST_Header *search = $$;
+		  while (search->next) search = search->next;
+		  search->next = $2;
+	      }
 	  }
         ;
 
@@ -263,16 +301,16 @@ comando_break:  TK_PR_BREAK {
 		};
 
 comando_decl_var:
-                                   comando_decl_var_2
-        | TK_PR_STATIC             comando_decl_var_2
-        |              TK_PR_CONST comando_decl_var_2
-        | TK_PR_STATIC TK_PR_CONST comando_decl_var_2
-        ;
+		comando_decl_var_2                          { $$ = NULL; }
+        | 	TK_PR_STATIC             comando_decl_var_2 { $$ = NULL; }
+        |	TK_PR_CONST comando_decl_var_2              { $$ = NULL; }
+        | 	TK_PR_STATIC TK_PR_CONST comando_decl_var_2 { $$ = NULL; }
+		;
 
 comando_decl_var_2:
-          tipo_primitivo TK_IDENTIFICADOR
-        | TK_IDENTIFICADOR TK_IDENTIFICADOR
-        ;
+		tipo_primitivo TK_IDENTIFICADOR
+        | 	TK_IDENTIFICADOR TK_IDENTIFICADOR
+		;
 
 comando_decl_var_init:
 		tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
