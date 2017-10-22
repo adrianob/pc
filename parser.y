@@ -79,6 +79,7 @@ AST_Program *g_program = NULL;
 
 %type<ast_function>  decl_func;
 %type<ast_header>    token_lit;
+%type<ast_header>    comando_case;
 %type<ast_header>    comando_if;
 %type<ast_header>    comando_shift;
 %type<ast_header>    comando_decl_var_init;
@@ -90,7 +91,6 @@ AST_Program *g_program = NULL;
 %type<ast_header>    comando_return;
 %type<ast_header>    comando_continue;
 %type<ast_header>    comando_break;
-%type<ast_header>    comando_case;
 %type<ast_header>    bloco_comandos;
 %type<ast_header>    seq_comandos;
 %type<ast_header>    comando;
@@ -224,7 +224,7 @@ seq_comandos:
         ;
 
 comando_case:
-        TK_PR_CASE TK_LIT_INT ':';
+        TK_PR_CASE TK_LIT_INT ':' {ast_literal_make($2);};
 
 comando_sem_entrada_saida:
           comando_decl_var
