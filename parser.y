@@ -11,35 +11,6 @@
 #include "table_symbol.h"
 
 AST_Program *g_program = NULL;
-
-/* AST_Header *remove_discards_from_header_list(AST_Header *header_list) { */
-/*     // Remove from the front of the list */
-/*     while (header_list && header_list->type == AST_DISCARD) { */
-/* 	AST_Header *h = header_list; */
-/* 	header_list = header_list->next; */
-/* 	ast_header_free(h); */
-/*     } */
-
-/*     if (header_list == NULL) */
-/*         return NULL; */
-
-/*     AST_Header *prev = header_list; */
-/*     AST_Header *curr = prev->next; */
-/*     while (curr) { */
-/* 	if (curr->type == AST_DISCARD) { */
-/* 	    AST_Header *h = curr; */
-/* 	    prev->next = curr->next; */
-/* 	    curr = prev->next; */
-/* 	    ast_header_free(h); */
-/* 	} else { */
-/* 	    prev = curr; */
-/* 	    curr = prev->next; */
-/* 	} */
-/*     } */
-
-/*     return prev; */
-/* } */
-
 %}
 
 %union {
@@ -326,7 +297,7 @@ comando_decl_var_init:
         |	tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
 		{
 		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-        $$ = ast_assignment_make(&id->header, $4);
+		    $$ = ast_assignment_make(&id->header, $4);
 		}
         | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
 		{
@@ -337,7 +308,7 @@ comando_decl_var_init:
         | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
 		{
 		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-        $$ = ast_assignment_make(&id->header, $5);
+		    $$ = ast_assignment_make(&id->header, $5);
 		}
         |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
 		{
@@ -348,7 +319,7 @@ comando_decl_var_init:
         |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
 		{
 		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-        $$ = ast_assignment_make(&id->header, $5);
+		    $$ = ast_assignment_make(&id->header, $5);
 		}
         | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
 		{
@@ -359,7 +330,7 @@ comando_decl_var_init:
         | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
 		{
 		    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
-        $$ = ast_assignment_make(&id->header, $6);
+		    $$ = ast_assignment_make(&id->header, $6);
 		}
 		;
 
@@ -407,26 +378,33 @@ comando_if:
 /* @Todo: Finish for and foreach */
 comando_foreach:
         TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos {
-          /*AST_Block *block = (AST_Block*)$7;*/
-          /*AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);*/
-          /*$$ = ast_foreach_make(id, $5, block->first_command);*/
-          /*ast_block_free((AST_Block*)$7);*/
-          //@TODO remover para proxima etapa
-          $$ = NULL;
+	    AST_Block *block = (AST_Block*)$7;
+	    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+	    $$ = ast_foreach_make(id, $5, block->first_command);
+	    ast_block_free((AST_Block*)$7);
         };
 
 comando_for:
-        TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos{
-          /*AST_Block *block = (AST_Block*)$9;*/
-          /*$$ = ast_for_make($5, block->first_command, $3, $7);*/
-          /*ast_block_free((AST_Block*)$9);*/
-          //@TODO remover para proxima etapa
-          $$ = NULL;
+        TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos {
+	    AST_Block *block = (AST_Block*)$9;
+	    $$ = ast_for_make($5, block->first_command, $3, $7);
+	    ast_block_free((AST_Block*)$9);
         };
 
 lista_comandos:
           comando_sem_entrada_saida
-        | lista_comandos ',' comando_sem_entrada_saida
+        | lista_comandos ',' comando_sem_entrada_saida {
+	      if ($$ == NULL) {
+		  $$ = $3;
+	      } else {
+		  $$ = $1;
+		  if ($3) {
+		      AST_Header *search = $$;
+		      while (search->next) search = search->next;
+		      search->next = $3;
+		  }
+	      }
+	  }
         ;
 
 comando_while:

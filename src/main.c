@@ -195,15 +195,6 @@ int main_avaliacao_etapa_2(int argc, char **argv) {
 
 int main_avaliacao_etapa_3(int argc, char **argv) {
     int ret = yyparse();
-
-    /* int num_funcs = 0; */
-    /* AST_Function *func = g_program->first_func; */
-    /* while (func) { */
-    /*     ++num_funcs; */
-    /*     func = func->next; */
-    /* } */
-    /* printf("Number of functions declared: %d\n", num_funcs); */
-
     return ret;
 }
 
