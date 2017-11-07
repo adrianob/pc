@@ -13,6 +13,7 @@ ADD_EXECUTABLE(main
   src/main.c
   src/cc_misc.c
   src/cc_gv.c
+  src/cc_ast.c
   src/cc_dict.c
   src/cc_list.c
   src/cc_tree.c

@@ -235,6 +235,8 @@ void main_finalize(void) {
     gv_init(NULL);
     print_ast_to_graph(g_program);
     gv_close();
+
+    ast_program_free(g_program);
     remove_dict_items(dict);
     dict_free(dict);
 }

@@ -171,11 +171,14 @@ decl_global_non_static:
 
 decl_func: cabecalho bloco_comandos {
 	       // cabecalho returns a AST_Identifier*
+               AST_Block *block = (AST_Block*)$2;
                $$ = ast_function_make($1);
-               $$->first_command = ((AST_Block*)$2)->first_command;
+               $$->first_command = block->first_command;
                // Free block, since inside function we use the pointer to the command
                // directly.
-               ast_block_free((AST_Block*)$2);
+
+	       block->first_command = NULL;
+               ast_block_free(block);
           };
 
 cabecalho:
@@ -243,7 +246,10 @@ seq_comandos:
         ;
 
 comando_case:
-        TK_PR_CASE TK_LIT_INT ':' {ast_literal_make($2);};
+        TK_PR_CASE TK_LIT_INT ':' {
+	    AST_Literal *lit = (AST_Literal*)ast_literal_make($2);
+	    $$ = ast_case_make(lit);
+	};
 
 comando_sem_entrada_saida:
           comando_decl_var
@@ -364,14 +370,19 @@ comando_if:
           TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos {
 	      AST_Block *then_block = (AST_Block*)$6;
 	      $$ = ast_if_make($3, then_block->first_command, NULL);
+
+	      then_block->first_command = NULL;
 	      ast_block_free((AST_Block*)$6);
 	  }
         | TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos TK_PR_ELSE bloco_comandos {
 	      AST_Block *then_block = (AST_Block*)$6;
 	      AST_Block *else_block = (AST_Block*)$8;
 	      $$ = ast_if_make($3, then_block->first_command, else_block->first_command);
-	      ast_block_free((AST_Block*)$6);
-	      ast_block_free((AST_Block*)$8);
+
+	      then_block->first_command = NULL;
+	      else_block->first_command = NULL;
+	      ast_block_free(then_block);
+	      ast_block_free(else_block);
 	  }
         ;
 
@@ -381,14 +392,18 @@ comando_foreach:
 	    AST_Block *block = (AST_Block*)$7;
 	    AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
 	    $$ = ast_foreach_make(id, $5, block->first_command);
-	    ast_block_free((AST_Block*)$7);
+
+	    block->first_command = NULL;
+	    ast_block_free(block);
         };
 
 comando_for:
         TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos {
 	    AST_Block *block = (AST_Block*)$9;
 	    $$ = ast_for_make($5, block->first_command, $3, $7);
-	    ast_block_free((AST_Block*)$9);
+
+	    block->first_command = NULL;
+	    ast_block_free(block);
         };
 
 lista_comandos:
@@ -411,21 +426,27 @@ comando_while:
         TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {
             AST_Block *block = (AST_Block*)$6;
             $$ = ast_while_make($3, block->first_command, false);
-            ast_block_free((AST_Block*)$6);
+
+	    block->first_command = NULL;
+            ast_block_free(block);
         };
 
 comando_do_while:
         TK_PR_DO bloco_comandos TK_PR_WHILE '(' expressao ')' {
             AST_Block *block = (AST_Block*)$2;
             $$ = ast_while_make($5, block->first_command, true);
-            ast_block_free((AST_Block*)$2);
+
+	    block->first_command = NULL;
+            ast_block_free(block);
         };
 
 comando_switch_case:
           TK_PR_SWITCH '(' expressao ')' bloco_comandos {
             AST_Block *block = (AST_Block*)$5;
             $$ = ast_switch_make($3, block->first_command);
-            ast_block_free((AST_Block*)$5);
+
+	    block->first_command = NULL;
+            ast_block_free(block);
           };
 
 comando_shift:
