@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include "macros.h"
 #include "cc_dict.h"
+#include "semantic.h"
 
 #ifndef AST_TYPES
 #define AST_TYPES						\
@@ -76,11 +77,13 @@ typedef struct AST_Header {
 
 typedef struct AST_Identifier {
     AST_Header        header;
+    IKS_Type          semantic_type;
     comp_dict_item_t *entry;
 } AST_Identifier;
 
 typedef struct AST_Function {
     int type;
+    IKS_Type             return_val_type;
     AST_Identifier      *identifier;
     AST_Header          *first_command;
     struct AST_Function *next;
@@ -112,6 +115,7 @@ void ast_if_free(AST_IfElse *i);
 
 typedef struct AST_Shift {
     AST_Header           header;
+    IKS_Type             semantic_type;
     AST_Identifier      *identifier;
     AST_Literal         *number;
     bool                 shift_right;
@@ -156,7 +160,7 @@ AST_Header *ast_input_make(AST_Header *expr);
 void ast_input_free(AST_Input *i);
 
 typedef struct AST_For {
-    AST_Header        header;
+    AST_Header         header;
     AST_Header        *first_command;
     AST_Header        *list_first_command;
     AST_Header        *second_list_first_command;
@@ -168,7 +172,7 @@ AST_Header *ast_for_make(AST_Header *expr, AST_Header *first_command, AST_Header
 void ast_for_free(AST_For *f);
 
 typedef struct AST_Foreach {
-    AST_Header        header;
+    AST_Header         header;
     AST_Identifier    *identifier;
     AST_Header        *first_command;
     AST_Header        *expr;
@@ -178,8 +182,8 @@ AST_Header *ast_foreach_make(AST_Identifier *identifier, AST_Header *expr, AST_H
 void ast_foreach_free(AST_Foreach *f);
 
 typedef struct AST_Output {
-    AST_Header  header;
-    AST_Header    *expr;
+    AST_Header   header;
+    AST_Header  *expr;
 } AST_Output;
 
 AST_Header *ast_output_make(AST_Header *expr);
@@ -208,6 +212,7 @@ void ast_return_free(AST_Return *r);
 
 typedef struct AST_Block {
     AST_Header  header;
+    IKS_Type    semantic_type;
     AST_Header *first_command;
 } AST_Block;
 
@@ -236,7 +241,8 @@ AST_Header *ast_identifier_make(comp_dict_item_t *entry);
 void ast_identifier_free(AST_Identifier *i);
 
 typedef struct AST_Literal {
-    AST_Header    header;
+    AST_Header        header;
+    IKS_Type          semantic_type;
     comp_dict_item_t *entry;
 } AST_Literal;
 
@@ -245,6 +251,7 @@ void ast_literal_free(AST_Literal *l);
 
 typedef struct AST_AritExpr {
     AST_Header   header;
+    IKS_Type     semantic_type;
     AST_Header  *first;
     AST_Header  *second;
 } AST_AritExpr;
@@ -253,7 +260,8 @@ AST_Header *ast_arit_expr_make(int op, AST_Header *lhs, AST_Header *rhs);
 void ast_arit_expr_free(AST_AritExpr *e);
 
 typedef struct AST_LogicExpr {
-    AST_Header  header;
+    AST_Header   header;
+    IKS_Type     semantic_type;
     AST_Header  *first;
     AST_Header  *second;
 } AST_LogicExpr;
@@ -262,9 +270,10 @@ AST_Header *ast_logic_expr_make(int op, AST_Header *lhs, AST_Header *rhs);
 void ast_logic_expr_free(AST_LogicExpr *e);
 
 typedef struct AST_IndexedVector {
-    AST_Header  header;
+    AST_Header      header;
+    IKS_Type        semantic_type;
     AST_Identifier *identifier;
-    AST_Header *expr;
+    AST_Header     *expr;
 } AST_IndexedVector;
 
 AST_Header *ast_indexed_vector_make(comp_dict_item_t *entry, AST_Header *expr);
@@ -273,7 +282,8 @@ void ast_indexed_vector_free(AST_IndexedVector *iv);
 void ast_expr_free(AST_Header *expr);
 
 typedef struct AST_FunctionCall {
-    AST_Header  header;
+    AST_Header      header;
+    IKS_Type        semantic_type;
     AST_Identifier *identifier;
     AST_Header *first_param;
 } AST_FunctionCall;
