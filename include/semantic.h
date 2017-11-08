@@ -4,10 +4,11 @@
 #include "cc_ast.h"
 #include "table_symbol.h"
 #include "enums.h"
+#include "sds.h"
 
 typedef struct SemanticError {
     IKS_Error type;
-    char *description;
+    sds description;
 } SemanticError;
 
 typedef struct DeclarationHeader {
