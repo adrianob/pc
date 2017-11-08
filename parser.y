@@ -301,8 +301,6 @@ decl_global_non_static:
 
 		    char *id_key = get_key_from_identifier(id);
 
-		    printf("Declaring global variable\n");
-
 		    if (dict_get_entry(scope_dict, id_key)) {
           push_declared_error(id);
 		    } else {
