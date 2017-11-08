@@ -39,7 +39,7 @@ TableSymbol *table_symbol_make(int line_number, int token_type, char *raw_value)
     case POA_IDENT: {
         // There should be no memory leak here, since the value is freed on the function
         // tyble_symbol_free.
-        char *value = malloc(strlen(raw_value));
+        char *value = calloc(strlen(raw_value)+1, 1);
         strncpy(value, raw_value, strlen(raw_value));
         symbol->value_string_or_ident = value;
     } break;
