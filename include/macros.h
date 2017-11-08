@@ -49,6 +49,10 @@ static void *array__grow(void *ptr, int new_cap, int type_size) {
     return new_area+1;
 }
 
+static void array_free(void *ptr) {
+    free(ARRAY_HEADER(ptr));
+}
+
 #define array_init(ptr) do {						\
 	void **arr = (void**)&(ptr);					\
 	ArrayHeader *ah = malloc(sizeof(ArrayHeader)+ARRAY_INIT_CAP*sizeof(*(ptr))); \
