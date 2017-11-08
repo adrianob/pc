@@ -333,21 +333,21 @@ decl_global_non_static:
 		    comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
 		    char *id_key = get_key_from_identifier(id);
 
-		    if (dict_get_entry(scope_dict, id_key)) {
-			// If name already is declared, push error and do nothing.
-			push_declared_error(id);
-		    } else {
-			char *ret_id_key = get_key_from_identifier(ret_id);
-			DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get(scope_dict, ret_id_key);
+        if (dict_get_entry(scope_dict, id_key)) {
+          // If name already is declared, push error and do nothing.
+          push_declared_error(id);
+        } else {
+          char *ret_id_key = get_key_from_identifier(ret_id);
+          DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
 
-			if (!ret_decl_hdr) push_undeclared_error(ret_id);
-	
-			DeclarationHeader *decl = variable_declaration_make(
-			    id, ret_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-			);
+          if (!ret_decl_hdr) push_undeclared_error(ret_id);
 
-			dict_put(scope_dict, id_key, decl);
-		    }
+          DeclarationHeader *decl = variable_declaration_make(
+              id, ret_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+          );
+
+          dict_put(scope_dict, id_key, decl);
+        }
 		}
         ;
 
