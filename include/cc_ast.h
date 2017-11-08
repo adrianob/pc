@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include "macros.h"
 #include "cc_dict.h"
-#include "semantic.h"
+#include "enums.h"
 
 #ifndef AST_TYPES
 #define AST_TYPES						\
@@ -82,14 +82,16 @@ typedef struct AST_Identifier {
 } AST_Identifier;
 
 typedef struct AST_Function {
-    int type;
-    IKS_Type             return_val_type;
+    AST_Header           header;
+    IKS_Type             return_type;
+    AST_Identifier      *return_identifier;
     AST_Identifier      *identifier;
     AST_Header          *first_command;
     struct AST_Function *next;
 } AST_Function;
 
-AST_Function *ast_function_make(AST_Identifier *id);
+AST_Function *ast_function_make(AST_Identifier *id, AST_Header *first_command,
+				IKS_Type return_type, AST_Identifier *return_identifier);
 void ast_function_free(AST_Function *f);
 
 typedef struct AST_Program {
