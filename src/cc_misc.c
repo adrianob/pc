@@ -4,12 +4,14 @@
 #include "table_symbol.h"
 #include "cc_ast.h"
 #include "macros.h"
+#include "semantic.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 extern int g_line_number;
 extern AST_Program *g_program;
+extern Array(SemanticError) g_semantic_errors;
 
 int comp_get_line_number(void) { return g_line_number; }
 
@@ -211,11 +213,11 @@ void print_ast_to_graph(AST_Program *program) {
     void *func_parent = program;
     AST_Function *func = program->first_func;
     while (func) {
-        Assert(func->type == AST_FUNCAO);
+        Assert(func->header.type == AST_FUNCAO);
 
         // Start printing list of commands from the function
         TableSymbol *symbol = func->identifier->entry->value;
-        gv_declare(func->type, func, symbol->value_string_or_ident);
+        gv_declare(func->header.type, func, symbol->value_string_or_ident);
         gv_connect(func_parent, func);
         AST_Header *cmd = func->first_command;
         void *cmd_parent = func;
@@ -235,6 +237,11 @@ void main_finalize(void) {
     gv_init(NULL);
     print_ast_to_graph(g_program);
     gv_close();
+
+    printf("Printing errors\n");
+    for (int i = 0; i < array_len(g_semantic_errors); ++i) {
+	printf("--> %s\n", g_semantic_errors[i].description);
+    }
 
     ast_program_free(g_program);
     remove_dict_items(dict);

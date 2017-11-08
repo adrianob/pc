@@ -4,6 +4,8 @@
 AST_Header *ast_shift_make(AST_Identifier *id, AST_Literal *number, bool shift_right) {
     AST_Shift *s = calloc(1, sizeof(*s));
     s->header.type = (shift_right) ? AST_SHIFT_RIGHT : AST_SHIFT_LEFT;
+    // @Assumption(Leo): Shift type should always be int.
+    s->semantic_type = IKS_INT;
     s->identifier = id;
     s->number = number;
     return &s->header;
@@ -81,10 +83,14 @@ void ast_program_free(AST_Program *program) {
     }
 }
 
-AST_Function *ast_function_make(AST_Identifier *id) {
+AST_Function *ast_function_make(AST_Identifier *id, AST_Header *first_command,
+				IKS_Type return_type, AST_Identifier *return_identifier) {
     AST_Function *f = calloc(1, sizeof(*f));
-    f->type = AST_FUNCAO;
+    f->header.type = AST_FUNCAO;
+    f->return_type = return_type;
+    f->return_identifier = return_identifier;
     f->identifier = id;
+    f->first_command = first_command;
     return f;
 }
 
