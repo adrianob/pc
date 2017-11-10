@@ -368,8 +368,8 @@ decl_func2:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Block *block = (AST_Block*)$4;
 
-            comp_dict_t * dic = dict_new();
-            push(&scopes, dict);
+            /*comp_dict_t * dic = dict_new();*/
+            /*push(&scopes, dict);*/
             $$ = ast_function_make(id, block->first_command, $1, NULL);
 
             block->first_command = NULL;
@@ -384,6 +384,7 @@ decl_func2:
               dict_put(scope_dict, id_key, decl);
             }
             ast_block_free(block);
+            /*if(list_size(scopes) > 0) pop(&scopes);*/
         }
         |	TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada bloco_comandos
         {
@@ -391,9 +392,9 @@ decl_func2:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Block *block = (AST_Block*)$4;
 
-            //this dict will hold all identifiers on the arguments list and function variables
-            comp_dict_t * dic = dict_new();
-            push(&scopes, dict);
+            /*//this dict will hold all identifiers on the arguments list and function variables*/
+            /*comp_dict_t * dic = dict_new();*/
+            /*push(&scopes, dict);*/
             $$ = ast_function_make(id, block->first_command, IKS_UNDECIDED, return_id);
 
             block->first_command = NULL;
@@ -418,6 +419,7 @@ decl_func2:
 
             }
             ast_block_free(block);
+            /*if(list_size(scopes) > 0) pop(&scopes);*/
         }
         ;
 
@@ -482,7 +484,7 @@ comando_sem_entrada_saida:
         | {
             comp_dict_t * block_dic = dict_new();
             push(&scopes, block_dic);
-        } bloco_comandos {$$ = NULL;}
+        } bloco_comandos {$$ = NULL; pop(&scopes);}
         | chamada_func
         | comando_continue
         | comando_break
@@ -570,6 +572,7 @@ comando_decl_var_init:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($4);
             $$ = ast_assignment_make(&id->header, &id2->header);
+
         }
         |	tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
@@ -766,6 +769,25 @@ comando_atribuicao:
         TK_IDENTIFICADOR '=' expressao {
         AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
         $$ = ast_assignment_make(&id->header, $3);
+
+        comp_dict_t *scope_dict = top(scopes);
+        char *id_key = get_key_from_identifier(id);
+
+        //didn't find declaration in current scope
+        if (!dict_get_entry(scope_dict, id_key)) {
+          char *ret_id_key = get_key_from_identifier(id);
+          DeclarationHeader *ret_decl_hdr = NULL;
+          STACK_T *head = scopes;
+          bool found = false;
+          while(head) {
+            comp_dict_t *dict = top(head);
+            ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
+            if (ret_decl_hdr) found = true;
+            head = head->next;
+          }
+
+          if (!found) push_undeclared_error(id);
+        }
     }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
         AST_Header *vec = ast_indexed_vector_make($1, $3);
