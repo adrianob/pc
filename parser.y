@@ -521,7 +521,6 @@ comando_decl_var_2:
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
 
-            printf("blah %d\n", list_size(scopes));
             comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
             if (dict_get_entry(scope_dict, id_key)) {
