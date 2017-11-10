@@ -174,7 +174,7 @@ programa:
             if (!g_global_scope) {
             g_global_scope = tree_new();
             g_global_scope->value = dict_new();
-    push(&scopes, g_global_scope->value);
+            push(&scopes, g_global_scope->value);
             }
         }
         | 	programa decl_global
@@ -184,7 +184,7 @@ programa:
             if (!g_global_scope) {
             g_global_scope = tree_new();
             g_global_scope->value = dict_new();
-    push(&scopes, g_global_scope->value);
+            push(&scopes, g_global_scope->value);
             }
         }
         | 	programa decl_tipos
@@ -194,7 +194,7 @@ programa:
             if (!g_global_scope) {
             g_global_scope = tree_new();
             g_global_scope->value = dict_new();
-    push(&scopes, g_global_scope->value);
+            push(&scopes, g_global_scope->value);
             }
         }
         | 	programa decl_func
@@ -204,7 +204,7 @@ programa:
             if (!g_global_scope) {
             g_global_scope = tree_new();
             g_global_scope->value = dict_new();
-    push(&scopes, g_global_scope->value);
+            push(&scopes, g_global_scope->value);
             }
 
             if (!g_program->first_func) {
@@ -310,10 +310,10 @@ decl_global_non_static:
             printf("Declaring global variable\n");
 
             if (dict_get_entry(scope_dict, id_key)) {
-        push_declared_error(id);
+              push_declared_error(id);
             } else {
-        DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
-        dict_put(scope_dict, id_key, decl);
+              DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
+              dict_put(scope_dict, id_key, decl);
             }
         }
         | 	tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';'
@@ -325,10 +325,10 @@ decl_global_non_static:
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
-        push_declared_error(id);
+              push_declared_error(id);
             } else {
-        DeclarationHeader *decl = vector_declaration_make(id, count, $1);
-        dict_put(scope_dict, id_key, decl);
+              DeclarationHeader *decl = vector_declaration_make(id, count, $1);
+              dict_put(scope_dict, id_key, decl);
             }
         }
         | 	TK_IDENTIFICADOR TK_IDENTIFICADOR ';'
@@ -339,21 +339,21 @@ decl_global_non_static:
             comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
             char *id_key = get_key_from_identifier(id);
 
-        if (dict_get_entry(scope_dict, id_key)) {
-        // If name already is declared, push error and do nothing.
-        push_declared_error(id);
-        } else {
-        char *ret_id_key = get_key_from_identifier(ret_id);
-        DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+            if (dict_get_entry(scope_dict, id_key)) {
+            // If name already is declared, push error and do nothing.
+            push_declared_error(id);
+            } else {
+              char *ret_id_key = get_key_from_identifier(ret_id);
+              DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
 
-        if (!ret_decl_hdr) push_undeclared_error(ret_id);
+              if (!ret_decl_hdr) push_undeclared_error(ret_id);
 
-        DeclarationHeader *decl = variable_declaration_make(
-            id, ret_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-        );
+              DeclarationHeader *decl = variable_declaration_make(
+                  id, ret_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+              );
 
-        dict_put(scope_dict, id_key, decl);
-        }
+              dict_put(scope_dict, id_key, decl);
+            }
         }
         ;
 
@@ -368,8 +368,8 @@ decl_func2:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Block *block = (AST_Block*)$4;
 
-        comp_dict_t * dic = dict_new();
-        push(&scopes, dict);
+            comp_dict_t * dic = dict_new();
+            push(&scopes, dict);
             $$ = ast_function_make(id, block->first_command, $1, NULL);
 
             block->first_command = NULL;
@@ -378,10 +378,10 @@ decl_func2:
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
-        push_declared_error(id);
+              push_declared_error(id);
             } else {
-        DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
-        dict_put(scope_dict, id_key, decl);
+              DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
+              dict_put(scope_dict, id_key, decl);
             }
             ast_block_free(block);
         }
@@ -391,8 +391,9 @@ decl_func2:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Block *block = (AST_Block*)$4;
 
-        comp_dict_t * dic = dict_new();
-        push(&scopes, dict);
+            //this dict will hold all identifiers on the arguments list and function variables
+            comp_dict_t * dic = dict_new();
+            push(&scopes, dict);
             $$ = ast_function_make(id, block->first_command, IKS_UNDECIDED, return_id);
 
             block->first_command = NULL;
@@ -400,19 +401,20 @@ decl_func2:
             comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
             char *id_key = get_key_from_identifier(id);
 
+            //check for function identifier validity
             if (dict_get_entry(scope_dict, id_key)) {
-        push_declared_error(id);
+              push_declared_error(id);
             } else {
-        char *ret_id_key = get_key_from_identifier(return_id);
-        DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+              char *ret_id_key = get_key_from_identifier(return_id);
+              DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
 
-        if (!ret_decl_hdr) push_undeclared_error(return_id);
+              if (!ret_decl_hdr) push_undeclared_error(return_id);
 
-        DeclarationHeader *decl = variable_declaration_make(
-            id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-        );
+              DeclarationHeader *decl = variable_declaration_make(
+                  id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+              );
 
-        dict_put(scope_dict, id_key, decl);
+              dict_put(scope_dict, id_key, decl);
 
             }
             ast_block_free(block);
@@ -442,7 +444,7 @@ bloco_comandos:
         ;
 
 seq_comandos:
-    comando ';'
+        comando ';'
         | comando_case
         | seq_comandos comando ';' {
         if ($$ == NULL) {
@@ -455,7 +457,7 @@ seq_comandos:
             search->next = $2;
         }
         }
-    }
+        }
         | seq_comandos comando_case {
         if ($$ == NULL) {
         $$ = $2;
@@ -477,7 +479,10 @@ comando_case:
 comando_sem_entrada_saida:
         comando_decl_var
         | comando_decl_var_init
-        | bloco_comandos
+        | {
+            comp_dict_t * block_dic = dict_new();
+            push(&scopes, block_dic);
+        } bloco_comandos {$$ = NULL;}
         | chamada_func
         | comando_continue
         | comando_break
@@ -516,13 +521,14 @@ comando_decl_var_2:
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
 
+            printf("blah %d\n", list_size(scopes));
             comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
             if (dict_get_entry(scope_dict, id_key)) {
-        push_declared_error(id);
+              push_declared_error(id);
             } else {
-        DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
-        dict_put(scope_dict, id_key, decl);
+              DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
+              dict_put(scope_dict, id_key, decl);
             }
         }
         | 	TK_IDENTIFICADOR TK_IDENTIFICADOR
@@ -534,28 +540,27 @@ comando_decl_var_2:
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
-        push_declared_error(id);
+              push_declared_error(id);
             } else {
-        char *ret_id_key = get_key_from_identifier(return_id);
-        DeclarationHeader *ret_decl_hdr = NULL;
-        STACK_T *head = scopes;
-        bool found = false;
-        while(head){
-            comp_dict_t *dict = top(head);
-            ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
-            if (ret_decl_hdr) found = true;
-            head = head->next;
-        }
+              char *ret_id_key = get_key_from_identifier(return_id);
+              DeclarationHeader *ret_decl_hdr = NULL;
+              STACK_T *head = scopes;
+              bool found = false;
+              while(head){
+                comp_dict_t *dict = top(head);
+                ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
+                if (ret_decl_hdr) found = true;
+                head = head->next;
+              }
 
-        if (!found) push_undeclared_error(return_id);
+              if (!found) push_undeclared_error(return_id);
 
 
-        DeclarationHeader *decl = variable_declaration_make(
-            id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-        );
+              DeclarationHeader *decl = variable_declaration_make(
+                  id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+              );
 
-        dict_put(scope_dict, id_key, decl);
-
+              dict_put(scope_dict, id_key, decl);
             }
         }
         ;
