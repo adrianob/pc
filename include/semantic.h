@@ -48,18 +48,20 @@ static DeclarationHeader *user_type_declaration_make(AST_Identifier *id, UserTyp
 typedef struct VariableDeclaration {
     DeclarationHeader   header;
     IKS_Type            type;
-    AST_Identifier     *return_identifier;
+    AST_Identifier     *type_identifier;
     AST_Identifier     *identifier;
+    int            size_in_bytes;
     // @Todo(leo): Consider when variable is const.
     // bool                is_const;
 } VariableDeclaration;
 
-static DeclarationHeader *variable_declaration_make(AST_Identifier *id, AST_Identifier *ret_id, IKS_Type type) {
+static DeclarationHeader *variable_declaration_make(AST_Identifier *id, AST_Identifier *type_id, IKS_Type type) {
     VariableDeclaration *d = calloc(1, sizeof(*d));
     d->header.type = DT_VARIABLE;
     d->identifier = id;
-    d->return_identifier = ret_id;
+    d->type_identifier = type_id;
     d->type = type;
+    d->size_in_bytes = get_primitive_type_size(type);
     return &d->header;
 }
 
@@ -68,6 +70,7 @@ typedef struct VectorDeclaration {
     AST_Identifier     *identifier;
     AST_Literal        *count;
     IKS_Type            type;
+    int                 elem_size_in_bytes;
 } VectorDeclaration;
 
 static DeclarationHeader *vector_declaration_make(AST_Identifier *id, AST_Literal *count, IKS_Type type) {
@@ -76,6 +79,7 @@ static DeclarationHeader *vector_declaration_make(AST_Identifier *id, AST_Litera
     d->identifier = id;
     d->count = count;
     d->type = type;
+    d->elem_size_in_bytes = get_primitive_type_size(type);
     return &d->header;
 }
 

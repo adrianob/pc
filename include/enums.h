@@ -12,6 +12,16 @@ typedef enum IKS_Type {
     IKS_UNDEFINED,
 } IKS_Type;
 
+static int get_primitive_type_size(IKS_Type type) {
+    switch (type) {
+    case IKS_INT: return 4;
+    case IKS_FLOAT: return 8;
+    case IKS_CHAR: return 1;
+    case IKS_BOOL: return 1;
+    default: return -1;
+    }
+}
+
 typedef enum IKS_Error {
     IKS_SUCCESS = 0,
     IKS_ERROR_UNDECLARED,

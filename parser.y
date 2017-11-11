@@ -129,7 +129,7 @@ static DeclarationHeader *find_declaration_recursive(AST_Identifier *id) {
     return NULL;
 }
 
-void find_declaration(AST_Identifier *id, IKS_Type type) {
+static void find_declaration(AST_Identifier *id, IKS_Type type) {
     //check if already declared
     comp_dict_t *scope_dict = top(g_scopes);
     char *id_key = get_key_from_identifier(id);
@@ -140,7 +140,6 @@ void find_declaration(AST_Identifier *id, IKS_Type type) {
         dict_put(scope_dict, id_key, decl);
     }
 }
-
 
 %}
 
@@ -918,7 +917,6 @@ chamada_func:
                 } else if (decl->type == DT_VECTOR) {
                     push_vector_error(id);
                 } else if (decl->type == DT_FUNCTION) {
-                    // @Todo(leo): check function parameters
                     FunctionDeclaration *func_decl = (FunctionDeclaration*)decl;
                     int num_params = function_declaration_num_params(func_decl);
 
@@ -933,6 +931,24 @@ chamada_func:
                         push_missing_args_error(id);
                     } else if (num_expressions > num_params) {
                         push_excess_args_error(id);
+                    } else {
+                        // @Todo(leo)
+                        // Correct number of parameters, now check the types
+                        /* DeclarationHeader *param = func_decl->first_param; */
+                        /* AST_Header *expr = $3; */
+                        /* while (param) { // we know that param and expr are the same length */
+                        /*     Assert(param->type == DT_VARIABLE); */
+
+                        /*     VariableDeclaration *var_decl = (VariableDeclaration*)param; */
+                        /*     e */
+
+                        /*     if (var_decl->type != expr_type) { */
+                        /*         // error */
+                        /*     } */
+
+                        /*     param = param->next; */
+                        /*     expr = expr->ext; */
+                        /* } */
                     }
                 } else {
                     Assert(false);
