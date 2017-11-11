@@ -15,7 +15,6 @@
 #include "stack.h"
 
 AST_Program *g_program = NULL;
-comp_tree_t *g_global_scope = NULL;
 STACK_T *scopes = NULL;
 Array(SemanticError) g_semantic_errors = NULL;
 
@@ -221,40 +220,36 @@ programa:
         {
             if (!g_program) g_program = ast_program_make();
             if (!g_semantic_errors) array_init(g_semantic_errors);
-            if (!g_global_scope) {
-                g_global_scope = tree_new();
-                g_global_scope->value = dict_new();
-                push(&scopes, g_global_scope->value);
+            if (list_size(scopes) == 0) {
+                comp_dict_t * dic = dict_new();
+                push(&scopes, dic);
             }
         }
         |   programa decl_global
         {
             if (!g_program) g_program = ast_program_make();
             if (!g_semantic_errors) array_init(g_semantic_errors);
-            if (!g_global_scope) {
-                g_global_scope = tree_new();
-                g_global_scope->value = dict_new();
-                push(&scopes, g_global_scope->value);
+            if (list_size(scopes) == 0) {
+                comp_dict_t * dic = dict_new();
+                push(&scopes, dic);
             }
         }
         |   programa decl_tipos
         {
             if (!g_program) g_program = ast_program_make();
             if (!g_semantic_errors) array_init(g_semantic_errors);
-            if (!g_global_scope) {
-                g_global_scope = tree_new();
-                g_global_scope->value = dict_new();
-                push(&scopes, g_global_scope->value);
+            if (list_size(scopes) == 0) {
+                comp_dict_t * dic = dict_new();
+                push(&scopes, dic);
             }
         }
         |   programa decl_func
         {
             if (!g_program) g_program = ast_program_make();
             if (!g_semantic_errors) array_init(g_semantic_errors);
-            if (!g_global_scope) {
-                g_global_scope = tree_new();
-                g_global_scope->value = dict_new();
-                push(&scopes, g_global_scope->value);
+            if (list_size(scopes) == 0) {
+                comp_dict_t * dic = dict_new();
+                push(&scopes, dic);
             }
 
             if (!g_program->first_func) {
@@ -272,7 +267,7 @@ programa:
 decl_tipos:
         TK_PR_CLASS TK_IDENTIFICADOR '[' lista_campos ']' ';'
         {
-            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            comp_dict_t *scope_dict = top(scopes);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             // Add user type to global scope
             char *id_key = get_key_from_identifier(id);
@@ -352,7 +347,7 @@ decl_global:
 decl_global_non_static:
         tipo_primitivo TK_IDENTIFICADOR ';'
         {
-            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            comp_dict_t *scope_dict = top(scopes);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
 
             char *id_key = get_key_from_identifier(id);
@@ -371,7 +366,7 @@ decl_global_non_static:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Literal *count = (AST_Literal*)ast_literal_make($4);
 
-            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
@@ -386,7 +381,7 @@ decl_global_non_static:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Identifier *ret_id = (AST_Identifier*)ast_identifier_make($1);
 
-            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
@@ -423,7 +418,7 @@ decl_func2:
             block->first_command = NULL;
 
             //check for function identifier validity
-            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
@@ -445,7 +440,7 @@ decl_func2:
 
             block->first_command = NULL;
 
-            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
 
             //check for function identifier validity
@@ -498,7 +493,7 @@ parametro_entrada:
         {
             AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
             char *ret_id_key = get_key_from_identifier(return_id);
             DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
@@ -515,7 +510,7 @@ parametro_entrada:
         {
             AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($2);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
             char *ret_id_key = get_key_from_identifier(return_id);
             DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
