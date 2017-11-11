@@ -19,6 +19,19 @@ comp_tree_t *g_global_scope = NULL;
 STACK_T *scopes = NULL;
 Array(SemanticError) g_semantic_errors = NULL;
 
+void comp_print_table2(comp_dict_t * dict) {
+    printf("================ Printing symbols table ==============\n");
+    for (int hash = 0; hash < dict->size; ++hash) {
+        comp_dict_item_t *search_item = dict->data[hash];
+        while (search_item) {
+            TableSymbol *symbol = (TableSymbol *)search_item->value;
+            cc_dict_etapa_2_print_entrada(search_item->key, symbol->line_number, symbol->token_type);
+            search_item = search_item->next;
+        }
+    }
+    printf("======================= Done =========================\n");
+}
+
 static inline char *get_key_from_identifier(AST_Identifier *id) {
     return ((TableSymbol*)id->entry->value)->value_string_or_ident;
 }
@@ -363,13 +376,11 @@ decl_func:
     ;
 
 decl_func2:
-        tipo_primitivo TK_IDENTIFICADOR lista_entrada bloco_comandos
+        tipo_primitivo TK_IDENTIFICADOR { comp_dict_t * dic = dict_new(); push(&scopes, dic); } lista_entrada bloco_comandos
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-            AST_Block *block = (AST_Block*)$4;
+            AST_Block *block = (AST_Block*)$5;
 
-            /*comp_dict_t * dic = dict_new();*/
-            /*push(&scopes, dict);*/
             $$ = ast_function_make(id, block->first_command, $1, NULL);
 
             block->first_command = NULL;
@@ -383,18 +394,15 @@ decl_func2:
               DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
               dict_put(scope_dict, id_key, decl);
             }
+            pop(&scopes);
             ast_block_free(block);
-            /*if(list_size(scopes) > 0) pop(&scopes);*/
         }
-        |	TK_IDENTIFICADOR TK_IDENTIFICADOR lista_entrada bloco_comandos
+        |	TK_IDENTIFICADOR TK_IDENTIFICADOR { comp_dict_t * dic = dict_new(); push(&scopes, dic); } lista_entrada bloco_comandos
         {
             AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-            AST_Block *block = (AST_Block*)$4;
+            AST_Block *block = (AST_Block*)$5;
 
-            /*//this dict will hold all identifiers on the arguments list and function variables*/
-            /*comp_dict_t * dic = dict_new();*/
-            /*push(&scopes, dict);*/
             $$ = ast_function_make(id, block->first_command, IKS_UNDECIDED, return_id);
 
             block->first_command = NULL;
@@ -419,7 +427,7 @@ decl_func2:
 
             }
             ast_block_free(block);
-            /*if(list_size(scopes) > 0) pop(&scopes);*/
+            pop(&scopes);
         }
         ;
 
@@ -484,7 +492,7 @@ comando_sem_entrada_saida:
         | {
             comp_dict_t * block_dic = dict_new();
             push(&scopes, block_dic);
-        } bloco_comandos {$$ = NULL; pop(&scopes);}
+        } bloco_comandos {pop(&scopes);}
         | chamada_func
         | comando_continue
         | comando_break
@@ -522,7 +530,6 @@ comando_decl_var_2:
         tipo_primitivo TK_IDENTIFICADOR
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-
             comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
             if (dict_get_entry(scope_dict, id_key)) {
