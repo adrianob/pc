@@ -19,7 +19,6 @@ comp_tree_t *g_global_scope = NULL;
 STACK_T *scopes = NULL;
 Array(SemanticError) g_semantic_errors = NULL;
 
-
 static void comp_print_table2(comp_dict_t * dict) {
     printf("================ Printing symbols table ==============\n");
     for (int hash = 0; hash < dict->size; ++hash) {
@@ -37,7 +36,7 @@ static inline char *get_key_from_identifier(AST_Identifier *id) {
     return ((TableSymbol*)id->entry->value)->value_string_or_ident;
 }
 
-static inline char *get_line_from_identifier(AST_Identifier *id) {
+static inline int get_line_from_identifier(AST_Identifier *id) {
     return ((TableSymbol*)id->entry->value)->line_number;
 }
 
@@ -886,7 +885,7 @@ comando_atribuicao:
             AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
             AST_Header *id = ast_identifier_make($3);
             $$ = ast_assignment_user_type_make(user_type_id, id, $5);
-            find_declaration_recursive(id);
+            find_declaration_recursive((AST_Identifier*)id);
         }
         ;
 
