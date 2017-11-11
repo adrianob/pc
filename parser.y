@@ -465,10 +465,56 @@ parametros_entrada:
         parametro_entrada | parametros_entrada ',' parametro_entrada;
 
 parametro_entrada:
-                    tipo_primitivo TK_IDENTIFICADOR
+        tipo_primitivo TK_IDENTIFICADOR
+        {
+          AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+          DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
+          comp_dict_t *scope_dict = top(scopes);
+          char *id_key = get_key_from_identifier(id);
+          dict_put(scope_dict, id_key, decl);
+        }
         | TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR
+        {
+          AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+          DeclarationHeader *decl = variable_declaration_make(id, NULL, $2);
+          comp_dict_t *scope_dict = top(scopes);
+          char *id_key = get_key_from_identifier(id);
+          dict_put(scope_dict, id_key, decl);
+        }
         |             TK_IDENTIFICADOR TK_IDENTIFICADOR
+        {
+          AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
+          AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+          comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+          char *id_key = get_key_from_identifier(id);
+          char *ret_id_key = get_key_from_identifier(return_id);
+          DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+
+          if (!ret_decl_hdr) push_undeclared_error(return_id);
+
+          DeclarationHeader *decl = variable_declaration_make(
+              id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+          );
+
+          dict_put(scope_dict, id_key, decl);
+        }
         | TK_PR_CONST TK_IDENTIFICADOR TK_IDENTIFICADOR
+        {
+          AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($2);
+          AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+          comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+          char *id_key = get_key_from_identifier(id);
+          char *ret_id_key = get_key_from_identifier(return_id);
+          DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+
+          if (!ret_decl_hdr) push_undeclared_error(return_id);
+
+          DeclarationHeader *decl = variable_declaration_make(
+              id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+          );
+
+          dict_put(scope_dict, id_key, decl);
+        }
         ;
 
 bloco_comandos:
