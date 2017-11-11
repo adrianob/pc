@@ -1,5 +1,5 @@
-#ifndef STACK
-#define STACK
+#ifndef __STACK_H__
+#define __STACK_H__
 #include <stdbool.h>
 
 typedef bool (*iterator)(void *);
@@ -18,4 +18,4 @@ void for_each(STACK_T **head_ref, iterator iterator);
 void destroy(STACK_T **head_ref);
 int list_size(STACK_T *head);
 
-#endif
+#endif // __STACK_H__

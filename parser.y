@@ -20,7 +20,7 @@ STACK_T *scopes = NULL;
 Array(SemanticError) g_semantic_errors = NULL;
 
 
-void comp_print_table2(comp_dict_t * dict) {
+static void comp_print_table2(comp_dict_t * dict) {
     printf("================ Printing symbols table ==============\n");
     for (int hash = 0; hash < dict->size; ++hash) {
         comp_dict_item_t *search_item = dict->data[hash];
@@ -71,34 +71,34 @@ void find_declaration_recursive(AST_Identifier *id) {
 
     //didn't find declaration in current scope
     if (!dict_get_entry(scope_dict, id_key)) {
-      char *ret_id_key = get_key_from_identifier(id);
-      DeclarationHeader *ret_decl_hdr = NULL;
-      STACK_T *head = scopes;
-      bool found = false;
-      while(head) {
-        comp_dict_t *dict = top(head);
-        ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
-        if (ret_decl_hdr) {
-          found = true;
-          break;
+        char *ret_id_key = get_key_from_identifier(id);
+        DeclarationHeader *ret_decl_hdr = NULL;
+        STACK_T *head = scopes;
+        bool found = false;
+        while(head) {
+            comp_dict_t *dict = top(head);
+            ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
+            if (ret_decl_hdr) {
+                found = true;
+                break;
+            }
+            head = head->next;
         }
-        head = head->next;
-      }
 
-      if (!found) push_undeclared_error(id);
+        if (!found) push_undeclared_error(id);
     }
 }
 
 void find_declaration(AST_Identifier *id, IKS_Type type) {
-  //check if already declared
-  comp_dict_t *scope_dict = top(scopes);
-  char *id_key = get_key_from_identifier(id);
-  if (dict_get_entry(scope_dict, id_key)) {
-    push_declared_error(id);
-  } else {
-    DeclarationHeader *decl = variable_declaration_make(id, NULL, type);
-    dict_put(scope_dict, id_key, decl);
-  }
+    //check if already declared
+    comp_dict_t *scope_dict = top(scopes);
+    char *id_key = get_key_from_identifier(id);
+    if (dict_get_entry(scope_dict, id_key)) {
+        push_declared_error(id);
+    } else {
+        DeclarationHeader *decl = variable_declaration_make(id, NULL, type);
+        dict_put(scope_dict, id_key, decl);
+    }
 }
 
 
@@ -223,49 +223,49 @@ programa:
             if (!g_program) g_program = ast_program_make();
             if (!g_semantic_errors) array_init(g_semantic_errors);
             if (!g_global_scope) {
-            g_global_scope = tree_new();
-            g_global_scope->value = dict_new();
-            push(&scopes, g_global_scope->value);
+                g_global_scope = tree_new();
+                g_global_scope->value = dict_new();
+                push(&scopes, g_global_scope->value);
             }
         }
-        | 	programa decl_global
+        |   programa decl_global
         {
             if (!g_program) g_program = ast_program_make();
             if (!g_semantic_errors) array_init(g_semantic_errors);
             if (!g_global_scope) {
-            g_global_scope = tree_new();
-            g_global_scope->value = dict_new();
-            push(&scopes, g_global_scope->value);
+                g_global_scope = tree_new();
+                g_global_scope->value = dict_new();
+                push(&scopes, g_global_scope->value);
             }
         }
-        | 	programa decl_tipos
+        |   programa decl_tipos
         {
             if (!g_program) g_program = ast_program_make();
             if (!g_semantic_errors) array_init(g_semantic_errors);
             if (!g_global_scope) {
-            g_global_scope = tree_new();
-            g_global_scope->value = dict_new();
-            push(&scopes, g_global_scope->value);
+                g_global_scope = tree_new();
+                g_global_scope->value = dict_new();
+                push(&scopes, g_global_scope->value);
             }
         }
-        | 	programa decl_func
+        |   programa decl_func
         {
             if (!g_program) g_program = ast_program_make();
             if (!g_semantic_errors) array_init(g_semantic_errors);
             if (!g_global_scope) {
-            g_global_scope = tree_new();
-            g_global_scope->value = dict_new();
-            push(&scopes, g_global_scope->value);
+                g_global_scope = tree_new();
+                g_global_scope->value = dict_new();
+                push(&scopes, g_global_scope->value);
             }
 
             if (!g_program->first_func) {
-            g_program->first_func = $2;
+                g_program->first_func = $2;
             } else {
-            AST_Function *search = g_program->first_func;
-            while (search->next) {
-                search = search->next;
-            }
-                        search->next = $2;
+                AST_Function *search = g_program->first_func;
+                while (search->next) {
+                    search = search->next;
+                }
+                search->next = $2;
             }
         }
         ;
@@ -279,25 +279,25 @@ decl_tipos:
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
-            push_declared_error(id);
+                push_declared_error(id);
             // @Todo(leo): free contents of $2 and $4
             } else {
-            DeclarationHeader *ud = user_type_declaration_make(id, $4);
-            dict_put(scope_dict, id_key, ud);
+                DeclarationHeader *ud = user_type_declaration_make(id, $4);
+                dict_put(scope_dict, id_key, ud);
             }
         };
 
 lista_campos:
                 campo
-    | 	lista_campos ':' campo
+    |   lista_campos ':' campo
         {
             if ($$ == NULL) {
-            $$ = $3;
+                $$ = $3;
             } else {
-            $$ = $1;
-            UserTypeField *search = $$;
-            while (search->next) search = search->next;
-            search->next = $3;
+                $$ = $1;
+                UserTypeField *search = $$;
+                while (search->next) search = search->next;
+                search->next = $3;
             }
         };
 
@@ -307,29 +307,29 @@ campo:
             AST_Header *id = ast_identifier_make($3);
             $$ = user_type_field_make($2, id, FV_PROTECTED);
         }
-        | 	TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR
+        |   TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR
         {
             AST_Header *id = ast_identifier_make($3);
             $$ = user_type_field_make($2, id, FV_PRIVATE);
         }
-        | 	TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR
+        |   TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR
         {
             AST_Header *id = ast_identifier_make($3);
             $$ = user_type_field_make($2, id, FV_PUBLIC);
         }
-        | 	TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
+        |   TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
         {
             AST_Header *expr = ast_literal_make($5);
             AST_Header *indexed_vector = ast_indexed_vector_make($3, expr);
             $$ = user_type_field_make($2, indexed_vector, FV_PUBLIC);
         }
-        | 	TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
+        |   TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
         {
             AST_Header *expr = ast_literal_make($5);
             AST_Header *indexed_vector = ast_indexed_vector_make($3, expr);
             $$ = user_type_field_make($2, indexed_vector, FV_PRIVATE);
         }
-        | 	TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
+        |   TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
         {
             AST_Header *expr = ast_literal_make($5);
             AST_Header *indexed_vector = ast_indexed_vector_make($3, expr);
@@ -339,10 +339,10 @@ campo:
 
 tipo_primitivo:
         TK_PR_INT {$$ = IKS_INT;}
-    | 	TK_PR_FLOAT {$$ = IKS_FLOAT;}
-    | 	TK_PR_BOOL {$$ = IKS_BOOL;}
-    | 	TK_PR_CHAR {$$ = IKS_CHAR;}
-    | 	TK_PR_STRING {$$ = IKS_STRING;}
+    |   TK_PR_FLOAT {$$ = IKS_FLOAT;}
+    |   TK_PR_BOOL {$$ = IKS_BOOL;}
+    |   TK_PR_CHAR {$$ = IKS_CHAR;}
+    |   TK_PR_STRING {$$ = IKS_STRING;}
         ;
 
 decl_global:
@@ -361,13 +361,13 @@ decl_global_non_static:
             printf("Declaring global variable\n");
 
             if (dict_get_entry(scope_dict, id_key)) {
-              push_declared_error(id);
+                push_declared_error(id);
             } else {
-              DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
-              dict_put(scope_dict, id_key, decl);
+                DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
+                dict_put(scope_dict, id_key, decl);
             }
         }
-        | 	tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';'
+        |   tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';'
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Literal *count = (AST_Literal*)ast_literal_make($4);
@@ -376,13 +376,13 @@ decl_global_non_static:
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
-              push_declared_error(id);
+                push_declared_error(id);
             } else {
-              DeclarationHeader *decl = vector_declaration_make(id, count, $1);
-              dict_put(scope_dict, id_key, decl);
+                DeclarationHeader *decl = vector_declaration_make(id, count, $1);
+                dict_put(scope_dict, id_key, decl);
             }
         }
-        | 	TK_IDENTIFICADOR TK_IDENTIFICADOR ';'
+        |   TK_IDENTIFICADOR TK_IDENTIFICADOR ';'
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Identifier *ret_id = (AST_Identifier*)ast_identifier_make($1);
@@ -391,26 +391,26 @@ decl_global_non_static:
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
-            // If name already is declared, push error and do nothing.
-            push_declared_error(id);
+                // If name already is declared, push error and do nothing.
+                push_declared_error(id);
             } else {
-              char *ret_id_key = get_key_from_identifier(ret_id);
-              DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+                char *ret_id_key = get_key_from_identifier(ret_id);
+                DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
 
-              if (!ret_decl_hdr) push_undeclared_error(ret_id);
+                if (!ret_decl_hdr) push_undeclared_error(ret_id);
 
-              DeclarationHeader *decl = variable_declaration_make(
-                  id, ret_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-              );
+                DeclarationHeader *decl = variable_declaration_make(
+                    id, ret_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+                );
 
-              dict_put(scope_dict, id_key, decl);
+                dict_put(scope_dict, id_key, decl);
             }
         }
         ;
 
 decl_func:
         TK_PR_STATIC decl_func2 {$$ = $2;}
-    |	decl_func2
+    |   decl_func2
     ;
 
 decl_func2:
@@ -428,15 +428,15 @@ decl_func2:
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
-              push_declared_error(id);
+                push_declared_error(id);
             } else {
-              DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
-              dict_put(scope_dict, id_key, decl);
+                DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
+                dict_put(scope_dict, id_key, decl);
             }
             pop(&scopes);
             ast_block_free(block);
         }
-        |	TK_IDENTIFICADOR TK_IDENTIFICADOR { comp_dict_t * dic = dict_new(); push(&scopes, dic); } lista_entrada bloco_comandos
+        |   TK_IDENTIFICADOR TK_IDENTIFICADOR { comp_dict_t * dic = dict_new(); push(&scopes, dic); } lista_entrada bloco_comandos
         {
             AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
@@ -451,18 +451,18 @@ decl_func2:
 
             //check for function identifier validity
             if (dict_get_entry(scope_dict, id_key)) {
-              push_declared_error(id);
+                push_declared_error(id);
             } else {
-              char *ret_id_key = get_key_from_identifier(return_id);
-              DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+                char *ret_id_key = get_key_from_identifier(return_id);
+                DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
 
-              if (!ret_decl_hdr) push_undeclared_error(return_id);
+                if (!ret_decl_hdr) push_undeclared_error(return_id);
 
-              DeclarationHeader *decl = variable_declaration_make(
-                  id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-              );
+                DeclarationHeader *decl = variable_declaration_make(
+                    id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+                );
 
-              dict_put(scope_dict, id_key, decl);
+                dict_put(scope_dict, id_key, decl);
 
             }
             ast_block_free(block);
@@ -481,53 +481,53 @@ parametros_entrada:
 parametro_entrada:
         tipo_primitivo TK_IDENTIFICADOR
         {
-          AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-          DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
-          comp_dict_t *scope_dict = top(scopes);
-          char *id_key = get_key_from_identifier(id);
-          dict_put(scope_dict, id_key, decl);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+            DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
+            comp_dict_t *scope_dict = top(scopes);
+            char *id_key = get_key_from_identifier(id);
+            dict_put(scope_dict, id_key, decl);
         }
         | TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR
         {
-          AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-          DeclarationHeader *decl = variable_declaration_make(id, NULL, $2);
-          comp_dict_t *scope_dict = top(scopes);
-          char *id_key = get_key_from_identifier(id);
-          dict_put(scope_dict, id_key, decl);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+            DeclarationHeader *decl = variable_declaration_make(id, NULL, $2);
+            comp_dict_t *scope_dict = top(scopes);
+            char *id_key = get_key_from_identifier(id);
+            dict_put(scope_dict, id_key, decl);
         }
         |             TK_IDENTIFICADOR TK_IDENTIFICADOR
         {
-          AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
-          AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-          comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
-          char *id_key = get_key_from_identifier(id);
-          char *ret_id_key = get_key_from_identifier(return_id);
-          DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+            AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            char *id_key = get_key_from_identifier(id);
+            char *ret_id_key = get_key_from_identifier(return_id);
+            DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
 
-          if (!ret_decl_hdr) push_undeclared_error(return_id);
+            if (!ret_decl_hdr) push_undeclared_error(return_id);
 
-          DeclarationHeader *decl = variable_declaration_make(
-              id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-          );
+            DeclarationHeader *decl = variable_declaration_make(
+                id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+            );
 
-          dict_put(scope_dict, id_key, decl);
+            dict_put(scope_dict, id_key, decl);
         }
         | TK_PR_CONST TK_IDENTIFICADOR TK_IDENTIFICADOR
         {
-          AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($2);
-          AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-          comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
-          char *id_key = get_key_from_identifier(id);
-          char *ret_id_key = get_key_from_identifier(return_id);
-          DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+            AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($2);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+            comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
+            char *id_key = get_key_from_identifier(id);
+            char *ret_id_key = get_key_from_identifier(return_id);
+            DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
 
-          if (!ret_decl_hdr) push_undeclared_error(return_id);
+            if (!ret_decl_hdr) push_undeclared_error(return_id);
 
-          DeclarationHeader *decl = variable_declaration_make(
-              id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-          );
+            DeclarationHeader *decl = variable_declaration_make(
+                id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+            );
 
-          dict_put(scope_dict, id_key, decl);
+            dict_put(scope_dict, id_key, decl);
         }
         ;
 
@@ -542,27 +542,27 @@ seq_comandos:
         comando ';'
         | comando_case
         | seq_comandos comando ';' {
-        if ($$ == NULL) {
-        $$ = $2;
-        } else {
-        $$ = $1;
-        if ($2) {
-            AST_Header *search = $$;
-            while (search->next) search = search->next;
-            search->next = $2;
-        }
-        }
+            if ($$ == NULL) {
+                $$ = $2;
+            } else {
+                $$ = $1;
+                if ($2) {
+                    AST_Header *search = $$;
+                    while (search->next) search = search->next;
+                    search->next = $2;
+                }
+            }
         }
         | seq_comandos comando_case {
-        if ($$ == NULL) {
-        $$ = $2;
-        } else {
-        $$ = $1;
-        AST_Header *search = $$;
-        while (search->next) search = search->next;
-        search->next = $2;
+            if ($$ == NULL) {
+                $$ = $2;
+            } else {
+                $$ = $1;
+                AST_Header *search = $$;
+                while (search->next) search = search->next;
+                search->next = $2;
+            }
         }
-    }
         ;
 
 comando_case:
@@ -599,7 +599,7 @@ comando_return: TK_PR_RETURN expressao {
 
 comando_continue: TK_PR_CONTINUE {
             $$ = ast_continue_make();
-            };
+        };
 
 comando_break:  TK_PR_BREAK {
             $$ = ast_break_make();
@@ -607,9 +607,9 @@ comando_break:  TK_PR_BREAK {
 
 comando_decl_var:
         comando_decl_var_2                          { $$ = NULL; }
-        | 	TK_PR_STATIC             comando_decl_var_2 { $$ = NULL; }
-        |	TK_PR_CONST comando_decl_var_2              { $$ = NULL; }
-        | 	TK_PR_STATIC TK_PR_CONST comando_decl_var_2 { $$ = NULL; }
+        |   TK_PR_STATIC             comando_decl_var_2 { $$ = NULL; }
+        |   TK_PR_CONST comando_decl_var_2              { $$ = NULL; }
+        |   TK_PR_STATIC TK_PR_CONST comando_decl_var_2 { $$ = NULL; }
         ;
 
 comando_decl_var_2:
@@ -620,13 +620,13 @@ comando_decl_var_2:
             comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
             if (dict_get_entry(scope_dict, id_key)) {
-              push_declared_error(id);
+                push_declared_error(id);
             } else {
-              DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
-              dict_put(scope_dict, id_key, decl);
+                DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
+                dict_put(scope_dict, id_key, decl);
             }
         }
-        | 	TK_IDENTIFICADOR TK_IDENTIFICADOR
+        |   TK_IDENTIFICADOR TK_IDENTIFICADOR
         {
             AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
@@ -635,27 +635,26 @@ comando_decl_var_2:
             char *id_key = get_key_from_identifier(id);
 
             if (dict_get_entry(scope_dict, id_key)) {
-              push_declared_error(id);
+                push_declared_error(id);
             } else {
-              char *ret_id_key = get_key_from_identifier(return_id);
-              DeclarationHeader *ret_decl_hdr = NULL;
-              STACK_T *head = scopes;
-              bool found = false;
-              while(head){
-                comp_dict_t *dict = top(head);
-                ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
-                if (ret_decl_hdr) found = true;
-                head = head->next;
-              }
+                char *ret_id_key = get_key_from_identifier(return_id);
+                DeclarationHeader *ret_decl_hdr = NULL;
+                STACK_T *head = scopes;
+                bool found = false;
+                while(head){
+                    comp_dict_t *dict = top(head);
+                    ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
+                    if (ret_decl_hdr) found = true;
+                    head = head->next;
+                }
 
-              if (!found) push_undeclared_error(return_id);
+                if (!found) push_undeclared_error(return_id);
 
+                DeclarationHeader *decl = variable_declaration_make(
+                    id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
+                );
 
-              DeclarationHeader *decl = variable_declaration_make(
-                  id, return_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-              );
-
-              dict_put(scope_dict, id_key, decl);
+                dict_put(scope_dict, id_key, decl);
             }
         }
         ;
@@ -670,14 +669,14 @@ comando_decl_var_init:
             find_declaration(id, $1);
 
         }
-        |	tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+        |   tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             $$ = ast_assignment_make(&id->header, $4);
 
             find_declaration(id, $1);
         }
-        | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+        |  TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
@@ -685,33 +684,33 @@ comando_decl_var_init:
             find_declaration(id, $2);
             //@TODO look for second identifier
         }
-        | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+        |  TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             $$ = ast_assignment_make(&id->header, $5);
             find_declaration(id, $2);
         }
-        |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+        |  TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
             $$ = ast_assignment_make(&id->header, &id2->header);
             find_declaration(id, $2);
         }
-        |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+        |   TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             $$ = ast_assignment_make(&id->header, $5);
             find_declaration(id, $2);
         }
-        | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+        | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($6);
             $$ = ast_assignment_make(&id->header, &id2->header);
             find_declaration(id, $3);
         }
-        | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
+        | TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
             $$ = ast_assignment_make(&id->header, $6);
@@ -729,11 +728,11 @@ token_lit:
 
 lit_numerico:
         TK_LIT_INT {
-        $$ = ast_literal_make($1);
-    }
+            $$ = ast_literal_make($1);
+        }
         | TK_LIT_FLOAT {
-        $$ = ast_literal_make($1);
-    }
+            $$ = ast_literal_make($1);
+        }
         ;
 
 comando_controle_fluxo:
@@ -768,37 +767,37 @@ comando_if:
 /* @Todo: Finish for and foreach */
 comando_foreach:
         TK_PR_FOREACH '(' TK_IDENTIFICADOR ':' lista_expressoes ')' bloco_comandos {
-        AST_Block *block = (AST_Block*)$7;
-        AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-        $$ = ast_foreach_make(id, $5, block->first_command);
+            AST_Block *block = (AST_Block*)$7;
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+            $$ = ast_foreach_make(id, $5, block->first_command);
 
-        block->first_command = NULL;
-        ast_block_free(block);
+            block->first_command = NULL;
+            ast_block_free(block);
         };
 
 comando_for:
         TK_PR_FOR '(' lista_comandos ':' expressao ':' lista_comandos ')' bloco_comandos {
-        AST_Block *block = (AST_Block*)$9;
-        $$ = ast_for_make($5, block->first_command, $3, $7);
+            AST_Block *block = (AST_Block*)$9;
+            $$ = ast_for_make($5, block->first_command, $3, $7);
 
-        block->first_command = NULL;
-        ast_block_free(block);
+            block->first_command = NULL;
+            ast_block_free(block);
         };
 
 lista_comandos:
         comando_sem_entrada_saida
         | lista_comandos ',' comando_sem_entrada_saida {
-        if ($$ == NULL) {
-        $$ = $3;
-        } else {
-        $$ = $1;
-        if ($3) {
-            AST_Header *search = $$;
-            while (search->next) search = search->next;
-            search->next = $3;
+            if ($$ == NULL) {
+                $$ = $3;
+            } else {
+                $$ = $1;
+                if ($3) {
+                    AST_Header *search = $$;
+                    while (search->next) search = search->next;
+                    search->next = $3;
+                }
+            }
         }
-        }
-    }
         ;
 
 comando_while:
@@ -806,7 +805,7 @@ comando_while:
             AST_Block *block = (AST_Block*)$6;
             $$ = ast_while_make($3, block->first_command, false);
 
-        block->first_command = NULL;
+            block->first_command = NULL;
             ast_block_free(block);
         };
 
@@ -815,7 +814,7 @@ comando_do_while:
             AST_Block *block = (AST_Block*)$2;
             $$ = ast_while_make($5, block->first_command, true);
 
-        block->first_command = NULL;
+            block->first_command = NULL;
             ast_block_free(block);
         };
 
@@ -824,21 +823,21 @@ comando_switch_case:
             AST_Block *block = (AST_Block*)$5;
             $$ = ast_switch_make($3, block->first_command);
 
-        block->first_command = NULL;
+            block->first_command = NULL;
             ast_block_free(block);
         };
 
 comando_shift:
         TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT {
-        AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-        AST_Literal *number = (AST_Literal*)ast_literal_make($3);
-        $$ = ast_shift_make(id, number, false);
-    }
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+            AST_Literal *number = (AST_Literal*)ast_literal_make($3);
+            $$ = ast_shift_make(id, number, false);
+        }
         | TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT {
-        AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-        AST_Literal *number = (AST_Literal*)ast_literal_make($3);
-        $$ = ast_shift_make(id, number, true);
-    }
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+            AST_Literal *number = (AST_Literal*)ast_literal_make($3);
+            $$ = ast_shift_make(id, number, true);
+        }
         ;
 
 comando_entrada_saida:
@@ -863,31 +862,31 @@ lista_expressoes:
         expressao
         | lista_expressoes ',' expressao {
             $$ = $1;
-        // Jump to the end of the $1 expression list and append $3.
-        AST_Header *header = $$;
-        while (header->next) header = header->next;
+            // Jump to the end of the $1 expression list and append $3.
+            AST_Header *header = $$;
+            while (header->next) header = header->next;
             header->next = $3;
         }
         ;
 
 comando_atribuicao:
         TK_IDENTIFICADOR '=' expressao {
-        AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-        $$ = ast_assignment_make(&id->header, $3);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+            $$ = ast_assignment_make(&id->header, $3);
 
-        find_declaration_recursive(id);
+            find_declaration_recursive(id);
         }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
-        AST_Header *vec = ast_indexed_vector_make($1, $3);
-        $$ = ast_assignment_make(vec, $6);
-        AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-        find_declaration_recursive(id);
+            AST_Header *vec = ast_indexed_vector_make($1, $3);
+            $$ = ast_assignment_make(vec, $6);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+            find_declaration_recursive(id);
         }
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
-        AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
-        AST_Header *id = ast_identifier_make($3);
-        $$ = ast_assignment_user_type_make(user_type_id, id, $5);
-        find_declaration_recursive(id);
+            AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
+            AST_Header *id = ast_identifier_make($3);
+            $$ = ast_assignment_user_type_make(user_type_id, id, $5);
+            find_declaration_recursive(id);
         }
         ;
 

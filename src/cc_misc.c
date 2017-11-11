@@ -106,7 +106,7 @@ void print_expression_to_graph(void *parent, AST_Header *expr) {
 
 void print_command_to_graph(void *parent, AST_Header *cmd) {
     if (cmd->type == AST_FOR || cmd->type == AST_FOREACH)
-	return;
+        return;
 
     gv_declare(cmd->type, cmd, NULL);
     gv_connect(parent, cmd);
@@ -117,9 +117,9 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
 
         print_expression_to_graph(cmd, if_else->condition);
 
-	if (if_else->then_command) {
-	    print_command_to_graph(cmd, if_else->then_command);
-	}
+        if (if_else->then_command) {
+            print_command_to_graph(cmd, if_else->then_command);
+        }
 
         if (if_else->else_command) {
             print_command_to_graph(cmd, if_else->else_command);
@@ -154,13 +154,13 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
     } break;
     case AST_BLOCO: {
         AST_Block *block = (AST_Block *)cmd;
-	AST_Header *block_cmd = block->first_command;
-	void *block_cmd_parent = block;
-	while (block_cmd) {
-	    print_command_to_graph(block_cmd_parent, block_cmd);
-	    block_cmd_parent = block_cmd;
-	    block_cmd = block_cmd->next;
-	}
+        AST_Header *block_cmd = block->first_command;
+        void *block_cmd_parent = block;
+        while (block_cmd) {
+            print_command_to_graph(block_cmd_parent, block_cmd);
+            block_cmd_parent = block_cmd;
+            block_cmd = block_cmd->next;
+        }
     } break;
     case AST_INPUT: {
         AST_Input *in = (AST_Input *)cmd;
@@ -169,13 +169,13 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
     case AST_OUTPUT: {
         AST_Output *out = (AST_Output *)cmd;
 
-	void *expr_parent = out;
-	AST_Header *expr = out->expr;
-	while (expr) {
-	    print_expression_to_graph(expr_parent, expr);
-	    expr_parent = expr;
-	    expr = expr->next;
-	}
+        void *expr_parent = out;
+        AST_Header *expr = out->expr;
+        while (expr) {
+            print_expression_to_graph(expr_parent, expr);
+            expr_parent = expr;
+            expr = expr->next;
+        }
     } break;
     case AST_CASE:
         break;
@@ -186,15 +186,15 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
     } break;
     case AST_CHAMADA_DE_FUNCAO: {
         AST_FunctionCall *funcall = (AST_FunctionCall *)cmd;
-	print_expression_to_graph(cmd, &funcall->identifier->header);
+        print_expression_to_graph(cmd, &funcall->identifier->header);
 
-	void *param_parent = funcall;
-	AST_Header *param = funcall->first_param;
-	while (param) {
-	    print_expression_to_graph(param_parent, param);
-	    param_parent = param;
-	    param = param->next;
-	}
+        void *param_parent = funcall;
+        AST_Header *param = funcall->first_param;
+        while (param) {
+            print_expression_to_graph(param_parent, param);
+            param_parent = param;
+            param = param->next;
+        }
     } break;
     case AST_CONTINUE:
     case AST_BREAK: {
@@ -240,7 +240,7 @@ void main_finalize(void) {
 
     printf("Printing errors\n");
     for (int i = 0; i < array_len(g_semantic_errors); ++i) {
-	printf("--> %s\n", g_semantic_errors[i].description);
+        printf("--> %s\n", g_semantic_errors[i].description);
     }
 
     ast_program_free(g_program);
