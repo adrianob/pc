@@ -886,7 +886,7 @@ comando_atribuicao:
         AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
         AST_Header *id = ast_identifier_make($3);
         $$ = ast_assignment_user_type_make(user_type_id, id, $5);
-        find_declaration_recursive(id);
+        find_declaration_recursive((AST_Identifier*)id);
         }
         ;
 
