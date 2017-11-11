@@ -65,7 +65,7 @@ static void push_undeclared_error(AST_Identifier *id) {
     array_push(g_semantic_errors, err);
 }
 
-void find_declaration(AST_Identifier *id) {
+void find_declaration_recursive(AST_Identifier *id) {
     comp_dict_t *scope_dict = top(scopes);
     char *id_key = get_key_from_identifier(id);
 
@@ -88,6 +88,20 @@ void find_declaration(AST_Identifier *id) {
       if (!found) push_undeclared_error(id);
     }
 }
+
+void find_declaration(AST_Identifier *id, IKS_Type type) {
+  //check if already declared
+  comp_dict_t *scope_dict = top(scopes);
+  char *id_key = get_key_from_identifier(id);
+  if (dict_get_entry(scope_dict, id_key)) {
+    push_declared_error(id);
+  } else {
+    DeclarationHeader *decl = variable_declaration_make(id, NULL, type);
+    dict_put(scope_dict, id_key, decl);
+  }
+}
+
+
 %}
 
 %union {
@@ -653,44 +667,55 @@ comando_decl_var_init:
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($4);
             $$ = ast_assignment_make(&id->header, &id2->header);
 
+            find_declaration(id, $1);
+
         }
         |	tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             $$ = ast_assignment_make(&id->header, $4);
+
+            find_declaration(id, $1);
         }
         | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
             $$ = ast_assignment_make(&id->header, &id2->header);
+            find_declaration(id, $2);
+            //@TODO look for second identifier
         }
         | 	TK_PR_STATIC             tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             $$ = ast_assignment_make(&id->header, $5);
+            find_declaration(id, $2);
         }
         |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
             $$ = ast_assignment_make(&id->header, &id2->header);
+            find_declaration(id, $2);
         }
         |	TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             $$ = ast_assignment_make(&id->header, $5);
+            find_declaration(id, $2);
         }
         | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($6);
             $$ = ast_assignment_make(&id->header, &id2->header);
+            find_declaration(id, $3);
         }
         | 	TK_PR_STATIC TK_PR_CONST tipo_primitivo TK_IDENTIFICADOR TK_OC_LE token_lit
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($4);
             $$ = ast_assignment_make(&id->header, $6);
+            find_declaration(id, $3);
         }
         ;
 
@@ -850,19 +875,19 @@ comando_atribuicao:
         AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
         $$ = ast_assignment_make(&id->header, $3);
 
-        find_declaration(id);
+        find_declaration_recursive(id);
         }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
         AST_Header *vec = ast_indexed_vector_make($1, $3);
         $$ = ast_assignment_make(vec, $6);
         AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-        find_declaration(id);
+        find_declaration_recursive(id);
         }
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
         AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
         AST_Header *id = ast_identifier_make($3);
         $$ = ast_assignment_user_type_make(user_type_id, id, $5);
-        find_declaration(id);
+        find_declaration_recursive(id);
         }
         ;
 
