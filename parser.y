@@ -19,7 +19,6 @@ comp_tree_t *g_global_scope = NULL;
 STACK_T *scopes = NULL;
 Array(SemanticError) g_semantic_errors = NULL;
 
-
 void comp_print_table2(comp_dict_t * dict) {
     printf("================ Printing symbols table ==============\n");
     for (int hash = 0; hash < dict->size; ++hash) {
@@ -37,7 +36,7 @@ static inline char *get_key_from_identifier(AST_Identifier *id) {
     return ((TableSymbol*)id->entry->value)->value_string_or_ident;
 }
 
-static inline char *get_line_from_identifier(AST_Identifier *id) {
+static inline int get_line_from_identifier(AST_Identifier *id) {
     return ((TableSymbol*)id->entry->value)->line_number;
 }
 

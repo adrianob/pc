@@ -100,13 +100,14 @@ void print_expression_to_graph(void *parent, AST_Header *expr) {
         print_expression_to_graph(expr, express->second);
     } break;
     default:
-        Assert(false);
+        /*Assert(false);*/
+        return;
     }
 }
 
 void print_command_to_graph(void *parent, AST_Header *cmd) {
     if (cmd->type == AST_FOR || cmd->type == AST_FOREACH)
-	return;
+      return;
 
     gv_declare(cmd->type, cmd, NULL);
     gv_connect(parent, cmd);
@@ -202,7 +203,8 @@ void print_command_to_graph(void *parent, AST_Header *cmd) {
         // children.
     } break;
     default:
-        Assert(false);
+        /*Assert(false);*/
+        return;
     }
 }
 
