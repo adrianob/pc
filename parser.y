@@ -19,6 +19,7 @@ comp_tree_t *g_global_scope = NULL;
 STACK_T *scopes = NULL;
 Array(SemanticError) g_semantic_errors = NULL;
 
+
 void comp_print_table2(comp_dict_t * dict) {
     printf("================ Printing symbols table ==============\n");
     for (int hash = 0; hash < dict->size; ++hash) {
@@ -64,6 +65,29 @@ static void push_undeclared_error(AST_Identifier *id) {
     array_push(g_semantic_errors, err);
 }
 
+void find_declaration(AST_Identifier *id) {
+    comp_dict_t *scope_dict = top(scopes);
+    char *id_key = get_key_from_identifier(id);
+
+    //didn't find declaration in current scope
+    if (!dict_get_entry(scope_dict, id_key)) {
+      char *ret_id_key = get_key_from_identifier(id);
+      DeclarationHeader *ret_decl_hdr = NULL;
+      STACK_T *head = scopes;
+      bool found = false;
+      while(head) {
+        comp_dict_t *dict = top(head);
+        ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
+        if (ret_decl_hdr) {
+          found = true;
+          break;
+        }
+        head = head->next;
+      }
+
+      if (!found) push_undeclared_error(id);
+    }
+}
 %}
 
 %union {
@@ -385,6 +409,7 @@ decl_func2:
 
             block->first_command = NULL;
 
+            //check for function identifier validity
             comp_dict_t *scope_dict = dict_from_tree(g_global_scope);
             char *id_key = get_key_from_identifier(id);
 
@@ -490,9 +515,10 @@ comando_sem_entrada_saida:
         comando_decl_var
         | comando_decl_var_init
         | {
+            //create new scope for block
             comp_dict_t * block_dic = dict_new();
             push(&scopes, block_dic);
-        } bloco_comandos {pop(&scopes);}
+        } bloco_comandos {$$ = NULL; pop(&scopes);}
         | chamada_func
         | comando_continue
         | comando_break
@@ -530,6 +556,7 @@ comando_decl_var_2:
         tipo_primitivo TK_IDENTIFICADOR
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+            //check if already declared
             comp_dict_t *scope_dict = top(scopes);
             char *id_key = get_key_from_identifier(id);
             if (dict_get_entry(scope_dict, id_key)) {
@@ -777,34 +804,20 @@ comando_atribuicao:
         AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
         $$ = ast_assignment_make(&id->header, $3);
 
-        comp_dict_t *scope_dict = top(scopes);
-        char *id_key = get_key_from_identifier(id);
-
-        //didn't find declaration in current scope
-        if (!dict_get_entry(scope_dict, id_key)) {
-          char *ret_id_key = get_key_from_identifier(id);
-          DeclarationHeader *ret_decl_hdr = NULL;
-          STACK_T *head = scopes;
-          bool found = false;
-          while(head) {
-            comp_dict_t *dict = top(head);
-            ret_decl_hdr = (DeclarationHeader*)dict_get_entry(dict, ret_id_key);
-            if (ret_decl_hdr) found = true;
-            head = head->next;
-          }
-
-          if (!found) push_undeclared_error(id);
+        find_declaration(id);
         }
-    }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
         AST_Header *vec = ast_indexed_vector_make($1, $3);
         $$ = ast_assignment_make(vec, $6);
-    }
+        AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+        find_declaration(id);
+        }
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
         AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
         AST_Header *id = ast_identifier_make($3);
         $$ = ast_assignment_user_type_make(user_type_id, id, $5);
-    }
+        find_declaration(id);
+        }
         ;
 
 expressao:
