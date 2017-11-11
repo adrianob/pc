@@ -235,25 +235,30 @@ void print_ast_to_graph(AST_Program *program) {
     }
 }
 
+void print_errors() {
+    printf("Printing errors (%d)\n", array_len(g_semantic_errors));
+    for (int i = 0; i < array_len(g_semantic_errors); ++i) {
+        printf("--> %s\n", g_semantic_errors[i].description);
+    }
+}
+
 void main_finalize(void) {
     gv_init(NULL);
     print_ast_to_graph(g_program);
     gv_close();
 
-    if(array_len(g_semantic_errors) > 0)
-        printf("Printing errors\n");
-    for (int i = 0; i < array_len(g_semantic_errors); ++i) {
-        printf("--> %s\n", g_semantic_errors[i].description);
-        ast_program_free(g_program);
-        remove_dict_items(dict);
-        dict_free(dict);
-        exit(g_semantic_errors[i].type);
+    int exit_code = IKS_SUCCESS;
+    int num_errors = array_len(g_semantic_errors);
+
+    if (num_errors > 0) {
+        print_errors();
+        exit_code = g_semantic_errors[0].type; // take the first error
     }
 
     ast_program_free(g_program);
     remove_dict_items(dict);
     dict_free(dict);
-    exit(IKS_SUCCESS);
+    exit(exit_code);
 }
 
 void comp_print_table(void) {

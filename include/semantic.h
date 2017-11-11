@@ -13,6 +13,7 @@ typedef struct SemanticError {
 
 typedef struct DeclarationHeader {
     DeclarationType type;
+    struct DeclarationHeader *next;
 } DeclarationHeader;
 
 typedef struct UserTypeField {
@@ -49,6 +50,8 @@ typedef struct VariableDeclaration {
     IKS_Type            type;
     AST_Identifier     *return_identifier;
     AST_Identifier     *identifier;
+    // @Todo(leo): Consider when variable is const.
+    // bool                is_const;
 } VariableDeclaration;
 
 static DeclarationHeader *variable_declaration_make(AST_Identifier *id, AST_Identifier *ret_id, IKS_Type type) {
@@ -76,75 +79,35 @@ static DeclarationHeader *vector_declaration_make(AST_Identifier *id, AST_Litera
     return &d->header;
 }
 
+typedef struct FunctionDeclaration {
+    DeclarationHeader   header;
+    AST_Identifier     *identifier;
+    AST_Identifier     *return_identifier;
+    IKS_Type            return_type;
+    DeclarationHeader  *first_param;
+} FunctionDeclaration;
 
-/* static AST_Header *scope_lookup(Array(comp_dict_t) scopes, AST_Identifier *identifier) { */
-/*     for (int i = array_len(scopes)-1; i >= 0; --i) { */
-/* 	AST_Header *hdr = (AST_Header*)dict_get(scopes[i], identifier); */
+static DeclarationHeader *function_declaration_make(AST_Identifier *id, AST_Identifier *ret_id,
+                                                    IKS_Type return_type, DeclarationHeader *first_param) {
+    FunctionDeclaration *d = calloc(1, sizeof(*d));
+    d->header.type = DT_FUNCTION;
+    d->identifier = id;
+    d->return_identifier = ret_id;
+    d->return_type = return_type;
+    d->first_param = first_param;
+    return &d->header;
+}
 
-/* 	if (!hdr) continue; // Not in this current scope. */
+static int function_declaration_num_params(FunctionDeclaration *decl) {
+    int num_params = 0;
 
-/* 	return hdr; */
-/*     } */
-/*     return NULL; */
-/* } */
+    DeclarationHeader *search = decl->first_param;
+    while (search) {
+        num_params++;
+        search = search->next;
+    }
 
-/* static Array(SemanticError) semantic_analyse_tree(AST_Program *program) { */
-/*     // Initialize stack of scopes. */
-/*     Array(comp_dict_t) scopes; */
-/*     array_init(scopes); */
-/*     // Initialize array of errors to return. */
-/*     Array(SemanticError) errors;  */
-/*     array_init(errors); */
-
-/*     AST_Function *func = program->first_func; */
-/*     while (func) { */
-/* 	// Analyse this function */
-/* 	if (func->return_type == IKS_UNDECIDED) { */
-/* 	    Assert(func->return_identifier); */
-
-/* 	    { */
-/* 		func */
-/* 	    } */
-
-
-/* 	    // Analyse the return type of the function */
-/* 	    { */
-/* 		AST_Header *hdr = scope_lookup(func->return_identifier); */
-
-/* 		if (hdr) { */
-/* 		    // Symbol is declared */
-/* 		    if (hdr->type == AST_FUNCAO) { */
-/* 			SemanticError err; */
-/* 			err.type = IKS_WRONG_TYPE; */
-/* 			err.description = "Cannot return a function."; */
-/* 			array_push(errors, err); */
-/* 		    } else if (hdr->type == AST_LITERAL) { */
-/* 			func->return_type = ((AST_Literal*)hdr)->semantic_type; */
-/* 		    } else { */
-/* 			Assert(false); */
-/* 		    } */
-/* 		} else { */
-/* 		    // Undeclared symbol. */
-/* 		    TableSymbol *id_ts = (TableSymbol*)func->identifier->entry; */
-/* 		    TableSymbol *return_id_ts = (TableSymbol*)func->return_identifier->entry; */
-
-/* 		    char *desc_format = "Return identifier %s is undeclared for function %s."; */
-/* 		    int desc_size = strlen(id_ts->name) + strlen(return_id_ts->name) + strlen(desc_format) - 4 + 1; */
-
-/* 		    SemanticError err; */
-/* 		    err.type = IKS_ERROR_UNDECLARED; */
-/* 		    err.description = calloc(desc_size, 1); */
-/* 		    snprintf(err.description, desc_size, desc_format, return_id_ts->name, id_ts->name); */
-
-/* 		    array_push(errors, err); */
-/* 		} */
-/* 	    } */
-/* 	} */
-	
-/*     } */
-
-/*     tree_free(global_scope); */
-/*     return errors; */
-/* } */
+    return num_params;
+}
 
 #endif // __SEMANTIC_H__
