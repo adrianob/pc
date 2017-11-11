@@ -238,14 +238,20 @@ void main_finalize(void) {
     print_ast_to_graph(g_program);
     gv_close();
 
-    printf("Printing errors\n");
+    if(array_len(g_semantic_errors) > 0)
+      printf("Printing errors\n");
     for (int i = 0; i < array_len(g_semantic_errors); ++i) {
-	printf("--> %s\n", g_semantic_errors[i].description);
+      printf("--> %s\n", g_semantic_errors[i].description);
+      ast_program_free(g_program);
+      remove_dict_items(dict);
+      dict_free(dict);
+      exit(g_semantic_errors[i].type);
     }
 
     ast_program_free(g_program);
     remove_dict_items(dict);
     dict_free(dict);
+    exit(IKS_SUCCESS);
 }
 
 void comp_print_table(void) {
