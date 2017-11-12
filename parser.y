@@ -145,6 +145,15 @@ static void push_wrong_par_output(AST_Header *header) {
     array_push(g_semantic_errors, err);
 }
 
+static void push_wrong_par_input(AST_Header *header) {
+    SemanticError err;
+    err.type = IKS_ERROR_WRONG_PAR_INPUT;
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: input only receives identifiers.",
+                                   find_line_number_from_ast_header(header));
+    array_push(g_semantic_errors, err);
+}
+
 static void push_excess_args_error(AST_Identifier *id) {
     SemanticError err;
     err.type = IKS_ERROR_EXCESS_ARGS;
@@ -989,6 +998,10 @@ comando_shift:
 comando_entrada_saida:
         TK_PR_INPUT expressao {
             $$ = ast_input_make($2);
+
+            if ($2->type != AST_IDENTIFICADOR) {
+                push_wrong_par_input($2);
+            }
         }
         | TK_PR_OUTPUT lista_expressoes      %prec "end_list_expressions" {
             // accepts string literal or aritmetic expression
