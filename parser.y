@@ -461,6 +461,7 @@ decl_func2:
             $$ = ast_function_make(id, block->first_command, $1, NULL);
             char *id_key = get_key_from_identifier(id);
 
+            pop(&g_scopes);
             //check for function identifier validity
             comp_dict_t *global_scope_dict = top(g_scopes);
 
@@ -470,7 +471,6 @@ decl_func2:
                 DeclarationHeader *decl = function_declaration_make(id, NULL, $1, $4);
                 dict_put(global_scope_dict, id_key, decl);
             }
-            pop(&g_scopes);
             block->first_command = NULL;
             ast_block_free(block);
         }
