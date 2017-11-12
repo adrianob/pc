@@ -301,7 +301,18 @@ static int find_line_number_from_ast_header(AST_Header *header) {
         AST_FunctionCall *fc = (AST_FunctionCall*)header;
         return ((TableSymbol*)fc->identifier->entry->value)->line_number;
     } break;
-    default: Assert(false);
+    case AST_ARIM_SOMA: {
+        AST_AritExpr *expr = (AST_AritExpr*)header;
+        return find_line_number_from_ast_header(expr->first);
+    } break;
+    case AST_VETOR_INDEXADO: {
+        AST_IndexedVector *vec = (AST_IndexedVector*)header;
+        return ((TableSymbol*)vec->identifier->entry->value)->line_number;
+    } break;
+    default:
+        printf("AST type: %s\n", g_ast_names[header->type]);
+        fflush(stdout);
+        Assert(false);
     }
 }
 
