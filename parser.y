@@ -73,6 +73,17 @@ static void push_variable_error(AST_Identifier *id) {
     array_push(g_semantic_errors, err);
 }
 
+static void push_wrong_type_args(AST_Identifier *id, int param_index) {
+    SemanticError err;
+    err.type = IKS_ERROR_WRONG_TYPE_ARGS;
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: Type mismatch in %s for parameter %d.",
+                                   get_line_from_identifier(id),
+                                   get_key_from_identifier(id),
+                                   param_index);
+    array_push(g_semantic_errors, err);
+}
+
 static void push_invalid_coertion_error(AST_Header *header) {
     SemanticError err;
     err.type = (header->semantic_type == IKS_CHAR)
@@ -197,7 +208,7 @@ static bool is_valid_expr_type(AST_Header *h) {
     return h->semantic_type == IKS_BOOL || h->semantic_type == IKS_INT || h->semantic_type == IKS_FLOAT;
 }
 
-static void check_errors_for_arit_expression(AST_Header *h1, AST_Header *h2) {
+static void check_errors_for_expression(AST_Header *h1, AST_Header *h2) {
     if (h1->semantic_type != IKS_INT && h1->semantic_type != IKS_FLOAT) {
         if (h1->semantic_type == IKS_CHAR || h1->semantic_type == IKS_STRING) {
             printf("pushing invalid coertion %s\n", iks_type_names[h1->semantic_type]);
@@ -1009,23 +1020,22 @@ chamada_func:
                     } else if (num_expressions > num_params) {
                         push_excess_args_error(id);
                     } else {
-                        // @Todo(leo)
-                        // Correct number of parameters, now check the types
-                        /* DeclarationHeader *param = func_decl->first_param; */
-                        /* AST_Header *expr = $3; */
-                        /* while (param) { // we know that param and expr are the same length */
-                        /*     Assert(param->type == DT_VARIABLE); */
+                        DeclarationHeader *param = func_decl->first_param;
+                        AST_Header *expr = $3;
+                        int param_i = 1;
+                        while (param && expr) { // we know that param and expr are the same length
+                            Assert(param->type == DT_VARIABLE);
 
-                        /*     VariableDeclaration *var_decl = (VariableDeclaration*)param; */
-                        /*     e */
+                            VariableDeclaration *var_decl = (VariableDeclaration*)param;
 
-                        /*     if (var_decl->type != expr_type) { */
-                        /*         // error */
-                        /*     } */
+                            if (var_decl->type != expr->semantic_type) {
+                                push_wrong_type_args(id, param_i);
+                            }
 
-                        /*     param = param->next; */
-                        /*     expr = expr->ext; */
-                        /* } */
+                            param = param->next;
+                            expr = expr->next;
+                            param_i++;
+                        }
                     }
                 } else {
                     Assert(false);
