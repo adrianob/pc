@@ -197,6 +197,19 @@ static bool is_valid_expr_type(AST_Header *h) {
     return h->semantic_type == IKS_BOOL || h->semantic_type == IKS_INT || h->semantic_type == IKS_FLOAT;
 }
 
+static void check_errors_for_arit_expression(AST_Header *h1, AST_Header *h2) {
+    if (h1->semantic_type == IKS_CHAR || h1->semantic_type == IKS_STRING) {
+        push_invalid_coertion_error(h1);
+    } else {
+        push_wrong_type_error(h1);
+    }
+    if (h2->semantic_type == IKS_CHAR || h2->semantic_type == IKS_STRING) {
+        push_invalid_coertion_error(h2);
+    } else {
+        push_wrong_type_error(h2);
+    }
+}
+
 %}
 
 %union {
@@ -1115,6 +1128,14 @@ expressao:
 expressao_arit:
         expressao_arit '+' expressao_arit_term1 {
             $$ = ast_arit_expr_make(AST_ARIM_SOMA, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                check_errors_for_arit_expression($1, $3);
+            }
         }
         | expressao_arit_term1
         ;
@@ -1122,6 +1143,14 @@ expressao_arit:
 expressao_arit_term1:
         expressao_arit_term1 '-' expressao_arit_term2 {
             $$ = ast_arit_expr_make(AST_ARIM_SUBTRACAO, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                check_errors_for_arit_expression($1, $3);
+            }
         }
         | expressao_arit_term2
         ;
@@ -1129,6 +1158,14 @@ expressao_arit_term1:
 expressao_arit_term2:
         expressao_arit_term2 '*' expressao_arit_term3 {
             $$ = ast_arit_expr_make(AST_ARIM_MULTIPLICACAO, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                check_errors_for_arit_expression($1, $3);
+            }
         }
         | expressao_arit_term3
         ;
@@ -1142,16 +1179,7 @@ expressao_arit_term3:
                 IKS_Type inferred_type = infer_type($1, $3);
                 $$->semantic_type = inferred_type;
             } else {
-                if ($1->semantic_type == IKS_CHAR || $1->semantic_type == IKS_STRING) {
-                    push_invalid_coertion_error($1);
-                } else {
-                    push_wrong_type_error($1);
-                }
-                if ($3->semantic_type == IKS_CHAR || $3->semantic_type == IKS_STRING) {
-                    push_invalid_coertion_error($3);
-                } else {
-                    push_wrong_type_error($3);
-                }
+                check_errors_for_arit_expression($1, $3);
             }
         }
         | expressao_arit_operando
