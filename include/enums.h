@@ -1,16 +1,26 @@
 #ifndef __ENUMS_H__
 #define __ENUMS_H__
 
+#define IKS_TYPES \
+    IKS_TYPE(IKS_UNDEFINED, "Undefined"),              \
+        IKS_TYPE(IKS_INT, "Integer"),                  \
+        IKS_TYPE(IKS_FLOAT, "Float"),                  \
+        IKS_TYPE(IKS_CHAR, "Character"),               \
+        IKS_TYPE(IKS_STRING, "String"),                \
+        IKS_TYPE(IKS_BOOL, "Boolean"),                 \
+        IKS_TYPE(IKS_USER_TYPE, "User-Type")
+
 typedef enum IKS_Type {
-    IKS_INT = 1,
-    IKS_FLOAT,
-    IKS_CHAR,
-    IKS_STRING,
-    IKS_BOOL,
-    IKS_USER_TYPE,
-    IKS_UNDECIDED,
-    IKS_UNDEFINED,
+#define IKS_TYPE(d, s) d
+    IKS_TYPES
+#undef IKS_TYPE
 } IKS_Type;
+
+static char *iks_type_names[] = {
+#define IKS_TYPE(d, s) s
+    IKS_TYPES
+#undef IKS_TYPE
+};
 
 static int get_primitive_type_size(IKS_Type type) {
     switch (type) {

@@ -20,6 +20,7 @@ typedef struct UserTypeField {
     IKS_Type           type;
     FieldVisibility    visibility;
     AST_Header        *identifier;
+    int                size_in_bytes;
     struct UserTypeField     *next;
 } UserTypeField;
 

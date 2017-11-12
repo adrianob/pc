@@ -12,6 +12,7 @@
 #include "macros.h"
 #include "cc_dict.h"
 #include "enums.h"
+#include "table_symbol.h"
 
 #ifndef AST_TYPES
 #define AST_TYPES						\
@@ -72,12 +73,12 @@ typedef struct AST_Literal AST_Literal;
 
 typedef struct AST_Header {
     int                type;
+    IKS_Type           semantic_type;
     struct AST_Header *next;
 } AST_Header;
 
 typedef struct AST_Identifier {
     AST_Header        header;
-    IKS_Type          semantic_type;
     comp_dict_item_t *entry;
 } AST_Identifier;
 
@@ -117,7 +118,6 @@ void ast_if_free(AST_IfElse *i);
 
 typedef struct AST_Shift {
     AST_Header           header;
-    IKS_Type             semantic_type;
     AST_Identifier      *identifier;
     AST_Literal         *number;
     bool                 shift_right;
@@ -214,7 +214,6 @@ void ast_return_free(AST_Return *r);
 
 typedef struct AST_Block {
     AST_Header  header;
-    IKS_Type    semantic_type;
     AST_Header *first_command;
 } AST_Block;
 
@@ -244,16 +243,14 @@ void ast_identifier_free(AST_Identifier *i);
 
 typedef struct AST_Literal {
     AST_Header        header;
-    IKS_Type          semantic_type;
     comp_dict_item_t *entry;
 } AST_Literal;
 
-AST_Header *ast_literal_make(comp_dict_item_t *entry);
+AST_Header *ast_literal_make(comp_dict_item_t *entry, IKS_Type semantic_type);
 void ast_literal_free(AST_Literal *l);
 
 typedef struct AST_AritExpr {
     AST_Header   header;
-    IKS_Type     semantic_type;
     AST_Header  *first;
     AST_Header  *second;
 } AST_AritExpr;
@@ -263,7 +260,6 @@ void ast_arit_expr_free(AST_AritExpr *e);
 
 typedef struct AST_LogicExpr {
     AST_Header   header;
-    IKS_Type     semantic_type;
     AST_Header  *first;
     AST_Header  *second;
 } AST_LogicExpr;
@@ -273,24 +269,41 @@ void ast_logic_expr_free(AST_LogicExpr *e);
 
 typedef struct AST_IndexedVector {
     AST_Header      header;
-    IKS_Type        semantic_type;
     AST_Identifier *identifier;
     AST_Header     *expr;
 } AST_IndexedVector;
 
-AST_Header *ast_indexed_vector_make(comp_dict_item_t *entry, AST_Header *expr);
+AST_Header *ast_indexed_vector_make(AST_Identifier *id, AST_Header *expr);
 void ast_indexed_vector_free(AST_IndexedVector *iv);
 
 void ast_expr_free(AST_Header *expr);
 
 typedef struct AST_FunctionCall {
     AST_Header      header;
-    IKS_Type        semantic_type;
     AST_Identifier *identifier;
     AST_Header *first_param;
 } AST_FunctionCall;
 
 AST_Header *ast_function_call_make(comp_dict_item_t *entry, AST_Header *param);
 void ast_function_call_free(AST_FunctionCall *fc);
+
+static int find_line_number_from_ast_header(AST_Header *header) {
+    switch (header->type) {
+    case AST_LITERAL: {
+        AST_Literal *lit = (AST_Literal*)header;
+        return ((TableSymbol*)lit->entry->value)->line_number;
+    } break;
+    case AST_IDENTIFICADOR: {
+        AST_Identifier *id = (AST_Identifier*)header;
+        return ((TableSymbol*)id->entry->value)->line_number;
+    } break;
+    case AST_CHAMADA_DE_FUNCAO: {
+        AST_FunctionCall *fc = (AST_FunctionCall*)header;
+        return ((TableSymbol*)fc->identifier->entry->value)->line_number;
+    } break;
+    default: Assert(false);
+    }
+}
+
 
 #endif

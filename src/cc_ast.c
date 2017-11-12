@@ -5,7 +5,7 @@ AST_Header *ast_shift_make(AST_Identifier *id, AST_Literal *number, bool shift_r
     AST_Shift *s = calloc(1, sizeof(*s));
     s->header.type = (shift_right) ? AST_SHIFT_RIGHT : AST_SHIFT_LEFT;
     // @Assumption(Leo): Shift type should always be int.
-    s->semantic_type = IKS_INT;
+    s->header.semantic_type = IKS_INT;
     s->identifier = id;
     s->number = number;
     return &s->header;
@@ -306,9 +306,10 @@ void ast_identifier_free(AST_Identifier *i) {
     free(i);
 }
 
-AST_Header *ast_literal_make(comp_dict_item_t *entry) {
+AST_Header *ast_literal_make(comp_dict_item_t *entry, IKS_Type semantic_type) {
     AST_Literal *l = calloc(1, sizeof(*l));
     l->header.type = AST_LITERAL;
+    l->header.semantic_type = semantic_type;
     l->entry = entry;
     return &l->header;
 }
@@ -347,10 +348,10 @@ void ast_logic_expr_free(AST_LogicExpr *e) {
     free(e);
 }
 
-AST_Header *ast_indexed_vector_make(comp_dict_item_t *entry, AST_Header *expr) {
+AST_Header *ast_indexed_vector_make(AST_Identifier *id, AST_Header *expr) {
     AST_IndexedVector *iv = calloc(1, sizeof(*iv));
     iv->header.type = AST_VETOR_INDEXADO;
-    iv->identifier = (AST_Identifier*)ast_identifier_make(entry);
+    iv->identifier = id;
     iv->expr = expr;
     return &iv->header;
 }

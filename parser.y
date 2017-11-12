@@ -73,6 +73,28 @@ static void push_variable_error(AST_Identifier *id) {
     array_push(g_semantic_errors, err);
 }
 
+static void push_invalid_coertion_error(AST_Header *header) {
+    SemanticError err;
+    err.type = (header->semantic_type == IKS_CHAR)
+        ? IKS_ERROR_CHAR_TO_X
+        : IKS_ERROR_STRING_TO_X;
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: Invalid coertion from %s.",
+                                   find_line_number_from_ast_header(header),
+                                   iks_type_names[header->semantic_type]);
+    array_push(g_semantic_errors, err);
+}
+
+static void push_wrong_type_error(AST_Header *header) {
+    SemanticError err;
+    err.type = IKS_ERROR_WRONG_TYPE;
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: Wrong type %s.",
+                                   find_line_number_from_ast_header(header),
+                                   iks_type_names[header->semantic_type]);
+    array_push(g_semantic_errors, err);
+}
+
 static void push_function_error(AST_Identifier *id) {
     SemanticError err;
     err.type = IKS_ERROR_FUNCTION;
@@ -151,6 +173,28 @@ static DeclarationHeader *find_or_make_declaration(AST_Identifier *id, IKS_Type 
         return decl;
     }
     return NULL;
+}
+
+static IKS_Type infer_type(AST_Header *h1, AST_Header *h2) {
+    Assert(h1->semantic_type == IKS_FLOAT ||
+           h1->semantic_type == IKS_INT ||
+           h1->semantic_type == IKS_BOOL);
+    Assert(h2->semantic_type == IKS_FLOAT ||
+           h2->semantic_type == IKS_INT ||
+           h2->semantic_type == IKS_BOOL);
+
+    if (h1->semantic_type == IKS_FLOAT || h2->semantic_type == IKS_FLOAT) {
+        return IKS_FLOAT;
+    } else if (h1->semantic_type == IKS_INT || h2->semantic_type == IKS_INT) {
+        return IKS_INT;
+    } else if (h1->semantic_type) {
+        Assert(h1->semantic_type == IKS_BOOL && h2->semantic_type == IKS_BOOL);
+        return IKS_BOOL;
+    }
+}
+
+static bool is_valid_expr_type(AST_Header *h) {
+    return h->semantic_type == IKS_BOOL || h->semantic_type == IKS_INT || h->semantic_type == IKS_FLOAT;
 }
 
 %}
@@ -357,43 +401,43 @@ campo:
         {
             AST_Header *id = ast_identifier_make($3);
             $$ = user_type_field_make($2, id, FV_PROTECTED);
-            find_or_make_declaration((AST_Identifier *)id, $2);
+            find_or_make_declaration((AST_Identifier*)ast_identifier_make($3), $2);
         }
         |   TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR
         {
             AST_Header *id = ast_identifier_make($3);
             $$ = user_type_field_make($2, id, FV_PRIVATE);
-            find_or_make_declaration((AST_Identifier *)id, $2);
+            find_or_make_declaration((AST_Identifier*)ast_identifier_make($3), $2);
         }
         |   TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR
         {
             AST_Header *id = ast_identifier_make($3);
             $$ = user_type_field_make($2, id, FV_PUBLIC);
-            find_or_make_declaration((AST_Identifier *)id, $2);
+            find_or_make_declaration((AST_Identifier *)ast_identifier_make($3), $2);
         }
         |   TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
         {
-            AST_Header *expr = ast_literal_make($5);
-            AST_Header *indexed_vector = ast_indexed_vector_make($3, expr);
+            AST_Header *expr = ast_literal_make($5, $2);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+            AST_Header *indexed_vector = ast_indexed_vector_make(id, expr);
             $$ = user_type_field_make($2, indexed_vector, FV_PUBLIC);
-            AST_Header *id = ast_identifier_make($3);
-            find_or_make_declaration((AST_Identifier *)id, $2);
+            find_or_make_declaration((AST_Identifier *)ast_identifier_make($3), $2);
         }
         |   TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
         {
-            AST_Header *expr = ast_literal_make($5);
-            AST_Header *indexed_vector = ast_indexed_vector_make($3, expr);
+            AST_Header *expr = ast_literal_make($5, $2);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+            AST_Header *indexed_vector = ast_indexed_vector_make(id, expr);
             $$ = user_type_field_make($2, indexed_vector, FV_PRIVATE);
-            AST_Header *id = ast_identifier_make($3);
-            find_or_make_declaration((AST_Identifier *)id, $2);
+            find_or_make_declaration((AST_Identifier *)ast_identifier_make($3), $2);
         }
         |   TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
         {
-            AST_Header *expr = ast_literal_make($5);
-            AST_Header *indexed_vector = ast_indexed_vector_make($3, expr);
+            AST_Header *expr = ast_literal_make($5, $2);
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
+            AST_Header *indexed_vector = ast_indexed_vector_make(id, expr);
             $$ = user_type_field_make($2, indexed_vector, FV_PROTECTED);
-            AST_Header *id = ast_identifier_make($3);
-            find_or_make_declaration((AST_Identifier *)id, $2);
+            find_or_make_declaration((AST_Identifier *)ast_identifier_make($3), $2);
         }
         ;
 
@@ -424,7 +468,7 @@ decl_global_non_static:
         |   tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';'
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-            AST_Literal *count = (AST_Literal*)ast_literal_make($4);
+            AST_Literal *count = (AST_Literal*)ast_literal_make($4, IKS_INT);
 
             comp_dict_t *scope_dict = top(g_scopes);
             char *id_key = get_key_from_identifier(id);
@@ -495,7 +539,7 @@ decl_func2:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Block *block = (AST_Block*)$5;
 
-            $$ = ast_function_make(id, block->first_command, IKS_UNDECIDED, return_id);
+            $$ = ast_function_make(id, block->first_command, IKS_UNDEFINED, return_id);
 
             block->first_command = NULL;
 
@@ -627,10 +671,10 @@ seq_comandos:
         ;
 
 comando_case:
-        TK_PR_CASE TK_LIT_INT ':' {
-        AST_Literal *lit = (AST_Literal*)ast_literal_make($2);
-        $$ = ast_case_make(lit);
-    };
+                TK_PR_CASE TK_LIT_INT ':' {
+                    AST_Literal *lit = (AST_Literal*)ast_literal_make($2, IKS_INT);
+                    $$ = ast_case_make(lit);
+                };
 
 comando_sem_entrada_saida:
         comando_decl_var
@@ -782,19 +826,19 @@ comando_decl_var_init:
         ;
 
 token_lit:
-        lit_numerico
-        | TK_LIT_FALSE {$$ = ast_literal_make($1);}
-        | TK_LIT_TRUE {$$ = ast_literal_make($1);}
-        | TK_LIT_CHAR {$$ = ast_literal_make($1);}
-        | TK_LIT_STRING {$$ = ast_literal_make($1);}
+                lit_numerico
+        |       TK_LIT_FALSE {$$ = ast_literal_make($1, IKS_BOOL);}
+        |       TK_LIT_TRUE {$$ = ast_literal_make($1, IKS_BOOL);}
+        |       TK_LIT_CHAR {$$ = ast_literal_make($1, IKS_CHAR);}
+        |       TK_LIT_STRING {$$ = ast_literal_make($1, IKS_STRING);}
         ;
 
 lit_numerico:
         TK_LIT_INT {
-            $$ = ast_literal_make($1);
+            $$ = ast_literal_make($1, IKS_INT);
         }
         | TK_LIT_FLOAT {
-            $$ = ast_literal_make($1);
+            $$ = ast_literal_make($1, IKS_FLOAT);
         }
         ;
 
@@ -893,12 +937,12 @@ comando_switch_case:
 comando_shift:
         TK_IDENTIFICADOR TK_OC_SL TK_LIT_INT {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-            AST_Literal *number = (AST_Literal*)ast_literal_make($3);
+            AST_Literal *number = (AST_Literal*)ast_literal_make($3, IKS_INT);
             $$ = ast_shift_make(id, number, false);
         }
         | TK_IDENTIFICADOR TK_OC_SR TK_LIT_INT {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-            AST_Literal *number = (AST_Literal*)ast_literal_make($3);
+            AST_Literal *number = (AST_Literal*)ast_literal_make($3, IKS_INT);
             $$ = ast_shift_make(id, number, true);
         }
         ;
@@ -918,6 +962,9 @@ chamada_func:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             char *id_key = get_key_from_identifier(id);
 
+            // Define the function call
+            $$ = ast_function_call_make($1, $3);
+
             DeclarationHeader *decl = NULL;
 
             if ((decl = find_declaration_recursive(id))) {
@@ -928,6 +975,8 @@ chamada_func:
                 } else if (decl->type == DT_FUNCTION) {
                     FunctionDeclaration *func_decl = (FunctionDeclaration*)decl;
                     int num_params = function_declaration_num_params(func_decl);
+
+                    $$->semantic_type = func_decl->return_type;
 
                     int num_expressions = 0;
                     AST_Header *search = $3;
@@ -965,8 +1014,6 @@ chamada_func:
             } else {
                 push_undeclared_error(id);
             }
-
-            $$ = ast_function_call_make($1, $3);
         }
         | TK_IDENTIFICADOR '(' ')' {
             // Guarantee that identifier is a function
@@ -1029,9 +1076,9 @@ comando_atribuicao:
             }
         }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
-            AST_Header *vec = ast_indexed_vector_make($1, $3);
-            $$ = ast_assignment_make(vec, $6);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+            AST_Header *vec = ast_indexed_vector_make(id, $3);
+            $$ = ast_assignment_make(vec, $6);
 
             DeclarationHeader *decl = NULL;
             if ((decl = find_declaration_recursive(id))) {
@@ -1059,10 +1106,10 @@ comando_atribuicao:
         ;
 
 expressao:
-        expressao_arit
-        | expressao_logica
-        | TK_LIT_CHAR {$$ = ast_literal_make($1);}
-        | TK_LIT_STRING {$$ = ast_literal_make($1);}
+                expressao_arit
+        |       expressao_logica
+        |       TK_LIT_CHAR {$$ = ast_literal_make($1, IKS_CHAR);}
+        |       TK_LIT_STRING {$$ = ast_literal_make($1, IKS_STRING);}
         ;
 
 expressao_arit:
@@ -1089,15 +1136,74 @@ expressao_arit_term2:
 expressao_arit_term3:
         expressao_arit_term3 '/' expressao_arit_operando {
             $$ = ast_arit_expr_make(AST_ARIM_DIVISAO, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                if ($1->semantic_type == IKS_CHAR || $1->semantic_type == IKS_STRING) {
+                    push_invalid_coertion_error($1);
+                } else {
+                    push_wrong_type_error($1);
+                }
+                if ($3->semantic_type == IKS_CHAR || $3->semantic_type == IKS_STRING) {
+                    push_invalid_coertion_error($3);
+                } else {
+                    push_wrong_type_error($3);
+                }
+            }
         }
         | expressao_arit_operando
         ;
 
 expressao_arit_operando:
-        TK_IDENTIFICADOR {$$ = ast_identifier_make($1);}
-        | TK_IDENTIFICADOR '[' expressao ']' {$$ = ast_indexed_vector_make($1, $3);}
+        TK_IDENTIFICADOR {
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+
+            comp_dict_t *scope_dict = top(g_scopes);
+            DeclarationHeader *decl_hdr = find_declaration_recursive(id);
+            if (decl_hdr) {
+                if (decl_hdr->type == DT_VARIABLE) {
+                    VariableDeclaration *decl = (VariableDeclaration*)decl_hdr;
+                    id->header.semantic_type = decl->type;
+                } else {
+                    push_variable_error(id);
+                }
+            } else {
+                push_undeclared_error(id);
+            }
+
+            $$ = &id->header;
+        }
+        | TK_IDENTIFICADOR '[' expressao ']' {
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
+            AST_IndexedVector *vec = (AST_IndexedVector*)ast_indexed_vector_make(id, $3);
+
+            comp_dict_t *scope_dict = top(g_scopes);
+            DeclarationHeader *decl_hdr = find_declaration_recursive(id);
+            if (decl_hdr) {
+                if (decl_hdr->type == DT_VECTOR) {
+                    VectorDeclaration *decl = (VectorDeclaration*)decl_hdr;
+                    id->header.semantic_type = decl->type;
+
+                    if ($3->semantic_type != IKS_INT) {
+                        push_wrong_type_error($3);
+                    }
+                } else {
+                    push_vector_error(id);
+                }
+            } else {
+                push_undeclared_error(id);
+            }
+
+            $$ = &vec->header;
+        }
         | lit_numerico
-        | '-' lit_numerico {$$ = ast_arit_expr_make(AST_ARIM_INVERSAO, $2, NULL);}
+        | '-' lit_numerico {
+            $$ = ast_arit_expr_make(AST_ARIM_INVERSAO, $2, NULL);
+            $$->semantic_type = $2->semantic_type;
+        }
         | chamada_func
         | '(' expressao_arit ')' {$$ = $2;}
         ;
@@ -1141,8 +1247,8 @@ expressao_logica4:
         ;
 
 expressao_logica_operando:
-        TK_LIT_FALSE {$$ = ast_literal_make($1);}
-        | TK_LIT_TRUE {$$ = ast_literal_make($1);}
+TK_LIT_FALSE {$$ = ast_literal_make($1, IKS_BOOL);}
+        | TK_LIT_TRUE {$$ = ast_literal_make($1, IKS_BOOL);}
         | '(' expressao_logica ')' {$$ = $2;}
         ;
 
