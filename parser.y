@@ -197,7 +197,7 @@ static bool is_valid_expr_type(AST_Header *h) {
     return h->semantic_type == IKS_BOOL || h->semantic_type == IKS_INT || h->semantic_type == IKS_FLOAT;
 }
 
-static void check_errors_for_arit_expression(AST_Header *h1, AST_Header *h2) {
+static void check_errors_for_expression(AST_Header *h1, AST_Header *h2) {
     if (h1->semantic_type == IKS_CHAR || h1->semantic_type == IKS_STRING) {
         push_invalid_coertion_error(h1);
     } else {
@@ -1134,7 +1134,7 @@ expressao_arit:
                 IKS_Type inferred_type = infer_type($1, $3);
                 $$->semantic_type = inferred_type;
             } else {
-                check_errors_for_arit_expression($1, $3);
+                check_errors_for_expression($1, $3);
             }
         }
         | expressao_arit_term1
@@ -1149,7 +1149,7 @@ expressao_arit_term1:
                 IKS_Type inferred_type = infer_type($1, $3);
                 $$->semantic_type = inferred_type;
             } else {
-                check_errors_for_arit_expression($1, $3);
+                check_errors_for_expression($1, $3);
             }
         }
         | expressao_arit_term2
@@ -1164,7 +1164,7 @@ expressao_arit_term2:
                 IKS_Type inferred_type = infer_type($1, $3);
                 $$->semantic_type = inferred_type;
             } else {
-                check_errors_for_arit_expression($1, $3);
+                check_errors_for_expression($1, $3);
             }
         }
         | expressao_arit_term3
@@ -1179,7 +1179,7 @@ expressao_arit_term3:
                 IKS_Type inferred_type = infer_type($1, $3);
                 $$->semantic_type = inferred_type;
             } else {
-                check_errors_for_arit_expression($1, $3);
+                check_errors_for_expression($1, $3);
             }
         }
         | expressao_arit_operando
@@ -1239,9 +1239,25 @@ expressao_arit_operando:
 expressao_logica:
         expressao_arit operator_relacional expressao_arit {
             $$ = ast_logic_expr_make($2, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                check_errors_for_expression($1, $3);
+            }
         }
         | expressao_logica TK_OC_AND expressao_logica1 {
             $$ = ast_logic_expr_make(AST_LOGICO_E, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                check_errors_for_expression($1, $3);
+            }
         }
         | expressao_logica1
         ;
@@ -1249,6 +1265,14 @@ expressao_logica:
 expressao_logica1:
         expressao_logica1 TK_OC_OR expressao_logica2 {
             $$ = ast_logic_expr_make(AST_LOGICO_OU, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                check_errors_for_expression($1, $3);
+            }
         }
         | expressao_logica2
         ;
@@ -1256,6 +1280,14 @@ expressao_logica1:
 expressao_logica2:
         expressao_logica2 TK_OC_EQ expressao_logica3 {
             $$ = ast_logic_expr_make(AST_LOGICO_COMP_IGUAL, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                check_errors_for_expression($1, $3);
+            }
         }
         | expressao_logica3
         ;
@@ -1263,19 +1295,39 @@ expressao_logica2:
 expressao_logica3:
         expressao_logica3 TK_OC_NE expressao_logica4 {
             $$ = ast_logic_expr_make(AST_LOGICO_COMP_DIF, $1, $3);
+
+            if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = infer_type($1, $3);
+                $$->semantic_type = inferred_type;
+            } else {
+                check_errors_for_expression($1, $3);
+            }
         }
         | expressao_logica4
         ;
 
 expressao_logica4:
         '!' expressao_logica4 {
-            $$ = ast_logic_expr_make(AST_LOGICO_COMP_NEGACAO, $2, NULL);
+
+            if (is_valid_expr_type($2)) {
+                // Correctly typed expression
+                IKS_Type inferred_type = $2->semantic_type;
+                $$->semantic_type = inferred_type;
+            } else {
+                if ($2->semantic_type == IKS_CHAR || $2->semantic_type == IKS_STRING) {
+                    push_invalid_coertion_error($2);
+                } else {
+                    push_wrong_type_error($2);
+                }
+            }
+            $$ = ast_logic_expr_make(AST_LOGICO_COMP_NEGACAO, $2, NULL, inferred_type);
         }
         | expressao_logica_operando
         ;
 
 expressao_logica_operando:
-TK_LIT_FALSE {$$ = ast_literal_make($1, IKS_BOOL);}
+        TK_LIT_FALSE {$$ = ast_literal_make($1, IKS_BOOL);}
         | TK_LIT_TRUE {$$ = ast_literal_make($1, IKS_BOOL);}
         | '(' expressao_logica ')' {$$ = $2;}
         ;
