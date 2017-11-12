@@ -1321,7 +1321,7 @@ expressao_logica4:
                     push_wrong_type_error($2);
                 }
             }
-            $$ = ast_logic_expr_make(AST_LOGICO_COMP_NEGACAO, $2, NULL, inferred_type);
+            $$ = ast_logic_expr_make(AST_LOGICO_COMP_NEGACAO, $2, NULL);
         }
         | expressao_logica_operando
         ;
