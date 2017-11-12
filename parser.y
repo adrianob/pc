@@ -73,9 +73,19 @@ static void push_variable_error(AST_Identifier *id) {
     array_push(g_semantic_errors, err);
 }
 
+static void push_function_error(AST_Identifier *id) {
+    SemanticError err;
+    err.type = IKS_ERROR_FUNCTION;
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: Identifier %s has to be used as a function.",
+                                   get_line_from_identifier(id),
+                                   get_key_from_identifier(id));
+    array_push(g_semantic_errors, err);
+}
+
 static void push_vector_error(AST_Identifier *id) {
     SemanticError err;
-    err.type = IKS_ERROR_VARIABLE;
+    err.type = IKS_ERROR_VECTOR;
     err.description = sdscatprintf(sdsempty(),
                                    "%d: Identifier %s has to be used as a vector.",
                                    get_line_from_identifier(id),
@@ -1004,16 +1014,40 @@ comando_atribuicao:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             $$ = ast_assignment_make(&id->header, $3);
 
-            DeclarationHeader *decl = find_declaration_recursive(id);
-            if (!decl) push_undeclared_error((AST_Identifier*)id);
+            DeclarationHeader *decl = NULL;
+            if ((decl = find_declaration_recursive(id))) {
+                if (decl->type == DT_FUNCTION) {
+                    push_function_error(id);
+                } else if (decl->type == DT_VECTOR) {
+                    push_vector_error(id);
+                } else if (decl->type == DT_VARIABLE) {
+                    //do nothing
+                } else {
+                    Assert(false);
+                }
+            } else {
+                push_undeclared_error(id);
+            }
         }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
             AST_Header *vec = ast_indexed_vector_make($1, $3);
             $$ = ast_assignment_make(vec, $6);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
 
-            DeclarationHeader *decl = find_declaration_recursive(id);
-            if (!decl) push_undeclared_error((AST_Identifier*)id);
+            DeclarationHeader *decl = NULL;
+            if ((decl = find_declaration_recursive(id))) {
+                if (decl->type == DT_FUNCTION) {
+                    push_function_error(id);
+                } else if (decl->type == DT_VARIABLE) {
+                    push_variable_error(id);
+                } else if (decl->type == DT_VECTOR) {
+                    //do nothing
+                } else {
+                    Assert(false);
+                }
+            } else {
+                push_undeclared_error(id);
+            }
         }
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
             AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
