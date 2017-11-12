@@ -136,6 +136,15 @@ static void push_missing_args_error(AST_Identifier *id) {
     array_push(g_semantic_errors, err);
 }
 
+static void push_wrong_par_output(AST_Header *header) {
+    SemanticError err;
+    err.type = IKS_ERROR_WRONG_PAR_OUTPUT;
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: output only receives string literals and arithmetic expressions.",
+                                   find_line_number_from_ast_header(header));
+    array_push(g_semantic_errors, err);
+}
+
 static void push_excess_args_error(AST_Identifier *id) {
     SemanticError err;
     err.type = IKS_ERROR_EXCESS_ARGS;
@@ -982,7 +991,29 @@ comando_entrada_saida:
             $$ = ast_input_make($2);
         }
         | TK_PR_OUTPUT lista_expressoes      %prec "end_list_expressions" {
+            // accepts string literal or aritmetic expression
             $$ = ast_output_make($2);
+
+            AST_Header *expr = $2;
+            while (expr) {
+                switch (expr->type) {
+                case AST_ARIM_SOMA:
+                case AST_ARIM_SUBTRACAO:
+                case AST_ARIM_MULTIPLICACAO:
+                case AST_ARIM_DIVISAO:
+                case AST_ARIM_INVERSAO:
+                    break;
+                case AST_LITERAL: {
+                    AST_Literal *lit = (AST_Literal*)expr;
+                    if (((TableSymbol*)lit->entry->value)->token_type != POA_LIT_STRING) {
+                        push_wrong_par_output(expr);
+                    }
+                } break;
+                default:
+                    push_wrong_par_output(expr);
+                }
+                expr = expr->next;
+            }
         }
         ;
 
@@ -1022,7 +1053,7 @@ chamada_func:
                     } else {
                         DeclarationHeader *param = func_decl->first_param;
                         AST_Header *expr = $3;
-                        int param_i = 1;
+                        int param_i = 1; // current parameter
                         while (param && expr) { // we know that param and expr are the same length
                             Assert(param->type == DT_VARIABLE);
 
