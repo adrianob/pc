@@ -197,16 +197,22 @@ static bool is_valid_expr_type(AST_Header *h) {
     return h->semantic_type == IKS_BOOL || h->semantic_type == IKS_INT || h->semantic_type == IKS_FLOAT;
 }
 
-static void check_errors_for_expression(AST_Header *h1, AST_Header *h2) {
-    if (h1->semantic_type == IKS_CHAR || h1->semantic_type == IKS_STRING) {
-        push_invalid_coertion_error(h1);
-    } else {
-        push_wrong_type_error(h1);
+static void check_errors_for_arit_expression(AST_Header *h1, AST_Header *h2) {
+    if (h1->semantic_type != IKS_INT && h1->semantic_type != IKS_FLOAT) {
+        if (h1->semantic_type == IKS_CHAR || h1->semantic_type == IKS_STRING) {
+            printf("pushing invalid coertion %s\n", iks_type_names[h1->semantic_type]);
+            push_invalid_coertion_error(h1);
+        } else {
+            push_wrong_type_error(h1);
+        }
     }
-    if (h2->semantic_type == IKS_CHAR || h2->semantic_type == IKS_STRING) {
-        push_invalid_coertion_error(h2);
-    } else {
-        push_wrong_type_error(h2);
+
+    if (h2->semantic_type != IKS_INT && h2->semantic_type != IKS_FLOAT) {
+        if (h2->semantic_type == IKS_CHAR || h2->semantic_type == IKS_STRING) {
+            push_invalid_coertion_error(h2);
+        } else {
+            push_wrong_type_error(h2);
+        }
     }
 }
 
