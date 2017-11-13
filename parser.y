@@ -204,6 +204,21 @@ static DeclarationHeader *find_or_make_declaration(AST_Identifier *id, IKS_Type 
     return NULL;
 }
 
+static IKS_Type infer_expression_type(IKS_Type t1, IKS_Type t2) {
+    if (t1 == IKS_FLOAT || t2 == IKS_FLOAT) {
+        return IKS_FLOAT;
+    } else if (t1 == IKS_INT || t2 == IKS_INT) {
+        return IKS_INT;
+    } else if (t1 == IKS_BOOL && t2 == IKS_BOOL) {
+        return IKS_BOOL;
+    } else if (t1 == t2) {
+        return t1;
+    }
+    else{
+        Assert(false);
+    }
+}
+
 static IKS_Type infer_type(AST_Header *h1, AST_Header *h2) {
     Assert(h1->semantic_type == IKS_FLOAT ||
            h1->semantic_type == IKS_INT ||
@@ -1151,7 +1166,7 @@ comando_atribuicao:
             comp_dict_t *scope_dict = top(g_scopes);
             char *id_key = get_key_from_identifier(id);
             comp_dict_item_t *entry = dict_get_entry(scope_dict, id_key);
-            if (((VariableDeclaration*)entry->value)->type != $3->semantic_type) {
+            if (infer_expression_type( ((VariableDeclaration*)entry->value)->type, $3->semantic_type) != ((VariableDeclaration*)entry->value)->type) {
                 push_wrong_type_error($3);
             }
         }
@@ -1178,7 +1193,7 @@ comando_atribuicao:
             comp_dict_t *scope_dict = top(g_scopes);
             char *id_key = get_key_from_identifier(id);
             comp_dict_item_t *entry = dict_get_entry(scope_dict, id_key);
-            if (((VariableDeclaration*)entry->value)->type != $6->semantic_type) {
+            if (infer_expression_type( ((VariableDeclaration*)entry->value)->type, $6->semantic_type) != ((VariableDeclaration*)entry->value)->type) {
                 push_wrong_type_error($6);
             }
         }
@@ -1193,7 +1208,7 @@ comando_atribuicao:
             comp_dict_t *scope_dict = top(g_scopes);
             char *id_key = get_key_from_identifier((AST_Identifier *)id);
             comp_dict_item_t *entry = dict_get_entry(scope_dict, id_key);
-            if (((VariableDeclaration*)entry->value)->type != $5->semantic_type) {
+            if (infer_expression_type( ((VariableDeclaration*)entry->value)->type, $5->semantic_type) != ((VariableDeclaration*)entry->value)->type) {
                 push_wrong_type_error($5);
             }
         }
