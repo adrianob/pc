@@ -1147,6 +1147,13 @@ comando_atribuicao:
             } else {
                 push_undeclared_error(id);
             }
+
+            comp_dict_t *scope_dict = top(g_scopes);
+            char *id_key = get_key_from_identifier(id);
+            comp_dict_item_t *entry = dict_get_entry(scope_dict, id_key);
+            if (((VariableDeclaration*)entry->value)->type != $3->semantic_type) {
+                push_wrong_type_error($3);
+            }
         }
         | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
@@ -1167,6 +1174,13 @@ comando_atribuicao:
             } else {
                 push_undeclared_error(id);
             }
+
+            comp_dict_t *scope_dict = top(g_scopes);
+            char *id_key = get_key_from_identifier(id);
+            comp_dict_item_t *entry = dict_get_entry(scope_dict, id_key);
+            if (((VariableDeclaration*)entry->value)->type != $6->semantic_type) {
+                push_wrong_type_error($6);
+            }
         }
         | TK_IDENTIFICADOR '$' TK_IDENTIFICADOR '=' expressao {
             AST_Identifier *user_type_id = (AST_Identifier*)ast_identifier_make($1);
@@ -1175,6 +1189,13 @@ comando_atribuicao:
 
             DeclarationHeader *decl = find_declaration_recursive((AST_Identifier*)id);
             if (!decl) push_undeclared_error((AST_Identifier*)id);
+
+            comp_dict_t *scope_dict = top(g_scopes);
+            char *id_key = get_key_from_identifier((AST_Identifier *)id);
+            comp_dict_item_t *entry = dict_get_entry(scope_dict, id_key);
+            if (((VariableDeclaration*)entry->value)->type != $5->semantic_type) {
+                push_wrong_type_error($5);
+            }
         }
         ;
 
