@@ -54,7 +54,7 @@ typedef enum IKS_Error {
     IKS_ERROR_WRONG_PAR_RETURN,
 
     // Extra defined errors
-    IKS_ERROR_RETURN_FUNCTION,  // Cannot return a function
+    IKS_ERROR_NON_EXISTENT_FIELD,
 } IKS_Error;
 
 typedef enum DeclarationType {

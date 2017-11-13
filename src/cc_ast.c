@@ -84,7 +84,7 @@ void ast_program_free(AST_Program *program) {
 }
 
 AST_Function *ast_function_make(AST_Identifier *id, AST_Header *first_command,
-				IKS_Type return_type, AST_Identifier *return_identifier) {
+                                IKS_Type return_type, AST_Identifier *return_identifier) {
     AST_Function *f = calloc(1, sizeof(*f));
     f->header.type = AST_FUNCAO;
     f->return_type = return_type;

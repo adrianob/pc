@@ -92,7 +92,7 @@ typedef struct AST_Function {
 } AST_Function;
 
 AST_Function *ast_function_make(AST_Identifier *id, AST_Header *first_command,
-				IKS_Type return_type, AST_Identifier *return_identifier);
+                                IKS_Type return_type, AST_Identifier *return_identifier);
 void ast_function_free(AST_Function *f);
 
 typedef struct AST_Program {
@@ -304,7 +304,11 @@ static int find_line_number_from_ast_header(AST_Header *header) {
     case AST_LOGICO_COMP_LE:
     case AST_LOGICO_COMP_GE:
     case AST_LOGICO_COMP_IGUAL:
-    case AST_LOGICO_COMP_DIF:
+    case AST_LOGICO_COMP_DIF: {
+        AST_LogicExpr *expr = (AST_LogicExpr*)header;
+        return find_line_number_from_ast_header(expr->first);
+    } break;
+    case AST_ARIM_SUBTRACAO:
     case AST_ARIM_SOMA: {
         AST_AritExpr *expr = (AST_AritExpr*)header;
         return find_line_number_from_ast_header(expr->first);
