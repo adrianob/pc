@@ -74,6 +74,7 @@ typedef struct AST_Literal AST_Literal;
 typedef struct AST_Header {
     int                type;
     IKS_Type           semantic_type;
+    IKS_Type           coertion_to;
     struct AST_Header *next;
 } AST_Header;
 

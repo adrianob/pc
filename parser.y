@@ -1233,10 +1233,10 @@ comando_atribuicao:
                     VariableDeclaration *var_decl = (VariableDeclaration*)decl;
                     $$->semantic_type = var_decl->type;
 
-                    if (!is_coertion_possible($3->semantic_type, $$->semantic_type)) {
-                        push_wrong_type_error($3);
+                    if (is_coertion_possible($3->semantic_type, $$->semantic_type)) {
+                        $3->coertion_to = $$->semantic_type;
                     } else {
-                        $3->semantic_type = $$->semantic_type;
+                        push_wrong_type_error($3);
                     }
                 } else {
                     push_variable_error(id);
@@ -1263,10 +1263,10 @@ comando_atribuicao:
                     VectorDeclaration *vec_decl = (VectorDeclaration*)decl;
                     $$->semantic_type = vec_decl->type;
 
-                    if (!is_coertion_possible($6->semantic_type, $$->semantic_type)) {
-                        push_wrong_type_error($6);
+                    if (is_coertion_possible($6->semantic_type, $$->semantic_type)) {
+                        $6->coertion_to = $$->semantic_type;
                     } else {
-                        $6->semantic_type = $$->semantic_type;
+                        push_wrong_type_error($6);
                     }
                 } else {
                     Assert(false);
@@ -1301,7 +1301,7 @@ comando_atribuicao:
                     push_non_existent_field_error((AST_Identifier*)id);
                 } else {
                     if (is_coertion_possible($5->semantic_type, id->semantic_type)) {
-                        $5->semantic_type = id->semantic_type;
+                        $5->coertion_to = id->semantic_type;
                     } else {
                         push_wrong_type_error($5);
                     }
