@@ -5,6 +5,7 @@
 #include "cc_ast.h"
 #include "macros.h"
 #include "semantic.h"
+#include "semantic_errors.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

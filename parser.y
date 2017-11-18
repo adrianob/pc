@@ -11,12 +11,13 @@
 #include "table_symbol.h"
 #include "enums.h"
 #include "semantic.h"
+#include "semantic_errors.h"
 #include "sds.h"
 #include "stack.h"
 
 AST_Program *g_program = NULL;
 STACK_T *g_scopes = NULL;
-Array(SemanticError) g_semantic_errors = NULL;
+extern Array(SemanticError) g_semantic_errors;
 
 static bool is_coertion_possible(IKS_Type from, IKS_Type to) {
     if (from == to) return true;
@@ -39,157 +40,8 @@ static void comp_print_table2(comp_dict_t * dict) {
     printf("======================= Done =========================\n");
 }
 
-static inline char *get_key_from_identifier(AST_Identifier *id) {
-    return ((TableSymbol*)id->entry->value)->value_string_or_ident;
-}
-
-static inline int get_line_from_identifier(AST_Identifier *id) {
-    return ((TableSymbol*)id->entry->value)->line_number;
-}
-
 static inline comp_dict_t *dict_from_tree(comp_tree_t *node) {
     return (comp_dict_t*)node->value;
-}
-
-static void push_declared_error(AST_Identifier *id) {
-    SemanticError err;
-    err.type = IKS_ERROR_DECLARED;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Identifier %s already declared.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_non_existent_field_error(AST_Identifier *id) {
-    SemanticError err;
-    err.type = IKS_ERROR_NON_EXISTENT_FIELD;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Field %s does not exist.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_undeclared_error(AST_Identifier *id) {
-    SemanticError err;
-    err.type = IKS_ERROR_UNDECLARED;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Identifier %s was not declared.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_variable_error(AST_Identifier *id) {
-    SemanticError err;
-    err.type = IKS_ERROR_VARIABLE;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Identifier %s has to be used as a variable.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_wrong_type_args(AST_Identifier *id, int param_index) {
-    SemanticError err;
-    err.type = IKS_ERROR_WRONG_TYPE_ARGS;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Type mismatch in %s for parameter %d.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id),
-                                   param_index);
-    array_push(g_semantic_errors, err);
-}
-
-static void push_invalid_coertion_error(AST_Header *header) {
-    SemanticError err;
-    err.type = (header->semantic_type == IKS_CHAR)
-        ? IKS_ERROR_CHAR_TO_X
-        : IKS_ERROR_STRING_TO_X;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Invalid coertion from %s.",
-                                   find_line_number_from_ast_header(header),
-                                   iks_type_names[header->semantic_type]);
-    array_push(g_semantic_errors, err);
-}
-
-static void push_wrong_type_error(AST_Header *header) {
-    SemanticError err;
-    err.type = IKS_ERROR_WRONG_TYPE;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Wrong type %s.",
-                                   find_line_number_from_ast_header(header),
-                                   iks_type_names[header->semantic_type]);
-    array_push(g_semantic_errors, err);
-}
-
-static void push_wrong_par_return(AST_Header *header, IKS_Type expected_type) {
-    SemanticError err;
-    err.type = IKS_ERROR_WRONG_PAR_RETURN;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: return has to match the return type of the function (%s).",
-                                   find_line_number_from_ast_header(header),
-                                   iks_type_names[expected_type]);
-    array_push(g_semantic_errors, err);
-}
-
-static void push_function_error(AST_Identifier *id) {
-    SemanticError err;
-    err.type = IKS_ERROR_FUNCTION;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Identifier %s has to be used as a function.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_vector_error(AST_Identifier *id) {
-    SemanticError err;
-    err.type = IKS_ERROR_VECTOR;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: Identifier %s has to be used as a vector.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_missing_args_error(AST_Identifier *id) {
-    SemanticError err;
-    err.type = IKS_ERROR_MISSING_ARGS;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: %s called with missing arguments.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_wrong_par_output(AST_Header *header) {
-    SemanticError err;
-    err.type = IKS_ERROR_WRONG_PAR_OUTPUT;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: output only receives string literals and arithmetic expressions.",
-                                   find_line_number_from_ast_header(header));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_wrong_par_input(AST_Header *header) {
-    SemanticError err;
-    err.type = IKS_ERROR_WRONG_PAR_INPUT;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: input only receives identifiers.",
-                                   find_line_number_from_ast_header(header));
-    array_push(g_semantic_errors, err);
-}
-
-static void push_excess_args_error(AST_Identifier *id) {
-    SemanticError err;
-    err.type = IKS_ERROR_EXCESS_ARGS;
-    err.description = sdscatprintf(sdsempty(),
-                                   "%d: %s called with excessive arguments.",
-                                   get_line_from_identifier(id),
-                                   get_key_from_identifier(id));
-    array_push(g_semantic_errors, err);
 }
 
 static DeclarationHeader *find_declaration_recursive(AST_Identifier *id) {

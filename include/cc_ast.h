@@ -325,5 +325,12 @@ static int find_line_number_from_ast_header(AST_Header *header) {
     }
 }
 
+static inline char *get_key_from_identifier(AST_Identifier *id) {
+    return ((TableSymbol*)id->entry->value)->value_string_or_ident;
+}
+
+static inline int get_line_from_identifier(AST_Identifier *id) {
+    return ((TableSymbol*)id->entry->value)->line_number;
+}
 
 #endif

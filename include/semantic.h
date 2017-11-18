@@ -6,11 +6,6 @@
 #include "enums.h"
 #include "sds.h"
 
-typedef struct SemanticError {
-    IKS_Error type;
-    sds description;
-} SemanticError;
-
 typedef struct DeclarationHeader {
     DeclarationType type;
     struct DeclarationHeader *next;
