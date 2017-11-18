@@ -46,7 +46,7 @@ typedef struct VariableDeclaration {
     IKS_Type            type;
     AST_Identifier     *type_identifier;
     AST_Identifier     *identifier;
-    int            size_in_bytes;
+    int                 size_in_bytes;
     // @Todo(leo): Consider when variable is const.
     // bool                is_const;
 } VariableDeclaration;

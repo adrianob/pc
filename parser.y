@@ -395,8 +395,6 @@ decl_global_non_static:
 
             char *id_key = get_key_from_identifier(id);
 
-            printf("Declaring global variable\n");
-
             find_or_make_declaration(id, $1);
         }
         |   tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';'
@@ -682,15 +680,17 @@ comando_return: TK_PR_RETURN expressao {
             comp_dict_t *scope_dict = get_global_scope_dict();
             Assert(scope_dict != NULL);
 
-            bool found = false;
+            bool found_func_decl = false;
             for (int hash = 0; hash < scope_dict->size; ++hash) {
                 comp_dict_item_t *search_item = scope_dict->data[hash];
                 while (search_item) {
                     DeclarationHeader *decl = (DeclarationHeader*)search_item->value;
                     if (decl->type == DT_FUNCTION) {
                         FunctionDeclaration *func_decl = (FunctionDeclaration*)decl;
-                        found = true;
-                        if (func_decl->return_type != $2->semantic_type) {
+                        found_func_decl = true;
+                        if (is_coertion_possible($2->semantic_type, func_decl->return_type)) {
+                            $2->coertion_to = func_decl->return_type;
+                        } else {
                             push_wrong_par_return($2, func_decl->return_type);
                         }
                     }
@@ -698,7 +698,7 @@ comando_return: TK_PR_RETURN expressao {
                 }
             }
             // If the function was not found declared in the scope, something went wrong.
-            Assert(found);
+            Assert(found_func_decl);
         };
 
 comando_continue: TK_PR_CONTINUE {
@@ -984,10 +984,9 @@ chamada_func:
 
             // Define the function call
             $$ = ast_function_call_make($1, $3);
+            DeclarationHeader *decl = find_declaration_recursive(id);
 
-            DeclarationHeader *decl = NULL;
-
-            if ((decl = find_declaration_recursive(id))) {
+            if (decl) {
                 if (decl->type == DT_VARIABLE) {
                     push_variable_error(id);
                 } else if (decl->type == DT_VECTOR) {
@@ -1010,6 +1009,7 @@ chamada_func:
                     } else if (num_expressions > num_params) {
                         push_excess_args_error(id);
                     } else {
+                        // Correct number of parameters, we need to check the types.
                         DeclarationHeader *param = func_decl->first_param;
                         AST_Header *expr = $3;
                         int param_i = 1; // current parameter
@@ -1018,8 +1018,14 @@ chamada_func:
 
                             VariableDeclaration *var_decl = (VariableDeclaration*)param;
 
+                            // Types do not match
                             if (var_decl->type != expr->semantic_type) {
-                                push_wrong_type_args(id, param_i);
+                                // Make coertion if possible, otherwise push error
+                                if (is_coertion_possible(expr->semantic_type, var_decl->type)) {
+                                    expr->coertion_to = var_decl->type;
+                                } else {
+                                    push_wrong_type_args(id, param_i);
+                                }
                             }
 
                             param = param->next;
@@ -1235,14 +1241,19 @@ expressao_arit_operando:
         TK_IDENTIFICADOR {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
 
-            comp_dict_t *scope_dict = top(g_scopes);
             DeclarationHeader *decl_hdr = find_declaration_recursive(id);
             if (decl_hdr) {
                 if (decl_hdr->type == DT_VARIABLE) {
                     VariableDeclaration *decl = (VariableDeclaration*)decl_hdr;
                     id->header.semantic_type = decl->type;
+                } else if (decl_hdr->type == DT_USER_TYPE) {
+                    id->header.semantic_type = IKS_USER_TYPE;
+                } else if (decl_hdr->type == DT_VECTOR) {
+                    push_vector_error(id);
+                } else if (decl_hdr->type == DT_FUNCTION) {
+                    push_function_error(id);
                 } else {
-                    push_variable_error(id);
+                    Assert(false);
                 }
             } else {
                 push_undeclared_error(id);
@@ -1254,7 +1265,6 @@ expressao_arit_operando:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             AST_IndexedVector *vec = (AST_IndexedVector*)ast_indexed_vector_make(id, $3);
 
-            comp_dict_t *scope_dict = top(g_scopes);
             DeclarationHeader *decl_hdr = find_declaration_recursive(id);
             if (decl_hdr) {
                 if (decl_hdr->type == DT_VECTOR) {
