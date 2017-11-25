@@ -349,7 +349,7 @@ campo:
             $$ = user_type_field_make($2, id, FV_PUBLIC);
             find_or_make_declaration((AST_Identifier *)ast_identifier_make($3), $2);
         }
-        |   TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
+        |   TK_PR_PUBLIC tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' array_multidimensional_global
         {
             AST_Header *expr = ast_literal_make($5, $2);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
@@ -357,7 +357,7 @@ campo:
             $$ = user_type_field_make($2, indexed_vector, FV_PUBLIC);
             find_or_make_declaration((AST_Identifier *)ast_identifier_make($3), $2);
         }
-        |   TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
+        |   TK_PR_PRIVATE tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' array_multidimensional_global
         {
             AST_Header *expr = ast_literal_make($5, $2);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
@@ -365,7 +365,7 @@ campo:
             $$ = user_type_field_make($2, indexed_vector, FV_PRIVATE);
             find_or_make_declaration((AST_Identifier *)ast_identifier_make($3), $2);
         }
-        |   TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']'
+        |   TK_PR_PROTECTED tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' array_multidimensional_global
         {
             AST_Header *expr = ast_literal_make($5, $2);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
@@ -388,6 +388,10 @@ decl_global:
         | TK_PR_STATIC decl_global_non_static
         ;
 
+array_multidimensional_global:
+        '[' TK_LIT_INT ']' array_multidimensional_global
+        | %empty
+        ;
 decl_global_non_static:
         tipo_primitivo TK_IDENTIFICADOR ';'
         {
@@ -397,7 +401,7 @@ decl_global_non_static:
 
             find_or_make_declaration(id, $1);
         }
-        |   tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' ';'
+        |   tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' array_multidimensional_global ';'
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Literal *count = (AST_Literal*)ast_literal_make($4, IKS_INT);
@@ -1080,6 +1084,11 @@ lista_expressoes:
         }
         ;
 
+array_multidimensional_expressao:
+        '[' expressao ']' array_multidimensional_expressao
+        | %empty
+        ;
+
 comando_atribuicao:
         TK_IDENTIFICADOR '=' expressao {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
@@ -1103,10 +1112,10 @@ comando_atribuicao:
                 push_undeclared_error(id);
             }
         }
-        | TK_IDENTIFICADOR '[' expressao ']' '=' expressao {
+        | TK_IDENTIFICADOR '[' expressao ']' array_multidimensional_expressao '=' expressao {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             AST_Header *vec = ast_indexed_vector_make(id, $3);
-            $$ = ast_assignment_make(vec, $6);
+            $$ = ast_assignment_make(vec, $7);
 
             if ($3->semantic_type == IKS_CHAR) push_invalid_coertion_error($3);
             if ($3->semantic_type == IKS_STRING) push_invalid_coertion_error($3);
@@ -1121,10 +1130,10 @@ comando_atribuicao:
                     VectorDeclaration *vec_decl = (VectorDeclaration*)decl;
                     $$->semantic_type = vec_decl->type;
 
-                    if (is_coertion_possible($6->semantic_type, $$->semantic_type)) {
-                        $6->coertion_to = $$->semantic_type;
+                    if (is_coertion_possible($7->semantic_type, $$->semantic_type)) {
+                        $7->coertion_to = $$->semantic_type;
                     } else {
-                        push_wrong_type_error($6);
+                        push_wrong_type_error($7);
                     }
                 } else {
                     Assert(false);
@@ -1261,7 +1270,7 @@ expressao_arit_operando:
 
             $$ = &id->header;
         }
-        | TK_IDENTIFICADOR '[' expressao ']' {
+        | TK_IDENTIFICADOR '[' expressao ']' array_multidimensional_expressao {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             AST_IndexedVector *vec = (AST_IndexedVector*)ast_indexed_vector_make(id, $3);
 
