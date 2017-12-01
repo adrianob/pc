@@ -672,6 +672,7 @@ seq_comandos:
                 if ($2) {
                     AST_Header *search = $1;
                     while (search->next) search = search->next;
+                    search->next = $2;
                 }
             } else {
                 $$ = $2;
@@ -1142,8 +1143,8 @@ comando_atribuicao:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             $$ = ast_assignment_make(&id->header, $3);
 
-            DeclarationHeader *decl = NULL;
-            if ((decl = find_declaration_recursive(id))) {
+            DeclarationHeader *decl = find_declaration_recursive(id);
+            if (decl) {
                 if (decl->type == DT_VARIABLE) {
                     VariableDeclaration *var_decl = (VariableDeclaration*)decl;
                     $$->semantic_type = var_decl->type;
