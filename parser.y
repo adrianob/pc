@@ -667,15 +667,14 @@ seq_comandos:
         comando ';'
         | comando_case
         | seq_comandos comando ';' {
-            if ($$ == NULL) {
-                $$ = $2;
-            } else {
+            if ($1) {
                 $$ = $1;
                 if ($2) {
-                    AST_Header *search = $$;
+                    AST_Header *search = $1;
                     while (search->next) search = search->next;
-                    search->next = $2;
                 }
+            } else {
+                $$ = $2;
             }
         }
         | seq_comandos comando_case {
@@ -703,7 +702,15 @@ comando_sem_entrada_saida:
             //create new scope for block
             comp_dict_t * block_dic = dict_new();
             stack_push(&g_scopes, block_dic);
-        } bloco_comandos {$$ = NULL; scope_free(stack_pop(&g_scopes));}
+        } bloco_comandos {
+            if (((AST_Block*)$2)->first_command) {
+                $$ = $2;
+            } else {
+                ast_block_free((AST_Block*)$2);
+                $$ = NULL;
+            }
+            scope_free(stack_pop(&g_scopes));
+        }
         | chamada_func
         | comando_continue
         | comando_break
