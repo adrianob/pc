@@ -50,11 +50,12 @@ TableSymbol *table_symbol_make(int line_number, int token_type, char *raw_value)
     return symbol;
 }
 
-void table_symbol_free(TableSymbol *s) {
+void table_symbol_free(void *s) {
     if (s == NULL) return;
 
-    if (s->token_type == POA_LIT_STRING || s->token_type == POA_IDENT) {
-        free(s->value_string_or_ident);
+    TableSymbol *ts = (TableSymbol*)s;
+    if (ts->token_type == POA_LIT_STRING || ts->token_type == POA_IDENT) {
+        free(ts->value_string_or_ident);
     }
-    free(s);
+    free(ts);
 }

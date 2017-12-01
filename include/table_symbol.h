@@ -27,6 +27,6 @@ typedef struct TableSymbol {
 } TableSymbol;
 
 TableSymbol *table_symbol_make(int line_number, int token_type, char *raw_value);
-void table_symbol_free(TableSymbol *s);
+void table_symbol_free(void *s);
 
 #endif // TABLE_SYMBOL_H

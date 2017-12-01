@@ -78,6 +78,8 @@ typedef struct AST_Header {
     struct AST_Header *next;
 } AST_Header;
 
+void ast_header_free(AST_Header *header);
+
 typedef struct AST_Identifier {
     AST_Header        header;
     comp_dict_item_t *entry;

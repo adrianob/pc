@@ -14,6 +14,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -259,4 +260,18 @@ void *dict_remove(comp_dict_t *dict, char *key) {
     }
 
     return data;
+}
+
+void dict_free_items(comp_dict_t *dict, void (*free_func)(void*)) {
+    if (!dict) return;
+
+    printf("DICT FREE ITEMS\n");
+    for (int hash = 0; hash < dict->size; ++hash) {
+        while (dict->data[hash]) {
+            printf("Removing key: %s\n", dict->data[hash]->key);
+            void *value = dict_remove(dict, dict->data[hash]->key);
+            if (free_func) free_func(value);
+        }
+    }
+    assert(dict->occupation == 0);
 }

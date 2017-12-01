@@ -3,6 +3,7 @@
 #include "main.h"
 #include "table_symbol.h"
 #include "cc_ast.h"
+#include "stack.h"
 #include "macros.h"
 #include "semantic.h"
 #include "semantic_errors.h"
@@ -13,6 +14,7 @@
 extern int g_line_number;
 extern AST_Program *g_program;
 extern Array(SemanticError) g_semantic_errors;
+extern STACK_T *g_scopes;
 
 int comp_get_line_number(void) { return g_line_number; }
 
@@ -22,21 +24,10 @@ void yyerror(char const *mensagem) {
 
 void main_init(int argc, char **argv) { dict = dict_new(); }
 
-static void remove_dict_items(comp_dict_t *dict) {
-    for (int hash = 0; hash < dict->size; ++hash) {
-        while (dict->data[hash]) {
-            TableSymbol *value = dict_remove(dict, dict->data[hash]->key);
-            table_symbol_free(value);
-        }
-    }
-    assert(dict->occupation == 0);
-}
-
 void print_expression_to_graph(void *parent, AST_Header *expr) {
     switch (expr->type) {
     case AST_IDENTIFICADOR: {
         AST_Identifier *ident = (AST_Identifier *)expr;
-	
         TableSymbol *symbol = ident->entry->value;
         gv_declare(expr->type, expr, symbol->value_string_or_ident);
         gv_connect(parent, expr);
@@ -244,9 +235,9 @@ void print_errors() {
 }
 
 void main_finalize(void) {
-    gv_init(NULL);
-    print_ast_to_graph(g_program);
-    gv_close();
+    /* gv_init(NULL); */
+    /* print_ast_to_graph(g_program); */
+    /* gv_close(); */
 
     int exit_code = IKS_SUCCESS;
     int num_errors = array_len(g_semantic_errors);
@@ -257,8 +248,14 @@ void main_finalize(void) {
     }
 
     ast_program_free(g_program);
-    remove_dict_items(dict);
+    dict_free_items(dict, table_symbol_free);
     dict_free(dict);
+    stack_destroy(&g_scopes, scope_free);
+
+    for (int i = 0; i < array_len(g_semantic_errors); ++i) {
+        sdsfree(g_semantic_errors[i].description);
+    }
+
     exit(exit_code);
 }
 

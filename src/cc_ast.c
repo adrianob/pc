@@ -28,46 +28,46 @@ void ast_header_free(AST_Header *header) {
     AST_Header *search_header = header;
 
     while (search_header) {
-	AST_Header *header_to_delete = search_header;
-	search_header = search_header->next;
+        AST_Header *header_to_delete = search_header;
+        search_header = search_header->next;
 	    
-	switch (header_to_delete->type) {
-	case AST_IF_ELSE:              ast_if_free((AST_IfElse*)header_to_delete); break;
-	case AST_WHILE_DO:
-	case AST_DO_WHILE:             ast_while_free((AST_While*)header_to_delete); break;
-	case AST_INPUT:                ast_input_free((AST_Input*)header_to_delete); break;
-	case AST_OUTPUT:               ast_output_free((AST_Output*)header_to_delete); break;
-	case AST_ATRIBUICAO:           ast_assignment_free((AST_Assignment*)header_to_delete); break;
-	case AST_RETURN:               ast_return_free((AST_Return*)header_to_delete); break;
-	case AST_BLOCO:                ast_block_free((AST_Block*)header_to_delete); break;
-	case AST_BREAK:                ast_break_free((AST_Break*)header_to_delete); break;
-	case AST_CONTINUE:             ast_continue_free((AST_Continue*)header_to_delete); break;
-	case AST_CASE:                 ast_case_free((AST_Case*)header_to_delete); break;
-	case AST_FOR:                  ast_for_free((AST_For*)header_to_delete); break;
-	case AST_FOREACH:              ast_foreach_free((AST_Foreach*)header_to_delete); break;
-	case AST_SWITCH:               ast_switch_free((AST_Switch*)header_to_delete); break;
-	case AST_IDENTIFICADOR:        ast_identifier_free((AST_Identifier*)header_to_delete); break;
-	case AST_LITERAL:              ast_literal_free((AST_Literal*)header_to_delete); break;
-	case AST_ARIM_SOMA:
-	case AST_ARIM_SUBTRACAO:
-	case AST_ARIM_MULTIPLICACAO:
-	case AST_ARIM_DIVISAO:
-	case AST_ARIM_INVERSAO:        ast_arit_expr_free((AST_AritExpr*)header_to_delete); break;
-	case AST_LOGICO_E:
-	case AST_LOGICO_OU:
-	case AST_LOGICO_COMP_DIF:
-	case AST_LOGICO_COMP_IGUAL:
-	case AST_LOGICO_COMP_LE:
-	case AST_LOGICO_COMP_GE:
-	case AST_LOGICO_COMP_L:
-	case AST_LOGICO_COMP_G:
-	case AST_LOGICO_COMP_NEGACAO:  ast_logic_expr_free((AST_LogicExpr*)header_to_delete); break;
-	case AST_VETOR_INDEXADO:       ast_indexed_vector_free((AST_IndexedVector*)header_to_delete); break;
-	case AST_CHAMADA_DE_FUNCAO:    ast_function_call_free((AST_FunctionCall*)header_to_delete); break;
-	case AST_SHIFT_RIGHT:
-	case AST_SHIFT_LEFT:           ast_shift_free((AST_Shift*)header_to_delete); break;
-	default: Assert(false);
-	}
+        switch (header_to_delete->type) {
+        case AST_IF_ELSE:              ast_if_free((AST_IfElse*)header_to_delete); break;
+        case AST_WHILE_DO:
+        case AST_DO_WHILE:             ast_while_free((AST_While*)header_to_delete); break;
+        case AST_INPUT:                ast_input_free((AST_Input*)header_to_delete); break;
+        case AST_OUTPUT:               ast_output_free((AST_Output*)header_to_delete); break;
+        case AST_ATRIBUICAO:           ast_assignment_free((AST_Assignment*)header_to_delete); break;
+        case AST_RETURN:               ast_return_free((AST_Return*)header_to_delete); break;
+        case AST_BLOCO:                ast_block_free((AST_Block*)header_to_delete); break;
+        case AST_BREAK:                ast_break_free((AST_Break*)header_to_delete); break;
+        case AST_CONTINUE:             ast_continue_free((AST_Continue*)header_to_delete); break;
+        case AST_CASE:                 ast_case_free((AST_Case*)header_to_delete); break;
+        case AST_FOR:                  ast_for_free((AST_For*)header_to_delete); break;
+        case AST_FOREACH:              ast_foreach_free((AST_Foreach*)header_to_delete); break;
+        case AST_SWITCH:               ast_switch_free((AST_Switch*)header_to_delete); break;
+        case AST_IDENTIFICADOR:        ast_identifier_free((AST_Identifier*)header_to_delete); break;
+        case AST_LITERAL:              ast_literal_free((AST_Literal*)header_to_delete); break;
+        case AST_ARIM_SOMA:
+        case AST_ARIM_SUBTRACAO:
+        case AST_ARIM_MULTIPLICACAO:
+        case AST_ARIM_DIVISAO:
+        case AST_ARIM_INVERSAO:        ast_arit_expr_free((AST_AritExpr*)header_to_delete); break;
+        case AST_LOGICO_E:
+        case AST_LOGICO_OU:
+        case AST_LOGICO_COMP_DIF:
+        case AST_LOGICO_COMP_IGUAL:
+        case AST_LOGICO_COMP_LE:
+        case AST_LOGICO_COMP_GE:
+        case AST_LOGICO_COMP_L:
+        case AST_LOGICO_COMP_G:
+        case AST_LOGICO_COMP_NEGACAO:  ast_logic_expr_free((AST_LogicExpr*)header_to_delete); break;
+        case AST_VETOR_INDEXADO:       ast_indexed_vector_free((AST_IndexedVector*)header_to_delete); break;
+        case AST_CHAMADA_DE_FUNCAO:    ast_function_call_free((AST_FunctionCall*)header_to_delete); break;
+        case AST_SHIFT_RIGHT:
+        case AST_SHIFT_LEFT:           ast_shift_free((AST_Shift*)header_to_delete); break;
+        default: Assert(false);
+        }
     }
 }
 

@@ -18,6 +18,7 @@ ADD_EXECUTABLE(main
   src/cc_dict.c
   src/cc_list.c
   src/cc_tree.c
+  src/semantic.c
   src/sds.c
   src/table_symbol.c
   src/semantic_errors.c
