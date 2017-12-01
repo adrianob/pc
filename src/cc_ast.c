@@ -76,10 +76,10 @@ void ast_program_free(AST_Program *program) {
 
     AST_Function *func = program->first_func;
     while (func) {
-	AST_Function *func_to_delete = func;
-	func = func->next;
+        AST_Function *func_to_delete = func;
+        func = func->next;
 
-	ast_function_free(func_to_delete);
+        ast_function_free(func_to_delete);
     }
 }
 

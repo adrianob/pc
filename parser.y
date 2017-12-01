@@ -303,7 +303,14 @@ programa:
         ;
 
 decl_tipos:
-        TK_PR_CLASS TK_IDENTIFICADOR '[' { comp_dict_t * dic = dict_new(); stack_push(&g_scopes, dic); } lista_campos {stack_pop(&g_scopes);} ']' ';'
+        TK_PR_CLASS TK_IDENTIFICADOR '['
+        {
+            comp_dict_t * dic = dict_new();
+            stack_push(&g_scopes, dic);
+        } lista_campos
+        {
+            scope_free(stack_pop(&g_scopes));
+        } ']' ';'
         {
             comp_dict_t *scope_dict = stack_top(g_scopes);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
@@ -320,7 +327,7 @@ decl_tipos:
         };
 
 lista_campos:
-                campo
+        campo
     |   lista_campos ':' campo
         {
             if ($$ == NULL) {
@@ -538,7 +545,7 @@ decl_func2:
                         $$ = ast_function_make(id, block->first_command, IKS_UNDEFINED, return_id);
                     }
 
-                    stack_pop(&g_scopes);
+                    scope_free(stack_pop(&g_scopes));
                     block->first_command = NULL;
                     ast_block_free(block);
                 }
@@ -576,9 +583,9 @@ parametro_entrada:
             if (dict_get_entry(scope_dict, get_key_from_identifier(id))) {
                 push_declared_error(id);
             } else {
-                // We need to increase the reference count, since it is going to be reused later.
-                ++decl->ref_count;
-                dict_put(scope_dict, id_key, decl);
+                dict_put(scope_dict,
+                         id_key,
+                         declaration_header_implicit_share(decl));
             }
 
             $$ = decl;
@@ -594,9 +601,9 @@ parametro_entrada:
             if (dict_get_entry(scope_dict, get_key_from_identifier(id))) {
                 push_declared_error(id);
             } else {
-                // We need to increase the reference count, since it is going to be reused later.
-                ++decl->ref_count;
-                dict_put(scope_dict, id_key, decl);
+                dict_put(scope_dict,
+                         id_key,
+                         declaration_header_implicit_share(decl));
             }
 
             $$ = decl;
@@ -619,9 +626,9 @@ parametro_entrada:
             if (dict_get_entry(scope_dict, id_key)) {
                 push_declared_error(id);
             } else {
-                // We need to increase the reference count, since it is going to be reused later.
-                ++decl->ref_count;
-                dict_put(scope_dict, id_key, decl);
+                dict_put(scope_dict,
+                         id_key,
+                         declaration_header_implicit_share(decl));
             }
 
             $$ = decl;
@@ -641,10 +648,10 @@ parametro_entrada:
                 id, type_id, (type_decl_hdr) ? type_decl_hdr->type : IKS_UNDEFINED
             );
 
-            dict_put(scope_dict, id_key, decl);
+            dict_put(scope_dict,
+                     id_key,
+                     declaration_header_implicit_share(decl));
 
-            // We need to increase the reference count, since it is going to be reused later.
-            ++decl->ref_count;
             $$ = decl;
         }
         ;
@@ -696,7 +703,7 @@ comando_sem_entrada_saida:
             //create new scope for block
             comp_dict_t * block_dic = dict_new();
             stack_push(&g_scopes, block_dic);
-        } bloco_comandos {$$ = NULL; stack_pop(&g_scopes);}
+        } bloco_comandos {$$ = NULL; scope_free(stack_pop(&g_scopes));}
         | chamada_func
         | comando_continue
         | comando_break
@@ -889,7 +896,7 @@ comando_if:
         $$ = ast_if_make($3, then_block->first_command, NULL);
 
         then_block->first_command = NULL;
-        ast_block_free((AST_Block*)$6);
+        ast_block_free(then_block);
     }
         | TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos TK_PR_ELSE bloco_comandos {
         AST_Block *then_block = (AST_Block*)$6;

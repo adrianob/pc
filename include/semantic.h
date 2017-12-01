@@ -76,4 +76,9 @@ static inline void scope_free(void *d) {
     dict_free(dict);
 }
 
+static inline DeclarationHeader *declaration_header_implicit_share(DeclarationHeader *hdr) {
+    hdr->ref_count++;
+    return hdr;
+}
+
 #endif // __SEMANTIC_H__
