@@ -377,7 +377,45 @@ void ast_function_call_free(AST_FunctionCall *f) {
     free(f);
 }
 
+int find_line_number_from_ast_header(AST_Header *header) {
+    switch (header->type) {
+    case AST_LITERAL: {
+        AST_Literal *lit = (AST_Literal*)header;
+        return ((TableSymbol*)lit->entry->value)->line_number;
+    } break;
+    case AST_IDENTIFICADOR: {
+        AST_Identifier *id = (AST_Identifier*)header;
+        return ((TableSymbol*)id->entry->value)->line_number;
+    } break;
+    case AST_CHAMADA_DE_FUNCAO: {
+        AST_FunctionCall *fc = (AST_FunctionCall*)header;
+        return ((TableSymbol*)fc->identifier->entry->value)->line_number;
+    } break;
+    case AST_LOGICO_COMP_LE:
+    case AST_LOGICO_COMP_GE:
+    case AST_LOGICO_COMP_IGUAL:
+    case AST_LOGICO_COMP_DIF: {
+        AST_LogicExpr *expr = (AST_LogicExpr*)header;
+        return find_line_number_from_ast_header(expr->first);
+    } break;
+    case AST_ARIM_SUBTRACAO:
+    case AST_ARIM_SOMA: {
+        AST_AritExpr *expr = (AST_AritExpr*)header;
+        return find_line_number_from_ast_header(expr->first);
+    } break;
+    case AST_VETOR_INDEXADO: {
+        AST_IndexedVector *vec = (AST_IndexedVector*)header;
+        return ((TableSymbol*)vec->identifier->entry->value)->line_number;
+    } break;
+    default:
+        printf("AST type: %s\n", g_ast_names[header->type]);
+        fflush(stdout);
+        Assert(false);
+    }
+}
+
 void ast_generate_code(AST_Program *program) {
     // TODO: Cada nodo de bloco na ast precisa ter um dicionario de símbolos associado a ele,
     // ou algo parecido.
 }
+

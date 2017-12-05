@@ -101,6 +101,7 @@ void ast_function_free(AST_Function *f);
 typedef struct AST_Program {
     int type;
     AST_Function *first_func;
+    comp_dict_t  *scope;
 } AST_Program;
 
 AST_Program *ast_program_make();
@@ -115,7 +116,9 @@ typedef struct AST_IfElse {
     AST_Header     header;
     AST_Header    *condition;
     AST_Header    *then_command;
+    comp_dict_t   *then_scope;
     AST_Header    *else_command;
+    comp_dict_t   *else_scope;
 } AST_IfElse;
 
 AST_Header *ast_if_make(AST_Header *cond, AST_Header *then_command, AST_Header *else_command);
@@ -143,6 +146,7 @@ typedef struct AST_While {
     AST_Header         header;
     AST_Header        *condition;
     AST_Header        *first_command;
+    comp_dict_t       *scope;
     bool               is_do_while;
 } AST_While;
 
@@ -172,6 +176,7 @@ typedef struct AST_For {
     AST_Header        *list_first_command;
     AST_Header        *second_list_first_command;
     AST_Header        *expr;
+    comp_dict_t       *scope;
 } AST_For;
 
 AST_Header *ast_for_make(AST_Header *expr, AST_Header *first_command, AST_Header *list_first_command,
@@ -183,6 +188,7 @@ typedef struct AST_Foreach {
     AST_Identifier    *identifier;
     AST_Header        *first_command;
     AST_Header        *expr;
+    comp_dict_t       *scope;
 } AST_Foreach;
 
 AST_Header *ast_foreach_make(AST_Identifier *identifier, AST_Header *expr, AST_Header *first_command);
@@ -218,8 +224,9 @@ AST_Header *ast_return_make(AST_Header *expr);
 void ast_return_free(AST_Return *r);
 
 typedef struct AST_Block {
-    AST_Header  header;
-    AST_Header *first_command;
+    AST_Header   header;
+    AST_Header  *first_command;
+    comp_dict_t *scope;
 } AST_Block;
 
 AST_Header *ast_block_make(AST_Header *cmd);
@@ -292,42 +299,7 @@ typedef struct AST_FunctionCall {
 AST_Header *ast_function_call_make(comp_dict_item_t *entry, AST_Header *param);
 void ast_function_call_free(AST_FunctionCall *fc);
 
-static int find_line_number_from_ast_header(AST_Header *header) {
-    switch (header->type) {
-    case AST_LITERAL: {
-        AST_Literal *lit = (AST_Literal*)header;
-        return ((TableSymbol*)lit->entry->value)->line_number;
-    } break;
-    case AST_IDENTIFICADOR: {
-        AST_Identifier *id = (AST_Identifier*)header;
-        return ((TableSymbol*)id->entry->value)->line_number;
-    } break;
-    case AST_CHAMADA_DE_FUNCAO: {
-        AST_FunctionCall *fc = (AST_FunctionCall*)header;
-        return ((TableSymbol*)fc->identifier->entry->value)->line_number;
-    } break;
-    case AST_LOGICO_COMP_LE:
-    case AST_LOGICO_COMP_GE:
-    case AST_LOGICO_COMP_IGUAL:
-    case AST_LOGICO_COMP_DIF: {
-        AST_LogicExpr *expr = (AST_LogicExpr*)header;
-        return find_line_number_from_ast_header(expr->first);
-    } break;
-    case AST_ARIM_SUBTRACAO:
-    case AST_ARIM_SOMA: {
-        AST_AritExpr *expr = (AST_AritExpr*)header;
-        return find_line_number_from_ast_header(expr->first);
-    } break;
-    case AST_VETOR_INDEXADO: {
-        AST_IndexedVector *vec = (AST_IndexedVector*)header;
-        return ((TableSymbol*)vec->identifier->entry->value)->line_number;
-    } break;
-    default:
-        printf("AST type: %s\n", g_ast_names[header->type]);
-        fflush(stdout);
-        Assert(false);
-    }
-}
+int find_line_number_from_ast_header(AST_Header *header);
 
 static inline char *get_key_from_identifier(AST_Identifier *id) {
     return ((TableSymbol*)id->entry->value)->value_string_or_ident;
