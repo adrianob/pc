@@ -484,7 +484,8 @@ decl_func2:
                         $$ = ast_function_make(id, block->first_command, IKS_UNDEFINED, NULL);
                     }
 
-                    scope_free(stack_pop(&g_scopes));
+                    comp_dict_t *scope = stack_pop(&g_scopes);
+                    $$->scope = scope;
                     block->first_command = NULL;
                     ast_block_free(block);
                 }
@@ -537,7 +538,8 @@ decl_func2:
                         $$ = ast_function_make(id, block->first_command, IKS_UNDEFINED, return_id);
                     }
 
-                    scope_free(stack_pop(&g_scopes));
+                    comp_dict_t *scope = stack_pop(&g_scopes);
+                    $$->scope = scope;
                     block->first_command = NULL;
                     ast_block_free(block);
                 }
@@ -698,13 +700,15 @@ comando_sem_entrada_saida:
             comp_dict_t * block_dic = dict_new();
             stack_push(&g_scopes, block_dic);
         } bloco_comandos {
-            if (((AST_Block*)$2)->first_command) {
+            AST_Block *block = (AST_Block*)$2;
+            if (block->first_command) {
                 $$ = $2;
+                block->scope = stack_pop(&g_scopes);
             } else {
                 ast_block_free((AST_Block*)$2);
+                scope_free(stack_pop(&g_scopes));
                 $$ = NULL;
             }
-            scope_free(stack_pop(&g_scopes));
         }
         | chamada_func
         | comando_continue

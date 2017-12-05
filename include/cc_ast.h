@@ -91,6 +91,7 @@ typedef struct AST_Function {
     AST_Identifier      *return_identifier;
     AST_Identifier      *identifier;
     AST_Header          *first_command;
+    comp_dict_t         *scope;
     struct AST_Function *next;
 } AST_Function;
 
