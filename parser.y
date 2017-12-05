@@ -19,6 +19,15 @@ AST_Program *g_program = NULL;
 STACK_T *g_scopes = NULL;
 extern Array(SemanticError) g_semantic_errors;
 
+static void initialize_globals_if_needed() {
+    if (!g_program) g_program = ast_program_make();
+    if (!g_semantic_errors) array_init(g_semantic_errors);
+    if (stack_list_size(g_scopes) == 0) {
+        comp_dict_t * dic = dict_new();
+        stack_push(&g_scopes, dic);
+    }
+}
+
 static bool is_coertion_possible(IKS_Type from, IKS_Type to) {
     if (from == to) return true;
     if (from == IKS_INT && (to == IKS_FLOAT || to == IKS_BOOL)) return true;
@@ -71,6 +80,7 @@ static DeclarationHeader *find_declaration_recursive(AST_Identifier *id) {
 }
 
 static DeclarationHeader *find_or_make_declaration(comp_dict_item_t *entry, IKS_Type type) {
+    Assert(type != DT_USER_TYPE_DEFINITION);
     //check if already declared
     AST_Identifier *id = (AST_Identifier*)ast_identifier_make(entry);
     comp_dict_t *scope_dict = stack_top(g_scopes);
@@ -256,39 +266,19 @@ static void check_errors_for_expression(AST_Header *h1, AST_Header *h2) {
 programa:
         %empty
         {
-            if (!g_program) g_program = ast_program_make();
-            if (!g_semantic_errors) array_init(g_semantic_errors);
-            if (stack_list_size(g_scopes) == 0) {
-                comp_dict_t * dic = dict_new();
-                stack_push(&g_scopes, dic);
-            }
+            initialize_globals_if_needed();
         }
         |   programa decl_global
         {
-            if (!g_program) g_program = ast_program_make();
-            if (!g_semantic_errors) array_init(g_semantic_errors);
-            if (stack_list_size(g_scopes) == 0) {
-                comp_dict_t * dic = dict_new();
-                stack_push(&g_scopes, dic);
-            }
+            initialize_globals_if_needed();
         }
         |   programa decl_tipos
         {
-            if (!g_program) g_program = ast_program_make();
-            if (!g_semantic_errors) array_init(g_semantic_errors);
-            if (stack_list_size(g_scopes) == 0) {
-                comp_dict_t * dic = dict_new();
-                stack_push(&g_scopes, dic);
-            }
+            initialize_globals_if_needed();
         }
         |   programa decl_func
         {
-            if (!g_program) g_program = ast_program_make();
-            if (!g_semantic_errors) array_init(g_semantic_errors);
-            if (stack_list_size(g_scopes) == 0) {
-                comp_dict_t * dic = dict_new();
-                stack_push(&g_scopes, dic);
-            }
+            initialize_globals_if_needed();
 
             if (!g_program->first_func) {
                 g_program->first_func = $2;
@@ -321,8 +311,8 @@ decl_tipos:
                 push_declared_error(id);
                 // @Todo(leo): free contents of $2 and $5
             } else {
-                DeclarationHeader *ud = user_type_declaration_make(id, $5);
-                dict_put(scope_dict, id_key, ud);
+                DeclarationHeader *def = user_type_definition_make(id, $5);
+                dict_put(scope_dict, id_key, def);
             }
         };
 
@@ -425,7 +415,7 @@ decl_global_non_static:
         |   TK_IDENTIFICADOR TK_IDENTIFICADOR ';'
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-            AST_Identifier *ret_id = (AST_Identifier*)ast_identifier_make($1);
+            AST_Identifier *type_id = (AST_Identifier*)ast_identifier_make($1);
 
             comp_dict_t *scope_dict = stack_top(g_scopes);
             char *id_key = get_key_from_identifier(id);
@@ -434,14 +424,15 @@ decl_global_non_static:
                 // If name already is declared, push error and do nothing.
                 push_declared_error(id);
             } else {
-                char *ret_id_key = get_key_from_identifier(ret_id);
-                DeclarationHeader *ret_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, ret_id_key);
+                char *type_id_key = get_key_from_identifier(type_id);
+                DeclarationHeader *type_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, type_id_key);
 
-                if (!ret_decl_hdr) push_undeclared_error(ret_id);
+                if (!type_decl_hdr)
+                    push_undeclared_error(type_id);
+                else
+                    Assert(type_decl_hdr->type == DT_USER_TYPE_DEFINITION);
 
-                DeclarationHeader *decl = variable_declaration_make(
-                    id, ret_id, (ret_decl_hdr) ? ret_decl_hdr->type : IKS_UNDEFINED
-                );
+                DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
 
                 dict_put(scope_dict, id_key, decl);
             }
@@ -469,7 +460,7 @@ decl_func2:
 
                     if (!find_declaration_recursive(id)) {
                         DeclarationHeader *decl = function_declaration_make(
-                            id, NULL, $1, $4
+                            id, NULL, $1, NULL, $4
                         );
                         dict_put(scope_dict, id_key, decl);
                     } else {
@@ -512,7 +503,7 @@ decl_func2:
                     // Check if the return type identifier is found or not.
                     AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
                     DeclarationHeader *ret_decl_hdr = find_declaration_recursive(return_id);
-                    if (ret_decl_hdr && ret_decl_hdr->type == DT_USER_TYPE) {
+                    if (ret_decl_hdr && ret_decl_hdr->type == DT_USER_TYPE_DEFINITION) {
                         return_id->header.semantic_type = IKS_USER_TYPE;
                     } else {
                         push_undeclared_error(return_id);
@@ -521,7 +512,8 @@ decl_func2:
                     DeclarationHeader *id_decl_hdr = find_declaration_recursive(id);
                     if (!id_decl_hdr) {
                         DeclarationHeader *decl = function_declaration_make(
-                            id, return_id, (ret_decl_hdr) ? return_id->header.semantic_type : IKS_UNDEFINED, $4
+                                id, return_id, (ret_decl_hdr) ? return_id->header.semantic_type : IKS_UNDEFINED,
+                                (UserTypeDefinition*)ret_decl_hdr, $4
                         );
                         dict_put(scope_dict, id_key, decl);
                     } else {
@@ -617,11 +609,12 @@ parametro_entrada:
             char *type_id_key = get_key_from_identifier(type_id);
             DeclarationHeader *type_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, type_id_key);
 
-            if (!type_decl_hdr) push_undeclared_error(type_id);
+            if (!type_decl_hdr)
+                push_undeclared_error(type_id);
+            else
+                Assert(type_decl_hdr->type == DT_USER_TYPE_DEFINITION);
 
-            DeclarationHeader *decl = variable_declaration_make(
-                id, type_id, (type_decl_hdr) ? type_decl_hdr->type : IKS_UNDEFINED
-            );
+            DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
 
             if (dict_get_entry(scope_dict, id_key)) {
                 push_declared_error(id);
@@ -642,11 +635,12 @@ parametro_entrada:
             char *type_id_key = get_key_from_identifier(type_id);
             DeclarationHeader *type_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, type_id_key);
 
-            if (!type_decl_hdr) push_undeclared_error(type_id);
+            if (!type_decl_hdr)
+                push_undeclared_error(type_id);
+            else
+                Assert(type_decl_hdr->type == DT_USER_TYPE_DEFINITION);
 
-            DeclarationHeader *decl = variable_declaration_make(
-                id, type_id, (type_decl_hdr) ? type_decl_hdr->type : IKS_UNDEFINED
-            );
+            DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
 
             dict_put(scope_dict,
                      id_key,
@@ -794,7 +788,9 @@ comando_decl_var_2:
                 push_declared_error(id);
             } else {
                 if (type_decl_hdr) {
-                    dict_put(scope_dict, id_key, type_decl_hdr);
+                    Assert(type_decl_hdr->type == DT_USER_TYPE_DEFINITION);
+                    DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
+                    dict_put(scope_dict, id_key, decl);
                 } else {
                     DeclarationHeader *decl = variable_declaration_make(id, type_id, IKS_UNDEFINED);
                     dict_put(scope_dict, id_key, decl);
@@ -1151,11 +1147,13 @@ comando_atribuicao:
 
                     if (is_coertion_possible($3->semantic_type, $$->semantic_type)) {
                         $3->coertion_to = $$->semantic_type;
-                    } else {
+                    } else if ($3->semantic_type == IKS_UNDEFINED) {
                         push_wrong_type_error($3);
+                    } else {
+                        push_invalid_coertion_error($3);
                     }
                 } else {
-                    push_variable_error(id);
+                    push_wrong_type_usage_error(id, decl->type);
                 }
             } else {
                 push_undeclared_error(id);
@@ -1202,8 +1200,8 @@ comando_atribuicao:
                 push_undeclared_error(user_type_id);
             } else if (user_type_decl_hdr->type == DT_USER_TYPE) {
                 // Check for field in the class declaration.
-                UserTypeDeclaration *user_type_decl = (UserTypeDeclaration*)user_type_decl_hdr;
-                UserTypeField *field = user_type_decl->first_field;
+                UserTypeDefinition *user_type_def = (UserTypeDefinition*)user_type_decl_hdr;
+                UserTypeField *field = user_type_def->first_field;
                 bool field_found = false;
                 while (field) {
                     char *curr_field_name = get_key_from_identifier((AST_Identifier*)field->identifier);
@@ -1306,12 +1304,9 @@ expressao_arit_operando:
                     id->header.semantic_type = decl->type;
                 } else if (decl_hdr->type == DT_USER_TYPE) {
                     id->header.semantic_type = IKS_USER_TYPE;
-                } else if (decl_hdr->type == DT_VECTOR) {
-                    push_vector_error(id);
-                } else if (decl_hdr->type == DT_FUNCTION) {
-                    push_function_error(id);
+                    push_user_type_error(id);
                 } else {
-                    Assert(false);
+                    push_wrong_type_usage_error(id, decl_hdr->type);
                 }
             } else {
                 push_undeclared_error(id);
@@ -1332,8 +1327,16 @@ expressao_arit_operando:
                     if ($3->semantic_type != IKS_INT) {
                         push_wrong_type_error($3);
                     }
+                } else if (decl_hdr->type == DT_VARIABLE) {
+                    push_variable_error(id);
+                } else if (decl_hdr->type == DT_FUNCTION) {
+                    push_function_error(id);
+                } else if (decl_hdr->type == DT_USER_TYPE_DEFINITION) {
+                    push_user_type_definition_error(id);
+                } else if (decl_hdr->type == DT_USER_TYPE) {
+                    push_user_type_error(id);
                 } else {
-                    push_vector_error(id);
+                    Assert(false);
                 }
             } else {
                 push_undeclared_error(id);

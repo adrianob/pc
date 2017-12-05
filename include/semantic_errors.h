@@ -22,6 +22,9 @@ void push_vector_error(AST_Identifier *id);
 void push_missing_args_error(AST_Identifier *id);
 void push_wrong_par_output(AST_Header *header);
 void push_wrong_par_input(AST_Header *header);
+void push_user_type_definition_error(AST_Identifier *id);
+void push_user_type_error(AST_Identifier *id);
 void push_excess_args_error(AST_Identifier *id);
+void push_wrong_type_usage_error(AST_Identifier *id, DeclarationType type);
 
 #endif // __SEMANTIC_ERRORS_H__

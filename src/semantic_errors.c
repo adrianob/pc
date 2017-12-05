@@ -33,6 +33,26 @@ void push_undeclared_error(AST_Identifier *id) {
     array_push(g_semantic_errors, err);
 }
 
+void push_user_type_definition_error(AST_Identifier *id) {
+    SemanticError err;
+    err.type = IKS_ERROR_USER_TYPE_DEFINITION;
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: Identifier %s has to be used as a user type definition.",
+                                   get_line_from_identifier(id),
+                                   get_key_from_identifier(id));
+    array_push(g_semantic_errors, err);
+}
+
+void push_user_type_error(AST_Identifier *id) {
+    SemanticError err;
+    err.type = IKS_ERROR_USER_TYPE;
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: Identifier %s has to be used as a user type identifier.",
+                                   get_line_from_identifier(id),
+                                   get_key_from_identifier(id));
+    array_push(g_semantic_errors, err);
+}
+
 void push_variable_error(AST_Identifier *id) {
     SemanticError err;
     err.type = IKS_ERROR_VARIABLE;
@@ -144,3 +164,20 @@ void push_excess_args_error(AST_Identifier *id) {
     array_push(g_semantic_errors, err);
 }
 
+void push_wrong_type_usage_error(AST_Identifier *id, DeclarationType type) {
+    SemanticError err;
+    switch (type) {
+    case DT_FUNCTION: err.type = IKS_ERROR_FUNCTION; break;
+    case DT_USER_TYPE: err.type = IKS_ERROR_USER_TYPE; break;
+    case DT_USER_TYPE_DEFINITION: err.type = IKS_ERROR_USER_TYPE_DEFINITION; break;
+    case DT_VECTOR: err.type = IKS_ERROR_VECTOR; break;
+    case DT_VARIABLE: err.type = IKS_ERROR_VARIABLE; break;
+    default: Assert(false);
+    }
+    err.description = sdscatprintf(sdsempty(),
+                                   "%d: Identifier %s has to be used as a %s.",
+                                   get_line_from_identifier(id),
+                                   get_key_from_identifier(id),
+                                   iks_type_names[type]);
+    array_push(g_semantic_errors, err);
+}

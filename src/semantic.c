@@ -8,28 +8,41 @@ UserTypeField *user_type_field_make(IKS_Type type, AST_Header *id_hdr, FieldVisi
     return u;
 }
 
-void *user_type_field_free(UserTypeField *f) {
+void user_type_field_free(UserTypeField *f) {
     ast_header_free(f->identifier);
     free(f);
 }
 
-DeclarationHeader *user_type_declaration_make(AST_Identifier *id, UserTypeField *first_field) {
-    UserTypeDeclaration *u = calloc(1, sizeof(*u));
-    u->header.type = DT_USER_TYPE;
-    u->header.ref_count = 1;
+DeclarationHeader *user_type_definition_make(AST_Identifier *id, UserTypeField *first_field) {
+    UserTypeDefinition *u = calloc(1, sizeof(*u));
+    u->header.type = DT_USER_TYPE_DEFINITION;
     u->identifier = id;
     u->first_field = first_field;
     return &u->header;
 }
 
-void *user_type_declaration_free(UserTypeDeclaration *d) {
-    ast_identifier_free(d->identifier);
-    UserTypeField *field = d->first_field;
+void user_type_definition_free(UserTypeDefinition *def) {
+    ast_identifier_free(def->identifier);
+    UserTypeField *field = def->first_field;
     while (field) {
         UserTypeField *next = field->next;
         user_type_field_free(field);
         field = next;
     }
+    free(def);
+}
+
+DeclarationHeader *user_type_declaration_make(AST_Identifier *id, UserTypeDefinition *type_definition) {
+    UserTypeDeclaration *u = calloc(1, sizeof(*u));
+    u->header.type = DT_USER_TYPE;
+    u->header.ref_count = 1;
+    u->identifier = id;
+    u->type_definition = type_definition;
+    return &u->header;
+}
+
+void user_type_declaration_free(UserTypeDeclaration *d) {
+    ast_identifier_free(d->identifier);
     free(d);
 }
 
@@ -44,7 +57,7 @@ DeclarationHeader *variable_declaration_make(AST_Identifier *id, AST_Identifier 
     return &d->header;
 }
 
-void *variable_declaration_free(VariableDeclaration *d) {
+void variable_declaration_free(VariableDeclaration *d) {
     ast_identifier_free(d->type_identifier);
     ast_identifier_free(d->identifier);
     free(d);
@@ -61,31 +74,34 @@ DeclarationHeader *vector_declaration_make(AST_Identifier *id, AST_Literal *coun
     return &d->header;
 }
 
-void *vector_declaration_free(VectorDeclaration *d) {
+void vector_declaration_free(VectorDeclaration *d) {
     ast_identifier_free(d->identifier);
     ast_literal_free(d->count);
     free(d);
 }
 
 DeclarationHeader *function_declaration_make(AST_Identifier *id, AST_Identifier *ret_id,
-                                             IKS_Type return_type, DeclarationHeader *first_param) {
+                                             IKS_Type return_type, UserTypeDefinition *return_type_definition,
+                                             DeclarationHeader *first_param) {
     FunctionDeclaration *d = calloc(1, sizeof(*d));
     d->header.type = DT_FUNCTION;
     d->header.ref_count = 1;
     d->identifier = id;
     d->return_identifier = ret_id;
     d->return_type = return_type;
+    d->return_type_definition = return_type_definition;
     d->first_param = first_param;
     return &d->header;
 }
 
-void *function_declaration_free(FunctionDeclaration *d) {
+void function_declaration_free(FunctionDeclaration *d) {
     ast_identifier_free(d->identifier);
     ast_identifier_free(d->return_identifier);
 
     DeclarationHeader *param = d->first_param;
     while (param) {
-        DeclarationHeader *next = param->next;
+     
+   DeclarationHeader *next = param->next;
         declaration_header_free(param);
         param = next;
     }
@@ -113,7 +129,7 @@ void declaration_header_free(void *data) {
     if (decl_hdr->ref_count == 1) {
         switch (decl_hdr->type) {
         case DT_FUNCTION: function_declaration_free((FunctionDeclaration*)data); break;
-        case DT_USER_TYPE: user_type_declaration_free((UserTypeDeclaration*)data); break;
+        case DT_USER_TYPE_DEFINITION: user_type_definition_free((UserTypeDefinition*)data); break;
         case DT_VECTOR: vector_declaration_free((VectorDeclaration*)data); break;
         case DT_VARIABLE: variable_declaration_free((VariableDeclaration*)data); break;
         default: Assert(false);

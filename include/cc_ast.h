@@ -106,6 +106,8 @@ typedef struct AST_Program {
 AST_Program *ast_program_make();
 void ast_program_free(AST_Program *p);
 
+void ast_generate_code(AST_Program *program);
+
 /* ------------------------------------------------
  * Commands
  * ------------------------------------------------ */

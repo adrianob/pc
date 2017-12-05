@@ -376,3 +376,8 @@ void ast_function_call_free(AST_FunctionCall *f) {
     ast_header_free(f->first_param);
     free(f);
 }
+
+void ast_generate_code(AST_Program *program) {
+    // TODO: Cada nodo de bloco na ast precisa ter um dicionario de símbolos associado a ele,
+    // ou algo parecido.
+}

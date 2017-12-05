@@ -55,11 +55,14 @@ typedef enum IKS_Error {
 
     // Extra defined errors
     IKS_ERROR_NON_EXISTENT_FIELD,
+    IKS_ERROR_USER_TYPE_DEFINITION,
+    IKS_ERROR_USER_TYPE
 } IKS_Error;
 
 typedef enum DeclarationType {
     DT_FUNCTION,
     DT_USER_TYPE,
+    DT_USER_TYPE_DEFINITION,
     DT_VECTOR,
     DT_VARIABLE,
 } DeclarationType;

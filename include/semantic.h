@@ -24,13 +24,21 @@ typedef struct UserTypeField {
 
 UserTypeField *user_type_field_make(IKS_Type type, AST_Header *id_hdr, FieldVisibility vis);
 
-typedef struct UserTypeDeclaration {
+typedef struct UserTypeDefinition {
     DeclarationHeader     header;
     AST_Identifier       *identifier;
     UserTypeField        *first_field;
+} UserTypeDefinition;
+
+DeclarationHeader *user_type_definition_make(AST_Identifier *id, UserTypeField *first_field);
+
+typedef struct UserTypeDeclaration {
+    DeclarationHeader     header;
+    UserTypeDefinition   *type_definition;
+    AST_Identifier       *identifier;
 } UserTypeDeclaration;
 
-DeclarationHeader *user_type_declaration_make(AST_Identifier *id, UserTypeField *first_field);
+DeclarationHeader *user_type_declaration_make(AST_Identifier *id, UserTypeDefinition *type_definition);
 
 typedef struct VariableDeclaration {
     DeclarationHeader   header;
@@ -38,7 +46,7 @@ typedef struct VariableDeclaration {
     AST_Identifier     *type_identifier;
     AST_Identifier     *identifier;
     int                 size_in_bytes;
-    // @Todo(leo): Consider when variable is const.
+    /* @Todo(leo): Consider when variable is const. */
     // bool                is_const;
 } VariableDeclaration;
 
@@ -58,12 +66,14 @@ typedef struct FunctionDeclaration {
     DeclarationHeader   header;
     AST_Identifier     *identifier;
     AST_Identifier     *return_identifier;
+    UserTypeDefinition *return_type_definition;
     IKS_Type            return_type;
     DeclarationHeader  *first_param;
 } FunctionDeclaration;
 
 DeclarationHeader *function_declaration_make(AST_Identifier *id, AST_Identifier *ret_id,
-                                             IKS_Type return_type, DeclarationHeader *first_param);
+                                             IKS_Type return_type, UserTypeDefinition *return_type_definition,
+                                             DeclarationHeader *first_param);
 
 int function_declaration_num_params(FunctionDeclaration *decl);
 

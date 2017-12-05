@@ -238,7 +238,6 @@ void main_finalize(void) {
     /* gv_init(NULL); */
     /* print_ast_to_graph(g_program); */
     /* gv_close(); */
-
     int exit_code = IKS_SUCCESS;
     int num_errors = array_len(g_semantic_errors);
 
