@@ -22,6 +22,7 @@ ADD_EXECUTABLE(main
   src/sds.c
   src/table_symbol.c
   src/semantic_errors.c
+  src/scope.c
 )
 TARGET_LINK_LIBRARIES(main ${FLEX_LIBRARIES})
 

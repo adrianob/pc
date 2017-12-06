@@ -7,6 +7,7 @@
 #include "macros.h"
 #include "semantic.h"
 #include "semantic_errors.h"
+#include "scope.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

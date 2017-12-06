@@ -14,6 +14,7 @@
 #include "semantic_errors.h"
 #include "sds.h"
 #include "stack.h"
+#include "scope.h"
 
 AST_Program *g_program = NULL;
 STACK_T *g_scopes = NULL;
