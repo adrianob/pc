@@ -23,8 +23,8 @@ static void initialize_globals_if_needed() {
     if (!g_program) g_program = ast_program_make();
     if (!g_semantic_errors) array_init(g_semantic_errors);
     if (stack_list_size(g_scopes) == 0) {
-        comp_dict_t * dic = dict_new();
-        stack_push(&g_scopes, dic);
+        Scope *s = scope_make(ST_GLOBAL);
+        stack_push(&g_scopes, s);
     }
 }
 
@@ -54,23 +54,22 @@ static inline comp_dict_t *dict_from_tree(comp_tree_t *node) {
 }
 
 static DeclarationHeader *find_declaration_recursive(AST_Identifier *id) {
-    comp_dict_t *scope_dict = stack_top(g_scopes);
+    Scope *scope = stack_top(g_scopes);
     char *id_key = get_key_from_identifier(id);
 
-    comp_dict_item_t *entry = dict_get_entry(scope_dict, id_key);
+    DeclarationHeader *decl_hdr = scope_get(scope, id_key);
 
-    if (entry) {
-        return (DeclarationHeader*)entry->value;
+    if (decl_hdr) {
+        return decl_hdr;
     } else {
         //didn't find declaration in current scope
         STACK_T *head = g_scopes;
-        bool found = false;
 
         while(head) {
-            comp_dict_t *dict = stack_top(head);
-            entry = dict_get_entry(dict, id_key);
-            if (entry) {
-                return (DeclarationHeader*)entry->value;
+            Scope *scope = stack_top(head);
+            decl_hdr = scope_get(scope, id_key);
+            if (decl_hdr) {
+                return decl_hdr;
             }
             head = head->next;
         }
@@ -83,21 +82,21 @@ static DeclarationHeader *find_or_make_declaration(comp_dict_item_t *entry, IKS_
     Assert(type != DT_USER_TYPE_DEFINITION);
     //check if already declared
     AST_Identifier *id = (AST_Identifier*)ast_identifier_make(entry);
-    comp_dict_t *scope_dict = stack_top(g_scopes);
+    Scope *scope = stack_top(g_scopes);
     char *id_key = get_key_from_identifier(id);
 
-    if (dict_get_entry(scope_dict, id_key)) {
+    if (scope_get(scope, id_key)) {
         push_declared_error(id);
         ast_identifier_free(id);
         return NULL;
     } else {
         DeclarationHeader *decl = variable_declaration_make(id, NULL, type);
-        dict_put(scope_dict, id_key, decl);
+        scope_add(scope, id_key, decl);
         return decl;
     }
 }
 
-static comp_dict_t *get_global_scope_dict() {
+static inline Scope *get_global_scope() {
     STACK_T *head = g_scopes;
     while (head->next) head = head->next;
     Assert(head != NULL);
@@ -295,24 +294,24 @@ programa:
 decl_tipos:
         TK_PR_CLASS TK_IDENTIFICADOR '['
         {
-            comp_dict_t * dic = dict_new();
-            stack_push(&g_scopes, dic);
+            Scope *scope = scope_make(ST_LOCAL);
+            stack_push(&g_scopes, scope);
         } lista_campos
         {
             scope_free(stack_pop(&g_scopes));
         } ']' ';'
         {
-            comp_dict_t *scope_dict = stack_top(g_scopes);
+            Scope *scope = stack_top(g_scopes);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             // Add user type to global scope
             char *id_key = get_key_from_identifier(id);
 
-            if (dict_get_entry(scope_dict, id_key)) {
+            if (scope_get(scope, id_key)) {
                 push_declared_error(id);
                 // @Todo(leo): free contents of $2 and $5
             } else {
                 DeclarationHeader *def = user_type_definition_make(id, $5);
-                dict_put(scope_dict, id_key, def);
+                scope_add(scope, id_key, def);
             }
         };
 
@@ -402,14 +401,14 @@ decl_global_non_static:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Literal *count = (AST_Literal*)ast_literal_make($4, IKS_INT);
 
-            comp_dict_t *scope_dict = stack_top(g_scopes);
+            Scope *scope = stack_top(g_scopes);
             char *id_key = get_key_from_identifier(id);
 
-            if (dict_get_entry(scope_dict, id_key)) {
+            if (scope_get(scope, id_key)) {
                 push_declared_error(id);
             } else {
                 DeclarationHeader *decl = vector_declaration_make(id, count, $1);
-                dict_put(scope_dict, id_key, decl);
+                scope_add(scope, id_key, decl);
             }
         }
         |   TK_IDENTIFICADOR TK_IDENTIFICADOR ';'
@@ -417,15 +416,15 @@ decl_global_non_static:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Identifier *type_id = (AST_Identifier*)ast_identifier_make($1);
 
-            comp_dict_t *scope_dict = stack_top(g_scopes);
+            Scope *scope = stack_top(g_scopes);
             char *id_key = get_key_from_identifier(id);
 
-            if (dict_get_entry(scope_dict, id_key)) {
+            if (scope_get(scope, id_key)) {
                 // If name already is declared, push error and do nothing.
                 push_declared_error(id);
             } else {
                 char *type_id_key = get_key_from_identifier(type_id);
-                DeclarationHeader *type_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, type_id_key);
+                DeclarationHeader *type_decl_hdr = scope_get(scope, type_id_key);
 
                 if (!type_decl_hdr)
                     push_undeclared_error(type_id);
@@ -434,7 +433,7 @@ decl_global_non_static:
 
                 DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
 
-                dict_put(scope_dict, id_key, decl);
+                scope_add(scope, id_key, decl);
             }
         }
         ;
@@ -447,13 +446,13 @@ decl_func:
 decl_func2:
                 tipo_primitivo TK_IDENTIFICADOR
                 {
-                    comp_dict_t * dic = dict_new();
-                    stack_push(&g_scopes, dic);
+                    Scope *scope = scope_make(ST_LOCAL);
+                    stack_push(&g_scopes, scope);
                 }
                 lista_entrada
                 {
                     // Here we make the function declaration.
-                    comp_dict_t *scope_dict = get_global_scope_dict();
+                    Scope *scope = get_global_scope();
                     // Get information about the function name identifier.
                     AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
                     char *id_key = get_key_from_identifier(id);
@@ -462,7 +461,7 @@ decl_func2:
                         DeclarationHeader *decl = function_declaration_make(
                             id, NULL, $1, NULL, $4
                         );
-                        dict_put(scope_dict, id_key, decl);
+                        scope_add(scope, id_key, decl);
                     } else {
                         push_declared_error(id);
                         ast_identifier_free(id);
@@ -484,19 +483,20 @@ decl_func2:
                         $$ = ast_function_make(id, block->first_command, IKS_UNDEFINED, NULL);
                     }
 
-                    comp_dict_t *scope = stack_pop(&g_scopes);
+                    Scope *scope = stack_pop(&g_scopes);
                     $$->scope = scope;
                     block->first_command = NULL;
                     ast_block_free(block);
                 }
         |       TK_IDENTIFICADOR TK_IDENTIFICADOR
                 {
-                    comp_dict_t * dic = dict_new(); stack_push(&g_scopes, dic);
+                    Scope* scope = scope_make(ST_LOCAL);
+                    stack_push(&g_scopes, scope);
                 }
                 lista_entrada
                 {
                     // Here we make the function declaration.
-                    comp_dict_t *scope_dict = get_global_scope_dict();
+                    Scope *scope = get_global_scope();
                     // Get information about the function name identifier.
                     AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
                     char *id_key = get_key_from_identifier(id);
@@ -516,7 +516,7 @@ decl_func2:
                                 id, return_id, (ret_decl_hdr) ? return_id->header.semantic_type : IKS_UNDEFINED,
                                 (UserTypeDefinition*)ret_decl_hdr, $4
                         );
-                        dict_put(scope_dict, id_key, decl);
+                        scope_add(scope, id_key, decl);
                     } else {
                         push_declared_error(id);
                     }
@@ -538,7 +538,7 @@ decl_func2:
                         $$ = ast_function_make(id, block->first_command, IKS_UNDEFINED, return_id);
                     }
 
-                    comp_dict_t *scope = stack_pop(&g_scopes);
+                    Scope *scope = stack_pop(&g_scopes);
                     $$->scope = scope;
                     block->first_command = NULL;
                     ast_block_free(block);
@@ -570,16 +570,16 @@ parametro_entrada:
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             char *id_key = get_key_from_identifier(id);
-            comp_dict_t *scope_dict = stack_top(g_scopes);
+            Scope *scope = stack_top(g_scopes);
 
             DeclarationHeader *decl = variable_declaration_make(id, NULL, IKS_UNDEFINED);
 
-            if (dict_get_entry(scope_dict, get_key_from_identifier(id))) {
+            if (scope_get(scope, get_key_from_identifier(id))) {
                 push_declared_error(id);
             } else {
-                dict_put(scope_dict,
-                         id_key,
-                         declaration_header_implicit_share(decl));
+                scope_add(scope,
+                                             id_key,
+                                             declaration_header_implicit_share(decl));
             }
 
             $$ = decl;
@@ -588,16 +588,16 @@ parametro_entrada:
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
             char *id_key = get_key_from_identifier(id);
-            comp_dict_t *scope_dict = stack_top(g_scopes);
+            Scope *scope = stack_top(g_scopes);
 
             DeclarationHeader *decl = variable_declaration_make(id, NULL, $2);
 
-            if (dict_get_entry(scope_dict, get_key_from_identifier(id))) {
+            if (scope_get(scope, get_key_from_identifier(id))) {
                 push_declared_error(id);
             } else {
-                dict_put(scope_dict,
-                         id_key,
-                         declaration_header_implicit_share(decl));
+                scope_add(scope,
+                                             id_key,
+                                             declaration_header_implicit_share(decl));
             }
 
             $$ = decl;
@@ -606,10 +606,10 @@ parametro_entrada:
         {
             AST_Identifier *type_id = (AST_Identifier*)ast_identifier_make($1);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
-            comp_dict_t *scope_dict = stack_top(g_scopes);
+            Scope *scope = stack_top(g_scopes);
             char *id_key = get_key_from_identifier(id);
             char *type_id_key = get_key_from_identifier(type_id);
-            DeclarationHeader *type_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, type_id_key);
+            DeclarationHeader *type_decl_hdr = scope_get(scope, type_id_key);
 
             if (!type_decl_hdr)
                 push_undeclared_error(type_id);
@@ -618,12 +618,12 @@ parametro_entrada:
 
             DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
 
-            if (dict_get_entry(scope_dict, id_key)) {
+            if (scope_get(scope, id_key)) {
                 push_declared_error(id);
             } else {
-                dict_put(scope_dict,
-                         id_key,
-                         declaration_header_implicit_share(decl));
+                scope_add(scope,
+                          id_key,
+                          declaration_header_implicit_share(decl));
             }
 
             $$ = decl;
@@ -632,10 +632,10 @@ parametro_entrada:
         {
             AST_Identifier *type_id = (AST_Identifier*)ast_identifier_make($2);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-            comp_dict_t *scope_dict = stack_top(g_scopes);
+            Scope *scope = stack_top(g_scopes);
             char *id_key = get_key_from_identifier(id);
             char *type_id_key = get_key_from_identifier(type_id);
-            DeclarationHeader *type_decl_hdr = (DeclarationHeader*)dict_get_entry(scope_dict, type_id_key);
+            DeclarationHeader *type_decl_hdr = scope_get(scope, type_id_key);
 
             if (!type_decl_hdr)
                 push_undeclared_error(type_id);
@@ -644,9 +644,7 @@ parametro_entrada:
 
             DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
 
-            dict_put(scope_dict,
-                     id_key,
-                     declaration_header_implicit_share(decl));
+            scope_add(scope, id_key, declaration_header_implicit_share(decl));
 
             $$ = decl;
         }
@@ -697,8 +695,8 @@ comando_sem_entrada_saida:
         | comando_decl_var_init
         | {
             //create new scope for block
-            comp_dict_t * block_dic = dict_new();
-            stack_push(&g_scopes, block_dic);
+            Scope *scope = scope_make(ST_LOCAL);
+            stack_push(&g_scopes, scope);
         } bloco_comandos {
             AST_Block *block = (AST_Block*)$2;
             if (block->first_command) {
@@ -730,12 +728,12 @@ comando_return: TK_PR_RETURN expressao {
             // We know that only one function can be defined in the current scope.
             // To find the function we iterate over all of the dict to find it.
             // TODO(leo): This is ineficcient, find a better way.
-            comp_dict_t *scope_dict = get_global_scope_dict();
-            Assert(scope_dict != NULL);
+            Scope *scope = get_global_scope();
+            Assert(scope != NULL);
 
             bool found_func_decl = false;
-            for (int hash = 0; hash < scope_dict->size; ++hash) {
-                comp_dict_item_t *search_item = scope_dict->data[hash];
+            for (int hash = 0; hash < scope->symbols->size; ++hash) {
+                comp_dict_item_t *search_item = scope->symbols->data[hash];
                 while (search_item) {
                     DeclarationHeader *decl = (DeclarationHeader*)search_item->value;
                     if (decl->type == DT_FUNCTION) {
@@ -779,7 +777,7 @@ comando_decl_var_2:
             AST_Identifier *type_id = (AST_Identifier*)ast_identifier_make($1);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
 
-            comp_dict_t *scope_dict = stack_top(g_scopes);
+            Scope *scope = stack_top(g_scopes);
             char *id_key = get_key_from_identifier(id);
             char *type_id_key = get_key_from_identifier(type_id);
 
@@ -794,10 +792,10 @@ comando_decl_var_2:
                 if (type_decl_hdr) {
                     Assert(type_decl_hdr->type == DT_USER_TYPE_DEFINITION);
                     DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
-                    dict_put(scope_dict, id_key, decl);
+                    scope_add(scope, id_key, decl);
                 } else {
                     DeclarationHeader *decl = variable_declaration_make(id, type_id, IKS_UNDEFINED);
-                    dict_put(scope_dict, id_key, decl);
+                    scope_add(scope, id_key, decl);
                 }
             }
         }

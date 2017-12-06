@@ -70,6 +70,7 @@ typedef struct comp_dict_item comp_dict_item_t;
 typedef struct AST_Header AST_Header;
 typedef struct AST_Identifier AST_Identifier;
 typedef struct AST_Literal AST_Literal;
+typedef struct Scope Scope;
 
 typedef struct AST_Header {
     int                type;
@@ -91,7 +92,7 @@ typedef struct AST_Function {
     AST_Identifier      *return_identifier;
     AST_Identifier      *identifier;
     AST_Header          *first_command;
-    comp_dict_t         *scope;
+    Scope               *scope;
     struct AST_Function *next;
 } AST_Function;
 
@@ -102,7 +103,7 @@ void ast_function_free(AST_Function *f);
 typedef struct AST_Program {
     int type;
     AST_Function *first_func;
-    comp_dict_t  *scope;
+    Scope        *scope;
 } AST_Program;
 
 AST_Program *ast_program_make();
@@ -117,9 +118,9 @@ typedef struct AST_IfElse {
     AST_Header     header;
     AST_Header    *condition;
     AST_Header    *then_command;
-    comp_dict_t   *then_scope;
+    Scope         *then_scope;
     AST_Header    *else_command;
-    comp_dict_t   *else_scope;
+    Scope         *else_scope;
 } AST_IfElse;
 
 AST_Header *ast_if_make(AST_Header *cond, AST_Header *then_command, AST_Header *else_command);
@@ -147,7 +148,7 @@ typedef struct AST_While {
     AST_Header         header;
     AST_Header        *condition;
     AST_Header        *first_command;
-    comp_dict_t       *scope;
+    Scope             *scope;
     bool               is_do_while;
 } AST_While;
 
@@ -177,7 +178,7 @@ typedef struct AST_For {
     AST_Header        *list_first_command;
     AST_Header        *second_list_first_command;
     AST_Header        *expr;
-    comp_dict_t       *scope;
+    Scope             *scope;
 } AST_For;
 
 AST_Header *ast_for_make(AST_Header *expr, AST_Header *first_command, AST_Header *list_first_command,
@@ -189,7 +190,7 @@ typedef struct AST_Foreach {
     AST_Identifier    *identifier;
     AST_Header        *first_command;
     AST_Header        *expr;
-    comp_dict_t       *scope;
+    Scope             *scope;
 } AST_Foreach;
 
 AST_Header *ast_foreach_make(AST_Identifier *identifier, AST_Header *expr, AST_Header *first_command);
@@ -227,7 +228,7 @@ void ast_return_free(AST_Return *r);
 typedef struct AST_Block {
     AST_Header   header;
     AST_Header  *first_command;
-    comp_dict_t *scope;
+    Scope       *scope;
 } AST_Block;
 
 AST_Header *ast_block_make(AST_Header *cmd);

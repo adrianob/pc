@@ -1,10 +1,32 @@
 #include "semantic.h"
 
+int get_user_type_definition_size(UserTypeField *first_field) {
+    int size_in_bytes = 0;
+
+    UserTypeField *field = first_field;
+    while (field) {
+        size_in_bytes += field->size_in_bytes;
+        field = field->next;
+    }
+
+    return size_in_bytes;
+}
+
+int get_vector_declaration_size(VectorDeclaration *v) {
+    TableSymbol *ts = (TableSymbol*)v->count->entry->value;
+    Assert(ts->token_type == POA_LIT_INT);
+
+    int num_elements = ts->value_int;
+    int size = v->elem_size_in_bytes * num_elements;
+    return size;
+}
+
 UserTypeField *user_type_field_make(IKS_Type type, AST_Header *id_hdr, FieldVisibility vis) {
     UserTypeField *u = calloc(1, sizeof(*u));
     u->type = type;
     u->visibility = vis;
     u->identifier = id_hdr;
+    u->size_in_bytes = get_primitive_type_size(type);
     return u;
 }
 
@@ -18,6 +40,7 @@ DeclarationHeader *user_type_definition_make(AST_Identifier *id, UserTypeField *
     u->header.type = DT_USER_TYPE_DEFINITION;
     u->identifier = id;
     u->first_field = first_field;
+    u->size_in_bytes = get_user_type_definition_size(first_field);
     return &u->header;
 }
 
@@ -46,11 +69,46 @@ void user_type_declaration_free(UserTypeDeclaration *d) {
     free(d);
 }
 
+Scope *scope_make(ScopeType type) {
+    Scope *s = calloc(1, sizeof(*s));
+    s->symbols = dict_new();
+    s->current_address_offset = 0;
+    s->type = type;
+    return s;
+}
+
+void scope_add(Scope *scope, char *name, DeclarationHeader *decl_hdr) {
+    Assert(dict_get_entry(scope->symbols, name) == NULL);
+
+    switch (decl_hdr->type) {
+    case DT_USER_TYPE: {
+        UserTypeDeclaration *ut = (UserTypeDeclaration*)decl_hdr;
+        ut->address_offset = scope->current_address_offset;
+        scope->current_address_offset += ut->type_definition->size_in_bytes;
+    } break;
+    case DT_VARIABLE: {
+        VariableDeclaration *v = (VariableDeclaration*)decl_hdr;
+        v->address_offset = scope->current_address_offset;
+        scope->current_address_offset += v->size_in_bytes;
+    } break;
+    case DT_VECTOR: {
+        VectorDeclaration *v = (VectorDeclaration*)decl_hdr;
+        v->address_offset = scope->current_address_offset;
+        scope->current_address_offset += get_vector_declaration_size(v);
+    } break;
+    case DT_FUNCTION: case DT_USER_TYPE_DEFINITION: break; // Do nothing
+    }
+
+    dict_put(scope->symbols, name, decl_hdr);
+    // TODO(leo): maybe return something useful here.
+}
+
 DeclarationHeader *variable_declaration_make(AST_Identifier *id, AST_Identifier *type_id, IKS_Type type) {
     VariableDeclaration *d = calloc(1, sizeof(*d));
     d->header.type = DT_VARIABLE;
     d->header.ref_count = 1;
     d->identifier = id;
+    d->address_offset = -1;
     d->type_identifier = type_id;
     d->type = type;
     d->size_in_bytes = get_primitive_type_size(type);
