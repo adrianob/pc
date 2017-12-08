@@ -73,49 +73,54 @@ ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instructi
     }
 }
 
+ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack, ILOC_Instruction *code, ILOC_OpCode opcode);
 ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack);
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
 ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
 
+ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack, ILOC_Instruction *code, ILOC_OpCode opcode){
+    ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
+    ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack);
+
+    code = iloc_instruction_concat(code, code_expr1);
+    code = iloc_instruction_concat(code, code_expr2);
+
+    ILOC_Instruction *load = iloc_instruction_make();
+    load->opcode = ILOC_LOADI;
+    array_push(load->sources, code_expr1->temp_val);
+    array_push(load->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+    code = iloc_instruction_concat(code, load);
+
+    ILOC_Instruction *inst = iloc_instruction_make();
+    inst->opcode = opcode;
+    Assert(array_len(load->targets) == 1);
+    array_push(inst->sources, load->targets[0]);
+    array_push(inst->sources, code_expr2->temp_val);
+    array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+    code = iloc_instruction_concat(code, inst);
+    return code;
+}
+
 ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack) {
-    /* printf("Generating code for arithmetic expression\n"); */
+    /*printf("Generating code for arithmetic expression\n");*/
     ILOC_Instruction *code = NULL;
 
     switch (expr->header.type) {
     case AST_ARIM_DIVISAO: {
-        ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
-        ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack);
-
-        code = iloc_instruction_concat(code, code_expr1);
-        code = iloc_instruction_concat(code, code_expr2);
-
-        ILOC_Instruction *load = iloc_instruction_make();
-        load->opcode = ILOC_LOADI;
-        array_push(load->sources, code_expr1->temp_val);
-        array_push(load->targets, iloc_register_make(ILOC_RT_GENERIC));
-
-        code = iloc_instruction_concat(code, load);
-
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = ILOC_DIVI;
-        Assert(array_len(load->targets) == 1);
-        array_push(inst->sources, load->targets[0]);
-        array_push(inst->sources, code_expr2->temp_val);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
-        code = iloc_instruction_concat(code, inst);
+        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_DIV);
     } break;
     case AST_ARIM_INVERSAO: {
-        
     } break;
     case AST_ARIM_MULTIPLICACAO: {
-        
+        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_MULT);
     } break;
     case AST_ARIM_SOMA: {
-        
+        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_ADD);
     } break;
     case AST_ARIM_SUBTRACAO: {
-        
+        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_SUB);
     } break;
     default: Assert(false);
     }
