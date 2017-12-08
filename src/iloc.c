@@ -74,7 +74,6 @@ ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instructi
 }
 
 ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack, ILOC_Instruction *code, ILOC_OpCode opcode);
-ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack);
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
 ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
 
@@ -100,31 +99,6 @@ ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_sta
     array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
 
     code = iloc_instruction_concat(code, inst);
-    return code;
-}
-
-ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack) {
-    /*printf("Generating code for arithmetic expression\n");*/
-    ILOC_Instruction *code = NULL;
-
-    switch (expr->header.type) {
-    case AST_ARIM_DIVISAO: {
-        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_DIVI);
-    } break;
-    case AST_ARIM_INVERSAO: {
-    } break;
-    case AST_ARIM_MULTIPLICACAO: {
-        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_MULTI);
-    } break;
-    case AST_ARIM_SOMA: {
-        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_ADDI);
-    } break;
-    case AST_ARIM_SUBTRACAO: {
-        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_SUBI);
-    } break;
-    default: Assert(false);
-    }
-    
     return code;
 }
 
@@ -178,11 +152,17 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
 
     switch (expr->type) {
     case AST_ARIM_DIVISAO:
+        code = arit_expr_generate_code((AST_AritExpr*)expr, scope_stack, code,  ILOC_DIVI);
+        break;
     case AST_ARIM_INVERSAO:
     case AST_ARIM_MULTIPLICACAO:
+        code = arit_expr_generate_code((AST_AritExpr*)expr, scope_stack, code,  ILOC_MULTI);
+        break;
     case AST_ARIM_SOMA:
+        code = arit_expr_generate_code((AST_AritExpr*)expr, scope_stack, code,  ILOC_ADDI);
+        break;
     case AST_ARIM_SUBTRACAO:
-        code = ast_arit_expr_generate_code((AST_AritExpr*)expr, scope_stack);
+        code = arit_expr_generate_code((AST_AritExpr*)expr, scope_stack, code,  ILOC_SUBI);
         break;
     case AST_ATRIBUICAO:
         code = ast_assignment_generate_code((AST_Assignment*)expr, scope_stack);
