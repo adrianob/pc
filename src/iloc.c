@@ -66,8 +66,10 @@ ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instructi
         /* while (last->next) last = last->next; */
         /* return last; */
     } else {
-        inst->next = new_inst;
-        new_inst->prev = inst;
+        ILOC_Instruction *first = new_inst;
+        while (first->prev)  first = first->prev;
+        inst->next = first;
+        first->prev = inst;
         while (last->next) last = last->next;
         return last;
     }

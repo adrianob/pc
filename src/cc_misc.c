@@ -252,9 +252,9 @@ void main_finalize(void) {
         ILOC_Instruction *code = iloc_generate_code(g_program);
         /* printf("Code generated!\n"); */
 
-        ILOC_Instruction *temp = code;
-        int num_inst = 0;
-        while (temp) {num_inst++; temp = temp->prev;}
+        /*ILOC_Instruction *temp = code;*/
+        /*int num_inst = 0;*/
+        /*while (temp) {num_inst++; temp = temp->prev;}*/
 
         /* printf("Number of instructions: %d\n", num_inst); */
         sds code_str = iloc_stringify(code);
