@@ -123,7 +123,7 @@ ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope
 
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
     printf("Generating code for assignment\n");
-    ILOC_Instruction *code = iloc_instruction_make();
+    ILOC_Instruction *code = NULL;
 
     if (assignment->is_user_type_assignment) {
         // Not implemented yet.
@@ -132,17 +132,21 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
         Assert(assignment->identifier->type == AST_IDENTIFICADOR);
 
         ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack);
+        code = iloc_instruction_concat(code, expr_code);
+
         DeclarationHeader *decl = scope_find_declaration_recursive(
             (AST_Identifier*)assignment->identifier, scope_stack
         );
-
-        code->opcode = ILOC_STOREAI;
+        ILOC_Instruction *inst = iloc_instruction_make();
+        inst->opcode = ILOC_STOREAI;
         // Sources
-        array_push(code->sources, expr_code->temp_val);
+        array_push(inst->sources, expr_code->temp_val);
         // Targets
-        array_push(code->targets, iloc_register_make(ILOC_RT_FP));
+        array_push(inst->targets, iloc_register_make(ILOC_RT_FP));
         int address_offset = declaration_header_get_address_offset(decl);
-        array_push(code->targets, iloc_number_make(address_offset));
+        array_push(inst->targets, iloc_number_make(address_offset));
+
+        code = iloc_instruction_concat(code, inst);
     }
 
     return code;
@@ -192,6 +196,8 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
     switch (cmd->type) {
     case AST_ATRIBUICAO: {
         ILOC_Instruction *assignment_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
+        Assert(assignment_code);
+
         code = iloc_instruction_concat(code, assignment_code);
     } break;
     // TODO(leo): the rest of the ast nodes.
@@ -213,11 +219,6 @@ ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_
     while (cmd) {
         ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
 
-        int num=0;
-        ILOC_Instruction *temp = cmd_code;
-        while (temp) {}
-
-        printf("cmd_code num %d\n", num);
         code = iloc_instruction_concat(code, cmd_code);
         cmd = cmd->next;
     }
@@ -260,6 +261,13 @@ sds iloc_stringify(ILOC_Instruction *code) {
     // Loop one instruction by one
     while (inst) {
         code_str = sdscatprintf(code_str, "%s ", iloc_opcode_names[inst->opcode]);
+
+        if (inst->opcode == ILOC_NOP) {
+            code_str = sdscat(code_str, "\n");
+            inst = inst->next;
+            continue;
+        }
+
         for (int i = 0; i < array_len(inst->sources); ++i) {
             sds source_name = iloc_operand_string(inst->sources[i]);
 
@@ -281,6 +289,7 @@ sds iloc_stringify(ILOC_Instruction *code) {
                 sdsfree(target_name);
             }
         }
+        code_str = sdscat(code_str, "\n");
         inst = inst->next;
     }
 

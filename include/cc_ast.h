@@ -16,7 +16,7 @@
 
 #ifndef AST_TYPES
 #define AST_TYPES						\
-        AST_TYPE(AST_PROGRAMA,            "Program"),		\
+    AST_TYPE(AST_PROGRAMA,            "Program"),		\
 	AST_TYPE(AST_FUNCAO,              "Function"),		\
 	AST_TYPE(AST_IF_ELSE,             "If Else"),		\
 	AST_TYPE(AST_DO_WHILE,            "Do While"),		\

@@ -254,7 +254,7 @@ void main_finalize(void) {
 
         ILOC_Instruction *temp = code;
         int num_inst = 0;
-        while (temp) {num_inst++; temp = code->prev;}
+        while (temp) {num_inst++; temp = temp->prev;}
 
         printf("Number of instructions: %d\n", num_inst);
         sds code_str = iloc_stringify(code);
