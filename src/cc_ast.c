@@ -1,6 +1,7 @@
 #include "cc_ast.h"
 #include "macros.h"
 #include "scope.h"
+#include "stack.h"
 
 AST_Header *ast_shift_make(AST_Identifier *id, AST_Literal *number, bool shift_right) {
     AST_Shift *s = calloc(1, sizeof(*s));
@@ -415,6 +416,4 @@ int find_line_number_from_ast_header(AST_Header *header) {
     }
 }
 
-void ast_generate_code(AST_Program *program) {
-}
 

@@ -2,6 +2,7 @@
 #define __SCOPE_H__
 
 #include "semantic.h"
+#include "stack.h"
 
 /* void declaration_header_free(void *data); */
 
@@ -34,5 +35,6 @@ static inline DeclarationHeader *scope_get(Scope *scope, char *name) {
 
 void scope_add(Scope *scope, char *name, DeclarationHeader *decl_hdr);
 
+DeclarationHeader *scope_find_declaration_recursive(AST_Identifier *id, STACK_T *scopes);
 
 #endif // __SCOPE_H__

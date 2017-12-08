@@ -20,12 +20,22 @@ AST_Program *g_program = NULL;
 STACK_T *g_scopes = NULL;
 extern Array(SemanticError) g_semantic_errors;
 
+static inline Scope *get_global_scope() {
+    STACK_T *head = g_scopes;
+    while (head->next) head = head->next;
+    Assert(head != NULL);
+    return head->data;
+}
+
 static void initialize_globals_if_needed() {
-    if (!g_program) g_program = ast_program_make();
     if (!g_semantic_errors) array_init(g_semantic_errors);
     if (stack_list_size(g_scopes) == 0) {
         Scope *s = scope_make(ST_GLOBAL);
         stack_push(&g_scopes, s);
+    }
+    if (!g_program) {
+        g_program = ast_program_make();
+        g_program->scope = stack_top(g_scopes);
     }
 }
 
@@ -54,31 +64,6 @@ static inline comp_dict_t *dict_from_tree(comp_tree_t *node) {
     return (comp_dict_t*)node->value;
 }
 
-static DeclarationHeader *find_declaration_recursive(AST_Identifier *id) {
-    Scope *scope = stack_top(g_scopes);
-    char *id_key = get_key_from_identifier(id);
-
-    DeclarationHeader *decl_hdr = scope_get(scope, id_key);
-
-    if (decl_hdr) {
-        return decl_hdr;
-    } else {
-        //didn't find declaration in current scope
-        STACK_T *head = g_scopes;
-
-        while(head) {
-            Scope *scope = stack_top(head);
-            decl_hdr = scope_get(scope, id_key);
-            if (decl_hdr) {
-                return decl_hdr;
-            }
-            head = head->next;
-        }
-    }
-
-    return NULL;
-}
-
 static DeclarationHeader *find_or_make_declaration(comp_dict_item_t *entry, IKS_Type type) {
     Assert(type != DT_USER_TYPE_DEFINITION);
     //check if already declared
@@ -95,13 +80,6 @@ static DeclarationHeader *find_or_make_declaration(comp_dict_item_t *entry, IKS_
         scope_add(scope, id_key, decl);
         return decl;
     }
-}
-
-static inline Scope *get_global_scope() {
-    STACK_T *head = g_scopes;
-    while (head->next) head = head->next;
-    Assert(head != NULL);
-    return head->data;
 }
 
 static IKS_Type infer_type(AST_Header *h1, AST_Header *h2) {
@@ -458,7 +436,7 @@ decl_func2:
                     AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
                     char *id_key = get_key_from_identifier(id);
 
-                    if (!find_declaration_recursive(id)) {
+                    if (!scope_find_declaration_recursive(id, g_scopes)) {
                         DeclarationHeader *decl = function_declaration_make(
                             id, NULL, $1, NULL, $4
                         );
@@ -474,7 +452,7 @@ decl_func2:
                     char *id_key = get_key_from_identifier(id);
                     AST_Block *block = (AST_Block*)$6;
 
-                    DeclarationHeader *id_decl_hdr = find_declaration_recursive(id);
+                    DeclarationHeader *id_decl_hdr = scope_find_declaration_recursive(id, g_scopes);
                     if (id_decl_hdr) {
                         Assert(id_decl_hdr->type == DT_FUNCTION);
                         FunctionDeclaration *func_decl = (FunctionDeclaration*)id_decl_hdr;
@@ -504,14 +482,14 @@ decl_func2:
 
                     // Check if the return type identifier is found or not.
                     AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
-                    DeclarationHeader *ret_decl_hdr = find_declaration_recursive(return_id);
+                    DeclarationHeader *ret_decl_hdr = scope_find_declaration_recursive(return_id, g_scopes);
                     if (ret_decl_hdr && ret_decl_hdr->type == DT_USER_TYPE_DEFINITION) {
                         return_id->header.semantic_type = IKS_USER_TYPE;
                     } else {
                         push_undeclared_error(return_id);
                     }
 
-                    DeclarationHeader *id_decl_hdr = find_declaration_recursive(id);
+                    DeclarationHeader *id_decl_hdr = scope_find_declaration_recursive(id, g_scopes);
                     if (!id_decl_hdr) {
                         DeclarationHeader *decl = function_declaration_make(
                                 id, return_id, (ret_decl_hdr) ? return_id->header.semantic_type : IKS_UNDEFINED,
@@ -529,7 +507,7 @@ decl_func2:
                     AST_Identifier *return_id = (AST_Identifier*)ast_identifier_make($1);
                     AST_Block *block = (AST_Block*)$6;
 
-                    DeclarationHeader *id_decl_hdr = find_declaration_recursive(id);
+                    DeclarationHeader *id_decl_hdr = scope_find_declaration_recursive(id, g_scopes);
                     if (id_decl_hdr) {
                         Assert(id_decl_hdr->type == DT_FUNCTION);
                         FunctionDeclaration *func_decl = (FunctionDeclaration*)id_decl_hdr;
@@ -782,12 +760,12 @@ comando_decl_var_2:
             char *id_key = get_key_from_identifier(id);
             char *type_id_key = get_key_from_identifier(type_id);
 
-            DeclarationHeader *type_decl_hdr = find_declaration_recursive(type_id);
+            DeclarationHeader *type_decl_hdr = scope_find_declaration_recursive(type_id, g_scopes);
             if (!type_decl_hdr) {
                 push_undeclared_error(type_id);
             }
 
-            if (find_declaration_recursive(id)) {
+            if (scope_find_declaration_recursive(id, g_scopes)) {
                 push_declared_error(id);
             } else {
                 if (type_decl_hdr) {
@@ -810,7 +788,7 @@ comando_decl_var_init:
             $$ = ast_assignment_make(&id->header, &id2->header);
 
             find_or_make_declaration(id->entry, $1);
-            if (!find_declaration_recursive(id2)) {
+            if (!scope_find_declaration_recursive(id2, g_scopes)) {
                 push_undeclared_error(id2);
             }
         }
@@ -827,7 +805,7 @@ comando_decl_var_init:
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
             $$ = ast_assignment_make(&id->header, &id2->header);
             find_or_make_declaration(id->entry, $2);
-            if (!find_declaration_recursive(id2)) {
+            if (!scope_find_declaration_recursive(id2, g_scopes)) {
                 push_undeclared_error(id2);
             }
         }
@@ -843,7 +821,7 @@ comando_decl_var_init:
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($5);
             $$ = ast_assignment_make(&id->header, &id2->header);
             find_or_make_declaration(id->entry, $2);
-            if (!find_declaration_recursive(id2)) {
+            if (!scope_find_declaration_recursive(id2, g_scopes)) {
                 push_undeclared_error(id2);
             }
         }
@@ -859,7 +837,7 @@ comando_decl_var_init:
             AST_Identifier *id2 = (AST_Identifier*)ast_identifier_make($6);
             $$ = ast_assignment_make(&id->header, &id2->header);
             find_or_make_declaration(id->entry, $3);
-            if (!find_declaration_recursive(id2)) {
+            if (!scope_find_declaration_recursive(id2, g_scopes)) {
                 push_undeclared_error(id2);
             }
         }
@@ -1037,7 +1015,7 @@ chamada_func:
             AST_Identifier *id = ((AST_FunctionCall*)$$)->identifier;
             char *id_key = get_key_from_identifier(id);
 
-            DeclarationHeader *decl = find_declaration_recursive(id);
+            DeclarationHeader *decl = scope_find_declaration_recursive(id, g_scopes);
 
             if (decl) {
                 if (decl->type == DT_VARIABLE) {
@@ -1100,7 +1078,7 @@ chamada_func:
             AST_Identifier *id = ((AST_FunctionCall*)$$)->identifier;
             char *id_key = get_key_from_identifier(id);
 
-            DeclarationHeader *decl = find_declaration_recursive(id);
+            DeclarationHeader *decl = scope_find_declaration_recursive(id, g_scopes);
 
             if (decl) {
                 if (decl->type == DT_VARIABLE) {
@@ -1142,7 +1120,7 @@ comando_atribuicao:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             $$ = ast_assignment_make(&id->header, $3);
 
-            DeclarationHeader *decl = find_declaration_recursive(id);
+            DeclarationHeader *decl = scope_find_declaration_recursive(id, g_scopes);
             if (decl) {
                 if (decl->type == DT_VARIABLE) {
                     VariableDeclaration *var_decl = (VariableDeclaration*)decl;
@@ -1171,7 +1149,7 @@ comando_atribuicao:
             if ($3->semantic_type == IKS_STRING) push_invalid_coertion_error($3);
 
             DeclarationHeader *decl = NULL;
-            if ((decl = find_declaration_recursive(id))) {
+            if ((decl = scope_find_declaration_recursive(id, g_scopes))) {
                 if (decl->type == DT_FUNCTION) {
                     push_function_error(id);
                 } else if (decl->type == DT_VARIABLE) {
@@ -1198,7 +1176,7 @@ comando_atribuicao:
             char *id_key = get_key_from_identifier((AST_Identifier*)id);
             $$ = ast_assignment_user_type_make(user_type_id, id, $5);
 
-            DeclarationHeader *user_type_decl_hdr = find_declaration_recursive(user_type_id);
+            DeclarationHeader *user_type_decl_hdr = scope_find_declaration_recursive(user_type_id, g_scopes);
             if (!user_type_decl_hdr) {
                 push_undeclared_error(user_type_id);
             } else if (user_type_decl_hdr->type == DT_USER_TYPE) {
@@ -1300,7 +1278,7 @@ expressao_arit_operando:
         TK_IDENTIFICADOR {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
 
-            DeclarationHeader *decl_hdr = find_declaration_recursive(id);
+            DeclarationHeader *decl_hdr = scope_find_declaration_recursive(id, g_scopes);
             if (decl_hdr) {
                 if (decl_hdr->type == DT_VARIABLE) {
                     VariableDeclaration *decl = (VariableDeclaration*)decl_hdr;
@@ -1321,7 +1299,7 @@ expressao_arit_operando:
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             AST_IndexedVector *vec = (AST_IndexedVector*)ast_indexed_vector_make(id, $3);
 
-            DeclarationHeader *decl_hdr = find_declaration_recursive(id);
+            DeclarationHeader *decl_hdr = scope_find_declaration_recursive(id, g_scopes);
             if (decl_hdr) {
                 if (decl_hdr->type == DT_VECTOR) {
                     VectorDeclaration *decl = (VectorDeclaration*)decl_hdr;
@@ -1330,16 +1308,8 @@ expressao_arit_operando:
                     if ($3->semantic_type != IKS_INT) {
                         push_wrong_type_error($3);
                     }
-                } else if (decl_hdr->type == DT_VARIABLE) {
-                    push_variable_error(id);
-                } else if (decl_hdr->type == DT_FUNCTION) {
-                    push_function_error(id);
-                } else if (decl_hdr->type == DT_USER_TYPE_DEFINITION) {
-                    push_user_type_definition_error(id);
-                } else if (decl_hdr->type == DT_USER_TYPE) {
-                    push_user_type_error(id);
                 } else {
-                    Assert(false);
+                    push_wrong_type_usage_error(id, decl_hdr->type);
                 }
             } else {
                 push_undeclared_error(id);

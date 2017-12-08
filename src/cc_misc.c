@@ -8,6 +8,7 @@
 #include "semantic.h"
 #include "semantic_errors.h"
 #include "scope.h"
+#include "iloc.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -245,6 +246,12 @@ void main_finalize(void) {
     if (num_errors > 0) {
         print_errors();
         exit_code = g_semantic_errors[0].type; // take the first error
+    }
+
+    if (exit_code == IKS_SUCCESS) {
+        ILOC_Instruction *code = iloc_generate_code(g_program);
+        sds code_str = iloc_stringify(code);
+        printf("%s\n", code_str);
     }
 
     ast_program_free(g_program);

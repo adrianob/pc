@@ -23,6 +23,7 @@ ADD_EXECUTABLE(main
   src/table_symbol.c
   src/semantic_errors.c
   src/scope.c
+  src/iloc.c
 )
 TARGET_LINK_LIBRARIES(main ${FLEX_LIBRARIES})
 

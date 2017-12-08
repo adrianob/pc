@@ -92,4 +92,16 @@ static inline DeclarationHeader *declaration_header_implicit_share(DeclarationHe
     return hdr;
 }
 
+static inline int declaration_header_get_address_offset(DeclarationHeader *hdr) {
+    switch (hdr->type) {
+    case DT_VECTOR: return ((VectorDeclaration*)hdr)->address_offset;
+    case DT_VARIABLE: return ((VariableDeclaration*)hdr)->address_offset;
+    case DT_USER_TYPE: return ((UserTypeDeclaration*)hdr)->address_offset;
+    // These types have no offset.
+    case DT_USER_TYPE_DEFINITION:
+    case DT_FUNCTION:
+    default: Assert(false);
+    }
+}
+
 #endif // __SEMANTIC_H__
