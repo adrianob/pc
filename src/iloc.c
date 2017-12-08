@@ -109,18 +109,18 @@ ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope
 
     switch (expr->header.type) {
     case AST_ARIM_DIVISAO: {
-        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_DIV);
+        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_DIVI);
     } break;
     case AST_ARIM_INVERSAO: {
     } break;
     case AST_ARIM_MULTIPLICACAO: {
-        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_MULT);
+        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_MULTI);
     } break;
     case AST_ARIM_SOMA: {
-        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_ADD);
+        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_ADDI);
     } break;
     case AST_ARIM_SUBTRACAO: {
-        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_SUB);
+        code = arit_expr_generate_code(expr, scope_stack, code,  ILOC_SUBI);
     } break;
     default: Assert(false);
     }
