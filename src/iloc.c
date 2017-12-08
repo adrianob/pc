@@ -73,11 +73,11 @@ ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instructi
     }
 }
 
-ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack, ILOC_Instruction *code, ILOC_OpCode opcode);
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
 ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
 
-ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack, ILOC_Instruction *code, ILOC_OpCode opcode){
+ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack,
+                                          ILOC_Instruction *code, ILOC_OpCode opcode){
     ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
     ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack);
 
