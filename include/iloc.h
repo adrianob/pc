@@ -67,13 +67,13 @@ typedef struct ILOC_Number {
     ILOC_OPCODE(ILOC_LOADI, "loadI"),         \
     ILOC_OPCODE(ILOC_LOAD, "load"),          \
     ILOC_OPCODE(ILOC_LOADAI, "loadAI"),        \
-    ILOC_OPCODE(ILOC_LOADA0, "loadA0"),        \
+    ILOC_OPCODE(ILOC_LOADAO, "loadA0"),        \
     ILOC_OPCODE(ILOC_STORE, "store"),         \
     ILOC_OPCODE(ILOC_STOREAI, "storeAI"),       \
-    ILOC_OPCODE(ILOC_STOREA0, "storeA0"),       \
+    ILOC_OPCODE(ILOC_STOREAO, "storeA0"),       \
     ILOC_OPCODE(ILOC_CSTORE, "cstore"),        \
     ILOC_OPCODE(ILOC_CSTOREAI, "cstoreAI"),      \
-    ILOC_OPCODE(ILOC_CSTOREA0, "cstoreA0"),      \
+    ILOC_OPCODE(ILOC_CSTOREAO, "cstoreA0"),      \
     ILOC_OPCODE(ILOC_I2I, "i2i"),           \
     ILOC_OPCODE(ILOC_C2C, "c2c"),           \
     ILOC_OPCODE(ILOC_C2I, "c2i"),           \
@@ -96,6 +96,8 @@ typedef struct ILOC_Instruction {
     ILOC_OpCode                opcode;
     Array(ILOC_OperandHeader*) sources;
     Array(ILOC_OperandHeader*) targets;
+
+    ILOC_OperandHeader        *temp_val;
 
     struct ILOC_Instruction *prev;
     struct ILOC_Instruction *next;

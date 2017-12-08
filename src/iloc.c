@@ -48,37 +48,77 @@ sds iloc_operand_string(ILOC_OperandHeader *hdr) {
     return name;
 }
 
-ILOC_Instruction *iloc_instruction_append_after(ILOC_Instruction *inst, ILOC_Instruction *new_inst) {
-    if (!inst) return new_inst;
+ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst) {
+    ILOC_Instruction *last = new_inst;
+
+    if (!inst) {
+        while (last->next) last = last->next;
+        return last;
+    }
 
     if (inst->next) {
-        ILOC_Instruction *tmp = inst->next;
-        inst->next = new_inst;
-        new_inst->next = tmp;
-        new_inst->next->prev = new_inst;
-        new_inst->prev = inst;
-        return new_inst;
+        Assert(false);
+        /* ILOC_Instruction *tmp = inst->next; */
+        /* inst->next = new_inst; */
+        /* new_inst->next = tmp; */
+        /* new_inst->next->prev = new_inst; */
+        /* new_inst->prev = inst; */
+        /* while (last->next) last = last->next; */
+        /* return last; */
     } else {
         inst->next = new_inst;
         new_inst->prev = inst;
-        return new_inst;
+        while (last->next) last = last->next;
+        return last;
     }
 }
 
-ILOC_Instruction *iloc_instruction_append_before(ILOC_Instruction *inst, ILOC_Instruction *new_inst) {
-    if (!inst) return new_inst;
+ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack);
+ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
+ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
 
-    if (inst->prev) {
-        ILOC_Instruction *tmp = inst->prev;
-        tmp->next = new_inst;
-        new_inst->prev = tmp;
-        new_inst->next = inst;
-        return new_inst;
-    } else {
-        inst->prev = new_inst;
-        new_inst->next = inst;
-        return new_inst;
+ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack) {
+    printf("Generating code for arithmetic expression\n");
+    ILOC_Instruction *code = NULL;
+
+    switch (expr->header.type) {
+    case AST_ARIM_DIVISAO: {
+        ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
+        ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack);
+
+        code = iloc_instruction_concat(code, code_expr1);
+        code = iloc_instruction_concat(code, code_expr2);
+
+        Assert(code->next == NULL);
+        printf("code: %d\n", ((ILOC_Number*)code->temp_val)->value);
+        printf("code->prev: %d\n", ((ILOC_Number*)code->prev->temp_val)->value);
+
+        ILOC_Instruction *inst = iloc_instruction_make();
+        inst->opcode = ILOC_DIV;
+        inst->temp_val = iloc_register_make(ILOC_RT_GENERIC);
+
+        array_push(inst->sources, code_expr1->temp_val);
+        array_push(inst->sources, code_expr2->temp_val);
+        array_push(inst->targets, inst->temp_val);
+
+        code = iloc_instruction_concat(code, inst);
+    } break;
+    case AST_ARIM_INVERSAO: {
+        
+    } break;
+    case AST_ARIM_MULTIPLICACAO: {
+        
+    } break;
+    case AST_ARIM_SOMA: {
+        
+    } break;
+    case AST_ARIM_SUBTRACAO: {
+        
+    } break;
+    default: Assert(false);
     }
+    
+    return code;
 }
 
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
@@ -91,102 +131,98 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
     } else {
         Assert(assignment->identifier->type == AST_IDENTIFICADOR);
 
-        switch (assignment->expr->type) {
-        case AST_LITERAL: {
-            code->opcode = ILOC_STOREAI;
-            DeclarationHeader *decl = scope_find_declaration_recursive(
-                (AST_Identifier*)assignment->identifier, scope_stack
-            );
-            AST_Literal *lit = (AST_Literal*)assignment->expr;
-            TableSymbol *symbol = (TableSymbol*)lit->entry->value;
-            switch (symbol->token_type) {
-            case POA_LIT_BOOL: {
-                int address_offset = declaration_header_get_address_offset(decl);
-                array_push(code->sources, iloc_number_make((int)symbol->value_bool));
-                array_push(code->targets, iloc_register_make(ILOC_RT_FP));
-                array_push(code->targets, iloc_number_make(address_offset));
-            } break;
-            case POA_LIT_CHAR: {
-                printf("Not implemented for chars yet\n");
-                Assert(false);
-            } break;
-            case POA_LIT_INT: {
-                code->opcode = ILOC_STOREAI;
-                int address_offset = declaration_header_get_address_offset(decl);
-                array_push(code->sources, iloc_number_make(symbol->value_int));
-                array_push(code->targets, iloc_register_make(ILOC_RT_FP));
-                array_push(code->targets, iloc_number_make(address_offset));
-            } break;
-            case POA_LIT_FLOAT: case POA_LIT_STRING: default:
-                printf("Not implemented\n");
-                Assert(false);
-            }
-        } break;
-        case AST_IDENTIFICADOR: {
-            /* code->opcode = ILOC_STOREA0; */
-            /* DeclarationHeader *decl = scope_find_declaration_recursive( */
-            /*     (AST_Identifier*)assignment->identifier, scope_stack */
-            /* ); */
-            /* AST_Literal *lit = (AST_Literal*)assignment->expr; */
-            /* TableSymbol *symbol = (TableSymbol*)lit->entry->value; */
-            /* switch (symbol->token_type) { */
-            /* case POA_LIT_BOOL: { */
-            /*     int address_offset = declaration_header_get_address_offset(decl); */
-            /*     array_push(code->sources, iloc_number_make((int)symbol->value_bool)); */
-            /*     array_push(code->targets, iloc_register_make(ILOC_RT_FP)); */
-            /*     array_push(code->targets, iloc_number_make(address_offset)); */
-            /* } break; */
-            /* case POA_LIT_CHAR: { */
-            /*     printf("Not implemented for chars yet\n"); */
-            /*     Assert(false); */
-            /* } break; */
-            /* case POA_LIT_INT: { */
-            /*     int address_offset = declaration_header_get_address_offset(decl); */
-            /*     array_push(code->sources, iloc_number_make(symbol->value_int)); */
-            /*     array_push(code->targets, iloc_register_make(ILOC_RT_FP)); */
-            /*     array_push(code->targets, iloc_number_make(address_offset)); */
-            /* } break; */
-            /* case POA_LIT_FLOAT: case POA_LIT_STRING: default: */
-            /*     printf("Not implemented\n"); */
-            /*     Assert(false); */
-            /* } */
+        ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack);
+        DeclarationHeader *decl = scope_find_declaration_recursive(
+            (AST_Identifier*)assignment->identifier, scope_stack
+        );
 
-        } break;
-        /* case AST_VETOR_INDEXADO: */
-        /* case AST_CHAMADA_DE_FUNCAO: */
-        default:
-            printf("Not implemented yet\n");
-            Assert(false);
-        }
+        code->opcode = ILOC_STOREAI;
+        // Sources
+        array_push(code->sources, expr_code->temp_val);
+        // Targets
+        array_push(code->targets, iloc_register_make(ILOC_RT_FP));
+        int address_offset = declaration_header_get_address_offset(decl);
+        array_push(code->targets, iloc_number_make(address_offset));
     }
 
     return code;
 }
 
+ILOC_Instruction *ast_literal_generate_code(AST_Literal *lit) {
+    ILOC_Instruction *code = iloc_instruction_make();
+    code->opcode = ILOC_NOP;
+
+    TableSymbol *symbol = (TableSymbol*)lit->entry->value;
+    switch (symbol->token_type) {
+    case POA_LIT_BOOL: code->temp_val = iloc_number_make((int)symbol->value_int); break;
+    case POA_LIT_INT: code->temp_val = iloc_number_make((int)symbol->value_int); break;
+    default: Assert(false);
+    }
+    
+    return code;
+}
+
+ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack) {
+    ILOC_Instruction *code = NULL;
+
+    switch (expr->type) {
+    case AST_ARIM_DIVISAO:
+    case AST_ARIM_INVERSAO:
+    case AST_ARIM_MULTIPLICACAO:
+    case AST_ARIM_SOMA:
+    case AST_ARIM_SUBTRACAO:
+        code = ast_arit_expr_generate_code((AST_AritExpr*)expr, scope_stack);
+        break;
+    case AST_ATRIBUICAO:
+        code = ast_assignment_generate_code((AST_Assignment*)expr, scope_stack);
+        break;
+    case AST_LITERAL:
+        code = ast_literal_generate_code((AST_Literal*)expr);
+        break;
+    default:
+        Assert(false);
+    }
+
+    return code;
+}
+
+ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
+    ILOC_Instruction *code = NULL;
+
+    switch (cmd->type) {
+    case AST_ATRIBUICAO: {
+        ILOC_Instruction *assignment_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
+        code = iloc_instruction_concat(code, assignment_code);
+    } break;
+    // TODO(leo): the rest of the ast nodes.
+    default:
+        printf("node: %s\n", g_ast_names[cmd->type]);
+        Assert(false);
+    }
+
+    return code;
+}
 
 ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_stack) {
     printf("Generating code for function %s\n", get_key_from_identifier(func->identifier));
-    ILOC_Instruction *cmd_inst = NULL;
+    ILOC_Instruction *code = NULL;
 
     stack_push(&scope_stack, func->scope);
 
     AST_Header *cmd = func->first_command;
     while (cmd) {
-        switch (cmd->type) {
-        case AST_ATRIBUICAO: {
-            ILOC_Instruction *code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
-            cmd_inst = iloc_instruction_append_after(cmd_inst, code);
-        } break;
-        // TODO(leo): the rest of the ast nodes.
-        default:
-            printf("node: %s\n", g_ast_names[cmd->type]);
-            Assert(false);
-        }
+        ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
 
+        int num=0;
+        ILOC_Instruction *temp = cmd_code;
+        while (temp) {}
+
+        printf("cmd_code num %d\n", num);
+        code = iloc_instruction_concat(code, cmd_code);
         cmd = cmd->next;
     }
 
-    return cmd_inst;
+    return code;
 }
 
 ILOC_Instruction *iloc_generate_code(AST_Program *program) {
@@ -195,17 +231,17 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
     STACK_T *scope_stack = stack_initialize();
     stack_push(&scope_stack, program->scope);
 
-    ILOC_Instruction *inst = NULL;
+    ILOC_Instruction *code = NULL;
     // Loop over all functions. NOTE(leo): currently there is only main declared.
     AST_Function *func = program->first_func;
 
     while (func) {
         ILOC_Instruction *func_code = ast_function_generate_code(func, scope_stack);
-        inst = iloc_instruction_append_after(inst, func_code);
+        code = iloc_instruction_concat(code, func_code);
         func = func->next;
     }
 
-    return inst;
+    return code;
 }
 
 ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, DeclarationHeader *decl_hdr) {

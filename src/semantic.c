@@ -124,8 +124,7 @@ void function_declaration_free(FunctionDeclaration *d) {
 
     DeclarationHeader *param = d->first_param;
     while (param) {
-     
-   DeclarationHeader *next = param->next;
+        DeclarationHeader *next = param->next;
         declaration_header_free(param);
         param = next;
     }
