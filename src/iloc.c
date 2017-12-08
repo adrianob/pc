@@ -35,8 +35,8 @@ sds iloc_operand_string(ILOC_OperandHeader *hdr) {
     } break;
     case ILOC_REGISTER: {
         ILOC_Register *reg = (ILOC_Register*)hdr;
-        if (reg->register_type == ILOC_RT_FP) {
-            name = sdsnew("fp");
+        if (reg->register_type == ILOC_RT_RARP) {
+            name = sdsnew("rarp");
         } else if (reg->register_type == ILOC_RT_RBSS) {
             name = sdsnew("rbss");
         } else {
@@ -78,7 +78,7 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
 ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
 
 ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack) {
-    printf("Generating code for arithmetic expression\n");
+    /* printf("Generating code for arithmetic expression\n"); */
     ILOC_Instruction *code = NULL;
 
     switch (expr->header.type) {
@@ -89,17 +89,19 @@ ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope
         code = iloc_instruction_concat(code, code_expr1);
         code = iloc_instruction_concat(code, code_expr2);
 
-        Assert(code->next == NULL);
-        printf("code: %d\n", ((ILOC_Number*)code->temp_val)->value);
-        printf("code->prev: %d\n", ((ILOC_Number*)code->prev->temp_val)->value);
+        ILOC_Instruction *load = iloc_instruction_make();
+        load->opcode = ILOC_LOADI;
+        array_push(load->sources, code_expr1->temp_val);
+        array_push(load->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+        code = iloc_instruction_concat(code, load);
 
         ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = ILOC_DIV;
-        inst->temp_val = iloc_register_make(ILOC_RT_GENERIC);
-
-        array_push(inst->sources, code_expr1->temp_val);
+        inst->opcode = ILOC_DIVI;
+        Assert(array_len(load->targets) == 1);
+        array_push(inst->sources, load->targets[0]);
         array_push(inst->sources, code_expr2->temp_val);
-        array_push(inst->targets, inst->temp_val);
+        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
 
         code = iloc_instruction_concat(code, inst);
     } break;
@@ -122,7 +124,7 @@ ILOC_Instruction *ast_arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope
 }
 
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
-    printf("Generating code for assignment\n");
+    /* printf("Generating code for assignment\n"); */
     ILOC_Instruction *code = NULL;
 
     if (assignment->is_user_type_assignment) {
@@ -140,9 +142,9 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
         ILOC_Instruction *inst = iloc_instruction_make();
         inst->opcode = ILOC_STOREAI;
         // Sources
-        array_push(inst->sources, expr_code->temp_val);
+        array_push(inst->sources, expr_code->targets[0]);
         // Targets
-        array_push(inst->targets, iloc_register_make(ILOC_RT_FP));
+        array_push(inst->targets, iloc_register_make(ILOC_RT_RARP));
         int address_offset = declaration_header_get_address_offset(decl);
         array_push(inst->targets, iloc_number_make(address_offset));
 
@@ -210,7 +212,7 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
 }
 
 ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_stack) {
-    printf("Generating code for function %s\n", get_key_from_identifier(func->identifier));
+    /* printf("Generating code for function %s\n", get_key_from_identifier(func->identifier)); */
     ILOC_Instruction *code = NULL;
 
     stack_push(&scope_stack, func->scope);
@@ -252,7 +254,7 @@ ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, Declarati
 }
 
 sds iloc_stringify(ILOC_Instruction *code) {
-    printf("Converting code to text...\n");
+    /* printf("Converting code to text...\n"); */
     // Go to the beginning of the list.
     ILOC_Instruction *inst = code;
     while (inst->prev) inst = inst->prev;
