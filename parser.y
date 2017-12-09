@@ -165,7 +165,9 @@ static void check_errors_for_expression(AST_Header *h1, AST_Header *h2) {
 %token TK_PR_PUBLIC
 %token TK_PR_PROTECTED
 %token TK_OC_LE
+%token TK_OC_LT
 %token TK_OC_GE
+%token TK_OC_GT
 %token TK_OC_EQ
 %token TK_OC_NE
 %token TK_OC_AND
@@ -877,22 +879,22 @@ comando_controle_fluxo:
 
 comando_if:
         TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos {
-        AST_Block *then_block = (AST_Block*)$6;
-        $$ = ast_if_make($3, then_block->first_command, NULL);
+            AST_Block *then_block = (AST_Block*)$6;
+            $$ = ast_if_make($3, then_block->first_command, NULL);
 
-        then_block->first_command = NULL;
-        ast_block_free(then_block);
-    }
+            then_block->first_command = NULL;
+            ast_block_free(then_block);
+        }
         | TK_PR_IF '(' expressao ')' TK_PR_THEN bloco_comandos TK_PR_ELSE bloco_comandos {
-        AST_Block *then_block = (AST_Block*)$6;
-        AST_Block *else_block = (AST_Block*)$8;
-        $$ = ast_if_make($3, then_block->first_command, else_block->first_command);
+            AST_Block *then_block = (AST_Block*)$6;
+            AST_Block *else_block = (AST_Block*)$8;
+            $$ = ast_if_make($3, then_block->first_command, else_block->first_command);
 
-        then_block->first_command = NULL;
-        else_block->first_command = NULL;
-        ast_block_free(then_block);
-        ast_block_free(else_block);
-    }
+            then_block->first_command = NULL;
+            else_block->first_command = NULL;
+            ast_block_free(then_block);
+            ast_block_free(else_block);
+        }
         ;
 
 /* @Todo: Finish for and foreach */
@@ -1427,4 +1429,6 @@ operator_relacional:
         | TK_OC_GE {$$ = AST_LOGICO_COMP_GE;}
         | TK_OC_EQ {$$ = AST_LOGICO_COMP_IGUAL;}
         | TK_OC_NE {$$ = AST_LOGICO_COMP_DIF;}
+        | TK_OC_LT {$$ = AST_LOGICO_COMP_LT;}
+        | TK_OC_GT {$$ = AST_LOGICO_COMP_GT;}
         ;

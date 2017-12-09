@@ -53,7 +53,9 @@ private     return TK_PR_PRIVATE;
 public      return TK_PR_PUBLIC;
 protected   return TK_PR_PROTECTED;
 \<=         return TK_OC_LE;
+\<          return TK_OC_LT;
 \>=         return TK_OC_GE;
+\>          return TK_OC_GT;
 ==          return TK_OC_EQ;
 !=          return TK_OC_NE;
 \&\&        return TK_OC_AND;
@@ -112,7 +114,7 @@ static void add_to_dict(char *lexeme, int line_number, int token_type) {
 
     if (dict_get_entry(dict, key) != NULL) {
         // Entry already exists. Replace it by maintaining the correct pointer value.
-        void *old_val = dict_replace(dict, key, symbol);  
+        void *old_val = dict_replace(dict, key, symbol);
         table_symbol_free(old_val);
     } else {
         dict_put(dict, key, symbol);

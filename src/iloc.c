@@ -398,6 +398,10 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
 
         code = iloc_instruction_concat(code, assignment_code);
     } break;
+    case AST_IF_ELSE: {
+        printf("OIQWDJOIQWDOIQJWDOIJQWOIDJQOIWDJ\n");
+        Assert(false);
+    } break;
     // TODO(leo): the rest of the ast nodes.
     default:
         printf("node: %s\n", g_ast_names[cmd->type]);
