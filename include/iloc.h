@@ -97,8 +97,6 @@ typedef struct ILOC_Instruction {
     Array(ILOC_OperandHeader*) sources;
     Array(ILOC_OperandHeader*) targets;
 
-    ILOC_OperandHeader        *temp_val;
-
     struct ILOC_Instruction *prev;
     struct ILOC_Instruction *next;
 } ILOC_Instruction;
