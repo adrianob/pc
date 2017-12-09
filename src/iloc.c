@@ -441,6 +441,8 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
         func = func->next;
     }
 
+    stack_pop(&scope_stack);
+
     return code;
 }
 
