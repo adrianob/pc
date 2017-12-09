@@ -1,18 +1,9 @@
 #include "iloc.h"
 
-ILOC_OperandHeader *iloc_register_make(ILOC_RegisterType register_type) {
-    ILOC_Register *r = calloc(1, sizeof(*r));
-    r->header.type = ILOC_REGISTER;
-    r->register_type = register_type;
-    r->number = (register_type == ILOC_RT_GENERIC) ? get_next_register_number() : -1;
-    return &r->header;
-}
-
-ILOC_OperandHeader *iloc_number_make(int value) {
-    ILOC_Number *n = calloc(1, sizeof(*n));
-    n->header.type = ILOC_NUMBER;
-    n->value = value;
-    return &n->header;
+void iloc_operand_free(const ILOC_Operand *operand) {
+    if (operand->type == ILOC_LABEL_REF) {
+        sdsfree(operand->label);
+    }
 }
 
 ILOC_Instruction *iloc_instruction_make(void) {
@@ -22,28 +13,52 @@ ILOC_Instruction *iloc_instruction_make(void) {
     return i;
 }
 
-sds iloc_operand_string(ILOC_OperandHeader *hdr) {
-    Assert(hdr);
+ILOC_Operand iloc_register_make(ILOC_RegisterType type) {
+    ILOC_Operand op;
+    op.type = ILOC_REGISTER;
+    op.register_type = type;
+    op.register_number = (type == ILOC_RT_GENERIC) ? get_next_register_number() : -1;
+    return op;
+}
+
+ILOC_Operand iloc_number_make(int value) {
+    ILOC_Operand op;
+    op.type = ILOC_NUMBER;
+    op.number = value;
+    return op;
+}
+
+void iloc_instruction_free(ILOC_Instruction *inst) {
+    if (inst->label) sdsfree(inst->label);
+
+    for (int i = 0; i < array_len(inst->sources); ++i)
+        iloc_operand_free(&inst->sources[i]);
+    array_free(inst->sources);
+
+    for (int i = 0; i < array_len(inst->targets); ++i)
+        iloc_operand_free(&inst->targets[i]);
+    array_free(inst->targets);
+}
+
+sds iloc_operand_string(const ILOC_Operand *operand) {
+    Assert(operand);
     sds name;
-    switch (hdr->type) {
-    case ILOC_NUMBER: {
-        ILOC_Number *num = (ILOC_Number*)hdr;
-        name = sdscatprintf(sdsempty(), "%d", num->value);
-    } break;
-    case ILOC_LABEL_REF: {
-        ILOC_LabelRef *label = (ILOC_LabelRef*)hdr;
-        name = sdsdup(label->ref);
-    } break;
-    case ILOC_REGISTER: {
-        ILOC_Register *reg = (ILOC_Register*)hdr;
-        if (reg->register_type == ILOC_RT_RARP) {
+    switch (operand->type) {
+    case ILOC_NUMBER: 
+        name = sdscatprintf(sdsempty(), "%d", operand->number);
+        break;
+    case ILOC_LABEL_REF:
+        name = sdsdup(operand->label);
+        break;
+    case ILOC_REGISTER:
+        if (operand->register_type == ILOC_RT_RARP) {
             name = sdsnew("rarp");
-        } else if (reg->register_type == ILOC_RT_RBSS) {
+        } else if (operand->register_type == ILOC_RT_RBSS) {
             name = sdsnew("rbss");
-        } else {
-            name = sdscatprintf(sdsempty(), "r%d", reg->number);
-        }
-    } break;
+        } else if (operand->register_type == ILOC_RT_GENERIC) {
+            name = sdscatprintf(sdsempty(), "r%d", operand->register_number);
+        } else Assert(false);
+        break;
     default: Assert(false);
     }
     return name;
@@ -124,8 +139,6 @@ ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *scope_s
 
     Assert(array_len(code_expr1->targets) > 0);
     Assert(array_len(code_expr2->targets) > 0);
-    Assert(code_expr1->targets[0]);
-    Assert(code_expr2->targets[0]);
 
     code = iloc_instruction_concat(code, code_expr1);
     code = iloc_instruction_concat(code, code_expr2);
@@ -194,8 +207,6 @@ ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_sta
 
     Assert(array_len(code_expr1->targets) > 0);
     Assert(array_len(code_expr2->targets) > 0);
-    Assert(code_expr1->targets[0]);
-    Assert(code_expr2->targets[0]);
 
     code = iloc_instruction_concat(code, code_expr1);
     code = iloc_instruction_concat(code, code_expr2);
@@ -282,9 +293,13 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
             array_push(load_into_reg->sources, expr_code->targets[0]);
             array_push(load_into_reg->targets, iloc_register_make(ILOC_RT_GENERIC));
 
+            Assert(load_into_reg->targets[0].register_type == ILOC_RT_GENERIC);
+            Assert(load_into_reg->targets[0].register_number != -1);
+
             code = iloc_instruction_concat(code, load_into_reg);
 
             array_push(inst->sources, load_into_reg->targets[0]);
+            /* printf("Target number is: %d\n", load_into_reg->targets[0].number); */
         } else {
             array_push(inst->sources, expr_code->targets[0]);
         }
@@ -347,9 +362,9 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
     case AST_ARIM_SUBTRACAO:
         code = arit_expr_generate_code((AST_AritExpr*)expr, scope_stack);
         break;
-    case AST_ATRIBUICAO:
-        code = ast_assignment_generate_code((AST_Assignment*)expr, scope_stack);
-        break;
+    /* case AST_ATRIBUICAO: */
+    /*     code = ast_assignment_generate_code((AST_Assignment*)expr, scope_stack); */
+    /*     break; */
     case AST_LITERAL:
         code = ast_literal_generate_code((AST_Literal*)expr);
         break;
@@ -405,6 +420,8 @@ ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_
         cmd = cmd->next;
     }
 
+    stack_pop(&scope_stack);
+
     return code;
 }
 
@@ -434,7 +451,6 @@ ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, Declarati
 }
 
 sds iloc_stringify(ILOC_Instruction *code) {
-    /* printf("Converting code to text...\n"); */
     // Go to the beginning of the list.
     ILOC_Instruction *inst = code;
     while (inst->prev) inst = inst->prev;
@@ -451,31 +467,45 @@ sds iloc_stringify(ILOC_Instruction *code) {
         }
 
         for (int i = 0; i < array_len(inst->sources); ++i) {
-            sds source_name = iloc_operand_string(inst->sources[i]);
+            sds source_name = iloc_operand_string(&inst->sources[i]);
 
             if (i == 0) {
                 code_str = sdscatprintf(code_str, "%s", source_name);
             } else {
                 code_str = sdscatprintf(code_str, ", %s", source_name);
-                sdsfree(source_name);
             }
+
+            sdsfree(source_name);
         }
 
         code_str = sdscat(code_str, " => ");
 
         for (int i = 0; i < array_len(inst->targets); ++i) {
-            sds target_name = iloc_operand_string(inst->targets[i]);
+            sds target_name = iloc_operand_string(&inst->targets[i]);
 
             if (i == 0) {
                 code_str = sdscatprintf(code_str, "%s", target_name);
             } else {
                 code_str = sdscatprintf(code_str, ", %s", target_name);
-                sdsfree(target_name);
             }
+            
+            sdsfree(target_name);
         }
         code_str = sdscat(code_str, "\n");
         inst = inst->next;
     }
 
     return code_str;
+}
+
+void iloc_free_code(ILOC_Instruction *code) {
+    ILOC_Instruction *it = code;
+    // Get it to the beginning of the list
+    while (it->prev) it = it->prev; 
+
+    while (it) {
+        ILOC_Instruction *next = it->next;
+        iloc_instruction_free(it);
+        it = next;
+    }
 }

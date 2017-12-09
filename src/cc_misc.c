@@ -18,9 +18,12 @@ extern AST_Program *g_program;
 extern Array(SemanticError) g_semantic_errors;
 extern STACK_T *g_scopes;
 
+static bool g_syntax_error = false;
+
 int comp_get_line_number(void) { return g_line_number; }
 
 void yyerror(char const *mensagem) {
+    g_syntax_error = true;
     fprintf(stderr, "%d: %s\n", g_line_number, mensagem);
 }
 
@@ -248,24 +251,25 @@ void main_finalize(void) {
         exit_code = g_semantic_errors[0].type; // take the first error
     }
 
-    if (exit_code == IKS_SUCCESS) {
+    if (exit_code == IKS_SUCCESS && !g_syntax_error) {
         ILOC_Instruction *code = iloc_generate_code(g_program);
-        /* printf("Code generated!\n"); */
 
-        /*ILOC_Instruction *temp = code;*/
-        /*int num_inst = 0;*/
-        /*while (temp) {num_inst++; temp = temp->prev;}*/
+        /* ILOC_Instruction *temp = code; */
+        /* int num_inst = 0; */
+        /* while (temp) {num_inst++; temp = temp->prev;} */
 
         /* printf("Number of instructions: %d\n", num_inst); */
         sds code_str = iloc_stringify(code);
         printf("%s\n", code_str);
         sdsfree(code_str);
+
+        iloc_free_code(code);
     }
 
     ast_program_free(g_program);
     dict_free_items(dict, table_symbol_free);
     dict_free(dict);
-    stack_destroy(&g_scopes, scope_free);
+    stack_destroy(&g_scopes, NULL);
 
     for (int i = 0; i < array_len(g_semantic_errors); ++i) {
         sdsfree(g_semantic_errors[i].description);

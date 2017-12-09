@@ -83,6 +83,7 @@ void ast_program_free(AST_Program *program) {
 
         ast_function_free(func_to_delete);
     }
+    scope_free(program->scope);
 }
 
 AST_Function *ast_function_make(AST_Identifier *id, AST_Header *first_command,
@@ -98,6 +99,7 @@ AST_Function *ast_function_make(AST_Identifier *id, AST_Header *first_command,
 
 void ast_function_free(AST_Function *f) {
     if (!f) return;
+    scope_free(f->scope);
     ast_identifier_free(f->identifier);
     ast_header_free(f->first_command);
     free(f);
@@ -114,6 +116,8 @@ AST_Header *ast_if_make(AST_Header *cond, AST_Header *then_command, AST_Header *
 
 void ast_if_free(AST_IfElse *i) {
     if (!i) return;
+    scope_free(i->then_scope);
+    scope_free(i->else_scope);
     ast_header_free(i->condition);
     ast_header_free(i->then_command);
     ast_header_free(i->else_command);
@@ -130,6 +134,7 @@ AST_Header *ast_while_make(AST_Header *cond, AST_Header *first_command, bool is_
 
 void ast_while_free(AST_While *w) {
     if (!w) return;
+    scope_free(w->scope);
     ast_header_free(w->condition);
     ast_header_free(w->first_command);
     free(w);
@@ -176,6 +181,7 @@ AST_Header *ast_for_make(AST_Header *expr, AST_Header *first_command, AST_Header
 
 void ast_for_free(AST_For *f) {
     if (!f) return;
+    scope_free(f->scope);
     ast_header_free(f->first_command);
     ast_header_free(f->list_first_command);
     ast_header_free(f->second_list_first_command);
@@ -193,6 +199,7 @@ AST_Header *ast_foreach_make(AST_Identifier *identifier, AST_Header *expr, AST_H
 
 void ast_foreach_free(AST_Foreach *f) {
     if (!f) return;
+    scope_free(f->scope);
     ast_identifier_free(f->identifier);
     ast_header_free(f->first_command);
     ast_header_free(f->expr);
@@ -273,6 +280,7 @@ AST_Header *ast_block_make(AST_Header *cmd) {
 
 void ast_block_free(AST_Block *b) {
     if (!b) return;
+    scope_free(b->scope);
     ast_header_free(b->first_command);
     free(b);
 }

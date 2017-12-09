@@ -16,31 +16,23 @@ typedef enum ILOC_OperandType {
     ILOC_LABEL_REF
 } ILOC_OperandType;
 
-typedef struct ILOC_OperandHeader {
-    ILOC_OperandType type;
-} ILOC_OperandHeader;
-
 typedef enum ILOC_RegisterType {
     ILOC_RT_RBSS,
     ILOC_RT_RARP,
     ILOC_RT_GENERIC
 } ILOC_RegisterType;
 
-typedef struct ILOC_Register {
-    ILOC_OperandHeader header;
-    ILOC_RegisterType  register_type;
-    int                number;
-} ILOC_Register;
-
-typedef struct ILOC_LabelRef {
-    ILOC_OperandHeader header;
-    sds                ref;
-} ILOC_LabelRef;
-
-typedef struct ILOC_Number {
-    ILOC_OperandHeader header;
-    int                value;
-} ILOC_Number;
+typedef struct ILOC_Operand {
+    ILOC_OperandType type;
+    union {
+        sds label;
+        int number;
+        struct {
+            ILOC_RegisterType register_type;
+            int register_number;
+        };
+    };
+} ILOC_Operand;
 
 #define ILOC_OPCODES \
     ILOC_OPCODE(ILOC_NOP, "nop"),               \
@@ -100,8 +92,8 @@ static const char *iloc_opcode_names[] = {
 typedef struct ILOC_Instruction {
     sds                        label;
     ILOC_OpCode                opcode;
-    Array(ILOC_OperandHeader*) sources;
-    Array(ILOC_OperandHeader*) targets;
+    Array(ILOC_Operand)        sources;
+    Array(ILOC_Operand)        targets;
 
     struct ILOC_Instruction *prev;
     struct ILOC_Instruction *next;
@@ -112,9 +104,6 @@ static inline int get_next_register_number() {
     return next++;
 }
 
-ILOC_OperandHeader *iloc_number_make(int value);
-ILOC_OperandHeader *iloc_register_make(ILOC_RegisterType register_type);
-ILOC_Instruction *iloc_instruction_make(void);
 ILOC_Instruction *iloc_instruction_append_after(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
 ILOC_Instruction *iloc_instruction_append_before(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
@@ -122,5 +111,6 @@ ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_
 ILOC_Instruction *iloc_generate_code(AST_Program *program);
 ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, DeclarationHeader *decl_hdr);
 sds iloc_stringify(ILOC_Instruction *code);
+void iloc_free_code(ILOC_Instruction *code);
 
 #endif // __ILOC_H__
