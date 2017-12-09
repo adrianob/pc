@@ -19,6 +19,7 @@
 AST_Program *g_program = NULL;
 STACK_T *g_scopes = NULL;
 extern Array(SemanticError) g_semantic_errors;
+Array(AST_Literal*) current_array_dimensions;
 
 static inline Scope *get_global_scope() {
     STACK_T *head = g_scopes;
@@ -370,6 +371,11 @@ decl_global:
 
 array_multidimensional_global:
         '[' TK_LIT_INT ']' array_multidimensional_global
+        {
+            if(!current_array_dimensions) array_init(current_array_dimensions);
+            AST_Literal *count = (AST_Literal*)ast_literal_make($2, IKS_INT);
+            array_push(current_array_dimensions, count);
+        }
         | %empty
         ;
 decl_global_non_static:
@@ -377,7 +383,7 @@ decl_global_non_static:
         {
             find_or_make_declaration($2, $1);
         }
-        |   tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' array_multidimensional_global ';'
+        |   tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' { array_init(current_array_dimensions); } array_multidimensional_global ';'
         {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
             AST_Literal *count = (AST_Literal*)ast_literal_make($4, IKS_INT);
@@ -388,8 +394,14 @@ decl_global_non_static:
             if (scope_get(scope, id_key)) {
                 push_declared_error(id);
             } else {
-                DeclarationHeader *decl = vector_declaration_make(id, count, $1);
+                DeclarationHeader *decl = vector_declaration_make(id, $1);
+                array_push(((VectorDeclaration *)decl)->dimensions, count);
+                int i;
+                for(i = 0; i < array_len(current_array_dimensions); i++){
+                    array_push(((VectorDeclaration *)decl)->dimensions, current_array_dimensions[i]);
+                }
                 scope_add(scope, id_key, decl);
+                /*array_free(current_array_dimensions);*/
             }
         }
         |   TK_IDENTIFICADOR TK_IDENTIFICADOR ';'

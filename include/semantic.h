@@ -63,13 +63,13 @@ DeclarationHeader *variable_declaration_make(AST_Identifier *id, AST_Identifier 
 typedef struct VectorDeclaration {
     DeclarationHeader   header;
     AST_Identifier     *identifier;
-    AST_Literal        *count;
+    Array(AST_Literal*) dimensions;
     IKS_Type            type;
     int                 elem_size_in_bytes;
     int                 address_offset;
 } VectorDeclaration;
 
-DeclarationHeader *vector_declaration_make(AST_Identifier *id, AST_Literal *count, IKS_Type type);
+DeclarationHeader *vector_declaration_make(AST_Identifier *id, IKS_Type type);
 int get_vector_declaration_size(VectorDeclaration *v);
 
 typedef struct FunctionDeclaration {

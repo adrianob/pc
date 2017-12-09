@@ -13,12 +13,20 @@ int get_user_type_definition_size(UserTypeField *first_field) {
 }
 
 int get_vector_declaration_size(VectorDeclaration *v) {
-    TableSymbol *ts = (TableSymbol*)v->count->entry->value;
-    Assert(ts->token_type == POA_LIT_INT);
+    int i;
+    int size = 0;
+    for (i = 0; i < array_len(v->dimensions); ++i) {
+        TableSymbol *ts = (TableSymbol*)v->dimensions[i]->entry->value;
+        Assert(ts->token_type == POA_LIT_INT);
 
-    int num_elements = ts->value_int;
-    int size = v->elem_size_in_bytes * num_elements;
-    return size;
+        int num_elements = ts->value_int;
+        if(size == 0){
+            size +=  num_elements;
+        } else {
+            size *=  num_elements;
+        }
+    }
+    return size * v->elem_size_in_bytes;
 }
 
 UserTypeField *user_type_field_make(IKS_Type type, AST_Header *id_hdr, FieldVisibility vis) {
@@ -87,12 +95,12 @@ void variable_declaration_free(VariableDeclaration *d) {
     free(d);
 }
 
-DeclarationHeader *vector_declaration_make(AST_Identifier *id, AST_Literal *count, IKS_Type type) {
+DeclarationHeader *vector_declaration_make(AST_Identifier *id, IKS_Type type) {
     VectorDeclaration *d = calloc(1, sizeof(*d));
     d->header.type = DT_VECTOR;
     d->header.ref_count = 1;
     d->identifier = id;
-    d->count = count;
+    array_init(d->dimensions);
     d->type = type;
     d->elem_size_in_bytes = get_primitive_type_size(type);
     return &d->header;
@@ -100,7 +108,7 @@ DeclarationHeader *vector_declaration_make(AST_Identifier *id, AST_Literal *coun
 
 void vector_declaration_free(VectorDeclaration *d) {
     ast_identifier_free(d->identifier);
-    ast_literal_free(d->count);
+    array_free(d->dimensions);
     free(d);
 }
 
