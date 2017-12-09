@@ -72,6 +72,30 @@ ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instructi
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
 ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
 
+ILOC_OpCode get_non_immediate_logic_expr_opcode(int ast_type) {
+    switch (ast_type) {
+    case AST_LOGICO_E:          return ILOC_AND;
+    case AST_LOGICO_OU:         return ILOC_OR;
+    case AST_LOGICO_COMP_DIF:   return ILOC_NE;
+    case AST_LOGICO_COMP_IGUAL: return ILOC_EQ;
+    case AST_LOGICO_COMP_LE:    return ILOC_LE;
+    case AST_LOGICO_COMP_GE:    return ILOC_GE;
+    case AST_LOGICO_COMP_L:     return ILOC_LT;
+    case AST_LOGICO_COMP_G:     return ILOC_GT;
+    // @TODO negação
+    default: Assert(false);
+    }
+}
+
+ILOC_OpCode get_immediate_logic_expr_opcode(int ast_type) {
+    switch (ast_type) {
+    // @TODO implement short circuit
+    case AST_LOGICO_E:          return ILOC_ANDI;
+    case AST_LOGICO_OU:         return ILOC_ORI;
+    default: Assert(false);
+    }
+}
+
 ILOC_OpCode get_non_immediate_arit_expr_opcode(int ast_type) {
     switch (ast_type) {
     case AST_ARIM_DIVISAO:       return ILOC_DIV;
@@ -92,8 +116,79 @@ ILOC_OpCode get_immediate_arit_expr_opcode(int ast_type) {
     }
 }
 
+ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *scope_stack) {
+    ILOC_Instruction *code = NULL;
+
+    ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
+    ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack);
+
+    Assert(array_len(code_expr1->targets) > 0);
+    Assert(array_len(code_expr2->targets) > 0);
+    Assert(code_expr1->targets[0]);
+    Assert(code_expr2->targets[0]);
+
+    code = iloc_instruction_concat(code, code_expr1);
+    code = iloc_instruction_concat(code, code_expr2);
+
+    if (code_expr1->opcode == ILOC_NOP && code_expr2->opcode == ILOC_NOP) {
+        // Two literals on the expression
+
+        // Load one literal in one register
+        ILOC_Instruction *load = iloc_instruction_make();
+        load->opcode = ILOC_LOADI;
+        array_push(load->sources, code_expr1->targets[0]);
+        array_push(load->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+        code = iloc_instruction_concat(code, load);
+
+        // Apply the immediate instruction with the other literal
+        ILOC_Instruction *inst = iloc_instruction_make();
+        inst->opcode = get_immediate_logic_expr_opcode(expr->header.type);
+        array_push(inst->sources, load->targets[0]);
+        array_push(inst->sources, code_expr2->targets[0]);
+        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+        code = iloc_instruction_concat(code, inst);
+        return code;
+    } else if (code_expr1->opcode != ILOC_NOP && code_expr2->opcode == ILOC_NOP) {
+        // First expression is on a register but second is a literal
+        // Apply the immediate instruction with the other literal
+        ILOC_Instruction *inst = iloc_instruction_make();
+        inst->opcode = get_immediate_logic_expr_opcode(expr->header.type);
+        array_push(inst->sources, code_expr1->targets[0]);
+        array_push(inst->sources, code_expr2->targets[0]);
+        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+        code = iloc_instruction_concat(code, inst);
+        return code;
+    } else if (code_expr1->opcode == ILOC_NOP && code_expr2->opcode != ILOC_NOP) {
+        // Second expression is on a register but first is a literal
+        // Apply the immediate instruction with the other literal
+        ILOC_Instruction *inst = iloc_instruction_make();
+        inst->opcode = get_immediate_logic_expr_opcode(expr->header.type);
+        array_push(inst->sources, code_expr2->targets[0]);
+        array_push(inst->sources, code_expr1->targets[0]);
+        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+        code = iloc_instruction_concat(code, inst);
+        return code;
+    } else {
+        // The two expressions are on registers
+        // Apply the register instruction with the other literal
+        ILOC_Instruction *inst = iloc_instruction_make();
+        inst->opcode = get_non_immediate_logic_expr_opcode(expr->header.type);
+        array_push(inst->sources, code_expr1->targets[0]);
+        array_push(inst->sources, code_expr2->targets[0]);
+        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+        code = iloc_instruction_concat(code, inst);
+        return code;
+    }
+}
+
 ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
+
     ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
     ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack);
 
@@ -260,6 +355,16 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
         break;
     case AST_IDENTIFICADOR:
         code = ast_identifier_generate_code((AST_Identifier*)expr, scope_stack);
+        break;
+    case AST_LOGICO_OU:
+    case AST_LOGICO_E:
+    case AST_LOGICO_COMP_DIF:
+    case AST_LOGICO_COMP_IGUAL:
+    case AST_LOGICO_COMP_LE:
+    case AST_LOGICO_COMP_GE:
+    case AST_LOGICO_COMP_L:
+    case AST_LOGICO_COMP_G:
+        code = logic_expr_generate_code((AST_LogicExpr*)expr, scope_stack);
         break;
     default:
         Assert(false);

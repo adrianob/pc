@@ -64,6 +64,12 @@ typedef struct ILOC_Number {
     ILOC_OPCODE(ILOC_ORI, "orI"),           \
     ILOC_OPCODE(ILOC_XOR, "xor"),           \
     ILOC_OPCODE(ILOC_XORI, "xorI"),          \
+    ILOC_OPCODE(ILOC_LT, "cmpLT"),          \
+    ILOC_OPCODE(ILOC_LE, "cmpLE"),          \
+    ILOC_OPCODE(ILOC_EQ, "cmpEQ"),          \
+    ILOC_OPCODE(ILOC_GE, "cmpGE"),          \
+    ILOC_OPCODE(ILOC_GT, "cmpGT"),          \
+    ILOC_OPCODE(ILOC_NE, "cmpNE"),          \
     ILOC_OPCODE(ILOC_LOADI, "loadI"),         \
     ILOC_OPCODE(ILOC_LOAD, "load"),          \
     ILOC_OPCODE(ILOC_LOADAI, "loadAI"),        \
