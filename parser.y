@@ -1319,12 +1319,11 @@ expressao_arit_operando:
 
             $$ = &id->header;
         }
-        | TK_IDENTIFICADOR '[' expressao ']' {array_init(current_array_expressions);} array_multidimensional_expressao {
+        | TK_IDENTIFICADOR '[' expressao ']' { array_init(current_array_expressions); } array_multidimensional_expressao {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
             AST_IndexedVector *vec = (AST_IndexedVector*)ast_indexed_vector_make(id);
             array_push(((AST_IndexedVector *)vec)->expressions, $3);
-            int i;
-            for(i = array_len(current_array_expressions) - 1; i >= 0; i--) {
+            for(int i = array_len(current_array_expressions) - 1; i >= 0; i--) {
                 array_push(((AST_IndexedVector *)vec)->expressions, current_array_expressions[i]);
             }
             array_free(current_array_expressions);
@@ -1346,6 +1345,7 @@ expressao_arit_operando:
             }
 
             $$ = &vec->header;
+            $$->semantic_type = id->header.semantic_type;
         }
         | lit_numerico
         | '-' lit_numerico {
