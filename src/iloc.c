@@ -487,66 +487,11 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
     case AST_LOGICO_E: {
         Assert(false);
     } break;
-    case AST_LOGICO_COMP_DIF: {
-        AST_LogicExpr *expr = (AST_LogicExpr*)hdr;
-
-        ILOC_Instruction *first_code = ast_expr_generate_code_labels(expr->first, true_label,
-                                                                     false_label, scope_stack);
-        ILOC_Instruction *second_code = ast_expr_generate_code_labels(expr->second, true_label,
-                                                                      false_label, scope_stack);
-
-        ILOC_Instruction *first_code_with_target_register = load_literal_to_register(first_code);
-        ILOC_Instruction *second_code_with_target_register = load_literal_to_register(second_code);
-
-        // Comparison
-        ILOC_Instruction *comp = iloc_instruction_make();
-        comp->opcode = ILOC_CMP_NE;
-        array_push(comp->sources, first_code_with_target_register->targets[0]);
-        array_push(comp->sources, second_code_with_target_register->targets[0]);
-        array_push(comp->targets, iloc_register_make(ILOC_RT_GENERIC));
-
-        // Conditional branch
-        ILOC_Instruction *cbr = iloc_instruction_make();
-        cbr->opcode = ILOC_CBR;
-        array_push(cbr->sources, comp->targets[0]);
-        array_push(cbr->targets, iloc_label_ref_make(true_label));
-        array_push(cbr->targets, iloc_label_ref_make(false_label));
-
-        code = iloc_instruction_concat(code, first_code_with_target_register);
-        code = iloc_instruction_concat(code, second_code_with_target_register);
-        code = iloc_instruction_concat(code, comp);
-        code = iloc_instruction_concat(code, cbr);
-    } break;
-    case AST_LOGICO_COMP_G: {
-        AST_LogicExpr *expr = (AST_LogicExpr*)hdr;
-
-        ILOC_Instruction *first_code = ast_expr_generate_code_labels(expr->first, true_label,
-                                                                     false_label, scope_stack);
-        ILOC_Instruction *second_code = ast_expr_generate_code_labels(expr->second, true_label,
-                                                                      false_label, scope_stack);
-
-        ILOC_Instruction *first_code_with_target_register = load_literal_to_register(first_code);
-        ILOC_Instruction *second_code_with_target_register = load_literal_to_register(second_code);
-
-        // Comparison
-        ILOC_Instruction *comp = iloc_instruction_make();
-        comp->opcode = ILOC_CMP_GT;
-        array_push(comp->sources, first_code_with_target_register->targets[0]);
-        array_push(comp->sources, second_code_with_target_register->targets[0]);
-        array_push(comp->targets, iloc_register_make(ILOC_RT_GENERIC));
-
-        // Conditional branch
-        ILOC_Instruction *cbr = iloc_instruction_make();
-        cbr->opcode = ILOC_CBR;
-        array_push(cbr->sources, comp->targets[0]);
-        array_push(cbr->targets, iloc_label_ref_make(true_label));
-        array_push(cbr->targets, iloc_label_ref_make(false_label));
-
-        code = iloc_instruction_concat(code, first_code_with_target_register);
-        code = iloc_instruction_concat(code, second_code_with_target_register);
-        code = iloc_instruction_concat(code, comp);
-        code = iloc_instruction_concat(code, cbr);
-    } break;
+    case AST_LOGICO_COMP_DIF:
+    case AST_LOGICO_COMP_GE:
+    case AST_LOGICO_COMP_LE:
+    case AST_LOGICO_COMP_G:
+    case AST_LOGICO_COMP_L:
     case AST_LOGICO_COMP_IGUAL: {
         AST_LogicExpr *expr = (AST_LogicExpr*)hdr;
 
@@ -560,7 +505,7 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
 
         // Comparison
         ILOC_Instruction *comp = iloc_instruction_make();
-        comp->opcode = ILOC_CMP_EQ;
+        comp->opcode = get_non_immediate_logic_expr_opcode(hdr->type);
         array_push(comp->sources, first_code_with_target_register->targets[0]);
         array_push(comp->sources, second_code_with_target_register->targets[0]);
         array_push(comp->targets, iloc_register_make(ILOC_RT_GENERIC));
@@ -577,9 +522,6 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
         code = iloc_instruction_concat(code, comp);
         code = iloc_instruction_concat(code, cbr);
     } break;
-    case AST_LOGICO_COMP_LE:
-    case AST_LOGICO_COMP_GE:
-    case AST_LOGICO_COMP_L:
     case AST_LOGICO_COMP_NEGACAO:
         Assert(false);
         /* code = logic_expr_generate_code_labels((AST_LogicExpr*)hdr, true_label, false_label, scope_stack); */
