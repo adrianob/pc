@@ -5,6 +5,11 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
 ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack);
 ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
 
+#define MAX_NUM_INSTRUCTIONS 2000
+
+static ILOC_Instruction *g_allocated_instructions[MAX_NUM_INSTRUCTIONS] = {0};
+static int g_num_allocated_instructions = 0;
+
 void iloc_operand_free(const ILOC_Operand *operand) {
     if (operand->type == ILOC_LABEL_REF) {
         sdsfree(operand->label);
@@ -15,6 +20,10 @@ ILOC_Instruction *iloc_instruction_make(void) {
     ILOC_Instruction *i = calloc(1, sizeof(*i));
     array_init(i->sources);
     array_init(i->targets);
+
+    Assert(g_num_allocated_instructions < MAX_NUM_INSTRUCTIONS);
+    g_allocated_instructions[g_num_allocated_instructions++] = i;
+
     return i;
 }
 
@@ -720,14 +729,10 @@ ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack
 
     code = iloc_instruction_concat(code, condition_code);
     code = iloc_instruction_concat(code, true_label);
-    if (then_branch_code) {
-        code = iloc_instruction_concat(code, then_branch_code);
-    }
+    code = iloc_instruction_concat(code, then_branch_code);
     code = iloc_instruction_concat(code, goto_next);
     code = iloc_instruction_concat(code, false_label);
-    if (else_branch_code) {
-        code = iloc_instruction_concat(code, else_branch_code);
-    }
+    code = iloc_instruction_concat(code, else_branch_code);
     code = iloc_instruction_concat(code, next_label);
 
     return code;
@@ -865,9 +870,13 @@ void iloc_free_code(ILOC_Instruction *code) {
     // Get it to the beginning of the list
     while (it->prev) it = it->prev; 
 
-    while (it) {
-        ILOC_Instruction *next = it->next;
-        iloc_instruction_free(it);
-        it = next;
+    for (int i = 0; i < g_num_allocated_instructions; ++i) {
+        iloc_instruction_free(g_allocated_instructions[i]);
     }
+            
+    /* while (it) { */
+    /*     ILOC_Instruction *next = it->next; */
+    /*     iloc_instruction_free(it); */
+    /*     it = next; */
+    /* } */
 }

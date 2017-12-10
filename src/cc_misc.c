@@ -275,6 +275,7 @@ void main_finalize(void) {
     for (int i = 0; i < array_len(g_semantic_errors); ++i) {
         sdsfree(g_semantic_errors[i].description);
     }
+    array_free(g_semantic_errors);
 
     exit(exit_code);
 }
