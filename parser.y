@@ -1368,8 +1368,8 @@ expressao_logica:
                 check_errors_for_expression($1, $3);
             }
         }
-        | expressao_logica TK_OC_AND expressao_logica1 {
-            $$ = ast_logic_expr_make(AST_LOGICO_E, $1, $3);
+        | expressao_logica TK_OC_OR expressao_logica1 {
+            $$ = ast_logic_expr_make(AST_LOGICO_OU, $1, $3);
 
             if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
                 // Correctly typed expression
@@ -1383,8 +1383,8 @@ expressao_logica:
         ;
 
 expressao_logica1:
-        expressao_logica1 TK_OC_OR expressao_logica2 {
-            $$ = ast_logic_expr_make(AST_LOGICO_OU, $1, $3);
+        expressao_logica1 TK_OC_AND expressao_logica2 {
+            $$ = ast_logic_expr_make(AST_LOGICO_E, $1, $3);
 
             if (is_valid_expr_type($1) && is_valid_expr_type($3)) {
                 // Correctly typed expression
