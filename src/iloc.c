@@ -94,6 +94,8 @@ sds iloc_operand_string(const ILOC_Operand *operand) {
 }
 
 ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst) {
+    if (!new_inst) return inst;
+
     ILOC_Instruction *last = new_inst;
 
     if (!inst) {
@@ -305,12 +307,14 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
         // Not implemented yet.
         Assert(false);
     } else {
-        Assert(assignment->identifier->type == AST_IDENTIFICADOR  || assignment->identifier->type == AST_VETOR_INDEXADO);
+        Assert(assignment->identifier->type == AST_IDENTIFICADOR  ||
+               assignment->identifier->type == AST_VETOR_INDEXADO);
 
         ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack);
         ILOC_Instruction *vec_expr_code = NULL;
-        if(assignment->identifier->type == AST_VETOR_INDEXADO){
-            vec_expr_code = ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expr, scope_stack);
+        if (assignment->identifier->type == AST_VETOR_INDEXADO){
+            vec_expr_code = ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expr,
+                                                   scope_stack);
         }
         code = iloc_instruction_concat(code, expr_code);
 
@@ -320,7 +324,7 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
             decl = scope_find_declaration_recursive(
                 (AST_Identifier*)assignment->identifier, scope_stack, &is_global_scope
             );
-        } else{ //vector assignment
+        } else { //vector assignment
             decl = scope_find_declaration_recursive(
                 (AST_Identifier*)((AST_IndexedVector *)assignment->identifier)->identifier, scope_stack, &is_global_scope
             );
@@ -512,6 +516,10 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
         /* code = logic_expr_generate_code_labels((AST_LogicExpr*)hdr, true_label, false_label, scope_stack); */
         break;
     // TODO(leo): finish other ast nodes.
+    case AST_IDENTIFICADOR: {
+        ILOC_Instruction *id = ast_identifier_generate_code((AST_Identifier*)hdr, scope_stack);
+        code = iloc_instruction_concat(code, id);
+    } break;
     case AST_LITERAL: {
         ILOC_Instruction *nop = ast_literal_generate_code((AST_Literal*)hdr);
         code = iloc_instruction_concat(code, nop);
