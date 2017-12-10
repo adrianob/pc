@@ -542,6 +542,94 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
     return code;
 }
 
+ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stack) {
+    ILOC_Instruction *code = NULL;
+
+    if (while_cmd->header.type == AST_DO_WHILE) {
+        // do while case
+        // Begin command label
+        ILOC_Instruction *begin_label_inst = iloc_instruction_make();
+        begin_label_inst->opcode = ILOC_NOP;
+        begin_label_inst->label = label_make();
+        // Next label
+        ILOC_Instruction *next_label_inst = iloc_instruction_make();
+        next_label_inst->opcode = ILOC_NOP;
+        next_label_inst->label = label_make();
+
+        ILOC_Instruction *condition_code = ast_expr_generate_code_labels(while_cmd->condition, begin_label_inst->label,
+                                                                         next_label_inst->label, scope_stack);
+        // Make the then branch code
+        ILOC_Instruction *branch_code = NULL;
+        if (while_cmd->first_command) {
+            if (while_cmd->scope)
+                stack_push(&scope_stack, while_cmd->scope);
+
+            AST_Header *cmd = while_cmd->first_command;
+            while (cmd) {
+                ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+                branch_code = iloc_instruction_concat(branch_code, cmd_code);
+                cmd = cmd->next;
+            }
+
+            if (while_cmd->scope)
+                stack_pop(&scope_stack);
+        }
+
+        code = iloc_instruction_concat(code, begin_label_inst);
+        code = iloc_instruction_concat(code, branch_code);
+        code = iloc_instruction_concat(code, condition_code);
+        code = iloc_instruction_concat(code, next_label_inst);
+
+        return code;
+    } else {
+        // while case
+        // Begin command label
+        ILOC_Instruction *begin_label_inst = iloc_instruction_make();
+        begin_label_inst->opcode = ILOC_NOP;
+        begin_label_inst->label = label_make();
+        // True condition label
+        ILOC_Instruction *true_label_inst = iloc_instruction_make();
+        true_label_inst->opcode = ILOC_NOP;
+        true_label_inst->label = label_make();
+        // Next label
+        ILOC_Instruction *next_label_inst = iloc_instruction_make();
+        next_label_inst->opcode = ILOC_NOP;
+        next_label_inst->label = label_make();
+        // Goto begin
+        ILOC_Instruction *goto_begin = iloc_instruction_make();
+        goto_begin->opcode = ILOC_JUMPI;
+        array_push(goto_begin->targets, iloc_label_ref_make(begin_label_inst->label));
+
+        ILOC_Instruction *condition_code = ast_expr_generate_code_labels(while_cmd->condition, true_label_inst->label,
+                                                                         next_label_inst->label, scope_stack);
+        // Make the then branch code
+        ILOC_Instruction *branch_code = NULL;
+        if (while_cmd->first_command) {
+            if (while_cmd->scope)
+                stack_push(&scope_stack, while_cmd->scope);
+
+            AST_Header *cmd = while_cmd->first_command;
+            while (cmd) {
+                ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+                branch_code = iloc_instruction_concat(branch_code, cmd_code);
+                cmd = cmd->next;
+            }
+
+            if (while_cmd->scope)
+                stack_pop(&scope_stack);
+        }
+
+        code = iloc_instruction_concat(code, begin_label_inst);
+        code = iloc_instruction_concat(code, condition_code);
+        code = iloc_instruction_concat(code, true_label_inst);
+        code = iloc_instruction_concat(code, branch_code);
+        code = iloc_instruction_concat(code, goto_begin);
+        code = iloc_instruction_concat(code, next_label_inst);
+
+        return code;
+    }
+}
+
 ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
     // The true label for the if command.
@@ -626,7 +714,13 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
         Assert(if_code);
         code = iloc_instruction_concat(code, if_code);
     } break;
+    case AST_WHILE_DO:
+    case AST_DO_WHILE: {
+        ILOC_Instruction *do_code = ast_do_generate_code((AST_While*)cmd, scope_stack);
+        code = iloc_instruction_concat(code, do_code);
+    } break;
     // TODO(leo): the rest of the ast nodes.
+
     default:
         printf("node: %s\n", g_ast_names[cmd->type]);
         Assert(false);

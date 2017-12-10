@@ -149,7 +149,6 @@ typedef struct AST_While {
     AST_Header        *condition;
     AST_Header        *first_command;
     Scope             *scope;
-    bool               is_do_while;
 } AST_While;
 
 AST_Header *ast_while_make(AST_Header *cond, AST_Header *first_command, bool is_do_while);
