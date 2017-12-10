@@ -312,6 +312,16 @@ ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_sta
     }
 }
 
+int calculate_dk(Array(ILOC_Instruction *) instructions, VectorDeclaration *decl, int k) {
+    if(k == 1) {
+        return instructions[0]->targets[0].number;
+    } else {
+        TableSymbol *ts = (TableSymbol*)decl->dimensions[k - 1]->entry->value;
+        int nk = ts->value_int;
+        return calculate_dk(instructions, decl, k - 1) * nk + instructions[k - 1]->targets[0].number;
+    }
+}
+
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
     /* printf("Generating code for assignment\n"); */
     ILOC_Instruction *code = NULL;
@@ -324,10 +334,13 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
                assignment->identifier->type == AST_VETOR_INDEXADO);
 
         ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack);
-        ILOC_Instruction *vec_expr_code = NULL;
-        if (assignment->identifier->type == AST_VETOR_INDEXADO){
-            vec_expr_code = ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expr,
-                                                   scope_stack);
+        Array(ILOC_Instruction *) instructions;
+        if (assignment->identifier->type == AST_VETOR_INDEXADO) {
+            array_init(instructions);
+            int i;
+            for (i = 0; i < array_len(((AST_IndexedVector *)assignment->identifier)->expressions); ++i) {
+                array_push(instructions, ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expressions[i], scope_stack));
+            }
         }
         code = iloc_instruction_concat(code, expr_code);
 
@@ -361,7 +374,8 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
             array_push(inst->sources, load_into_reg->targets[0]);
 
             if(assignment->identifier->type == AST_VETOR_INDEXADO) {
-                array_offset += vec_expr_code->targets[0].number * ((VectorDeclaration *)decl)->elem_size_in_bytes;
+                int dk = calculate_dk(instructions, ((VectorDeclaration *)decl), array_len(instructions));
+                array_offset += dk * ((VectorDeclaration *)decl)->elem_size_in_bytes;
             }
 
             /* printf("Target number is: %d\n", load_into_reg->targets[0].number); */

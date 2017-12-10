@@ -20,6 +20,7 @@ AST_Program *g_program = NULL;
 STACK_T *g_scopes = NULL;
 extern Array(SemanticError) g_semantic_errors;
 Array(AST_Literal*) current_array_dimensions;
+Array(AST_Header*) current_array_expressions;
 
 static inline Scope *get_global_scope() {
     STACK_T *head = g_scopes;
@@ -333,7 +334,7 @@ campo:
         {
             AST_Header *expr = ast_literal_make($5, $2);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-            AST_Header *indexed_vector = ast_indexed_vector_make(id, expr);
+            AST_Header *indexed_vector = ast_indexed_vector_make(id);
             $$ = user_type_field_make($2, indexed_vector, FV_PUBLIC);
             find_or_make_declaration($3, $2);
         }
@@ -341,7 +342,7 @@ campo:
         {
             AST_Header *expr = ast_literal_make($5, $2);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-            AST_Header *indexed_vector = ast_indexed_vector_make(id, expr);
+            AST_Header *indexed_vector = ast_indexed_vector_make(id);
             $$ = user_type_field_make($2, indexed_vector, FV_PRIVATE);
             find_or_make_declaration($3, $2);
         }
@@ -349,7 +350,7 @@ campo:
         {
             AST_Header *expr = ast_literal_make($5, $2);
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($3);
-            AST_Header *indexed_vector = ast_indexed_vector_make(id, expr);
+            AST_Header *indexed_vector = ast_indexed_vector_make(id);
             $$ = user_type_field_make($2, indexed_vector, FV_PROTECTED);
             find_or_make_declaration($3, $2);
         }
@@ -400,7 +401,7 @@ decl_global_non_static:
                     array_push(((VectorDeclaration *)decl)->dimensions, current_array_dimensions[i]);
                 }
                 scope_add(scope, id_key, decl);
-                /*array_free(current_array_dimensions);*/
+                array_free(current_array_dimensions);
             }
         }
         |   TK_IDENTIFICADOR TK_IDENTIFICADOR ';'
@@ -1125,6 +1126,10 @@ lista_expressoes:
 
 array_multidimensional_expressao:
         '[' expressao ']' array_multidimensional_expressao
+        {
+            if(!current_array_expressions) array_init(current_array_expressions);
+            array_push(current_array_expressions, $2);
+        }
         | %empty
         ;
 
@@ -1153,10 +1158,16 @@ comando_atribuicao:
                 push_undeclared_error(id);
             }
         }
-        | TK_IDENTIFICADOR '[' expressao ']' array_multidimensional_expressao '=' expressao {
+        | TK_IDENTIFICADOR '[' expressao ']' {array_init(current_array_expressions);} array_multidimensional_expressao '=' expressao {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-            AST_Header *vec = ast_indexed_vector_make(id, $3);
-            $$ = ast_assignment_make(vec, $7);
+            AST_Header *vec = ast_indexed_vector_make(id);
+            array_push(((AST_IndexedVector *)vec)->expressions, $3);
+            $$ = ast_assignment_make(vec, $8);
+            int i;
+            for(i = array_len(current_array_expressions) - 1; i >= 0; i--) {
+                array_push(((AST_IndexedVector *)vec)->expressions, current_array_expressions[i]);
+            }
+            array_free(current_array_expressions);
 
             if ($3->semantic_type == IKS_CHAR) push_invalid_coertion_error($3);
             if ($3->semantic_type == IKS_STRING) push_invalid_coertion_error($3);
@@ -1171,10 +1182,10 @@ comando_atribuicao:
                     VectorDeclaration *vec_decl = (VectorDeclaration*)decl;
                     $$->semantic_type = vec_decl->type;
 
-                    if (is_coertion_possible($7->semantic_type, $$->semantic_type)) {
-                        $7->coertion_to = $$->semantic_type;
+                    if (is_coertion_possible($8->semantic_type, $$->semantic_type)) {
+                        $8->coertion_to = $$->semantic_type;
                     } else {
-                        push_wrong_type_error($7);
+                        push_wrong_type_error($8);
                     }
                 } else {
                     Assert(false);
@@ -1308,9 +1319,15 @@ expressao_arit_operando:
 
             $$ = &id->header;
         }
-        | TK_IDENTIFICADOR '[' expressao ']' array_multidimensional_expressao {
+        | TK_IDENTIFICADOR '[' expressao ']' {array_init(current_array_expressions);} array_multidimensional_expressao {
             AST_Identifier *id = (AST_Identifier*)ast_identifier_make($1);
-            AST_IndexedVector *vec = (AST_IndexedVector*)ast_indexed_vector_make(id, $3);
+            AST_IndexedVector *vec = (AST_IndexedVector*)ast_indexed_vector_make(id);
+            array_push(((AST_IndexedVector *)vec)->expressions, $3);
+            int i;
+            for(i = array_len(current_array_expressions) - 1; i >= 0; i--) {
+                array_push(((AST_IndexedVector *)vec)->expressions, current_array_expressions[i]);
+            }
+            array_free(current_array_expressions);
 
             DeclarationHeader *decl_hdr = scope_find_declaration_recursive(id, g_scopes, NULL);
             if (decl_hdr) {

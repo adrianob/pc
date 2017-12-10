@@ -281,12 +281,12 @@ AST_Header *ast_logic_expr_make(int op, AST_Header *lhs, AST_Header *rhs);
 void ast_logic_expr_free(AST_LogicExpr *e);
 
 typedef struct AST_IndexedVector {
-    AST_Header      header;
-    AST_Identifier *identifier;
-    AST_Header     *expr;
+    AST_Header         header;
+    AST_Identifier     *identifier;
+    Array(AST_Header*) expressions;
 } AST_IndexedVector;
 
-AST_Header *ast_indexed_vector_make(AST_Identifier *id, AST_Header *expr);
+AST_Header *ast_indexed_vector_make(AST_Identifier *id);
 void ast_indexed_vector_free(AST_IndexedVector *iv);
 
 void ast_expr_free(AST_Header *expr);

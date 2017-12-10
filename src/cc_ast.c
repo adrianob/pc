@@ -358,17 +358,17 @@ void ast_logic_expr_free(AST_LogicExpr *e) {
     free(e);
 }
 
-AST_Header *ast_indexed_vector_make(AST_Identifier *id, AST_Header *expr) {
+AST_Header *ast_indexed_vector_make(AST_Identifier *id) {
     AST_IndexedVector *iv = calloc(1, sizeof(*iv));
     iv->header.type = AST_VETOR_INDEXADO;
     iv->identifier = id;
-    iv->expr = expr;
+    array_init(iv->expressions);
     return &iv->header;
 }
 
 void ast_indexed_vector_free(AST_IndexedVector *iv) {
     ast_identifier_free(iv->identifier);
-    ast_header_free(iv->expr);
+    array_free(iv->expressions);
     free(iv);
 }
 
