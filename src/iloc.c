@@ -337,9 +337,10 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
         Array(ILOC_Instruction *) instructions;
         if (assignment->identifier->type == AST_VETOR_INDEXADO) {
             array_init(instructions);
-            int i;
-            for (i = 0; i < array_len(((AST_IndexedVector *)assignment->identifier)->expressions); ++i) {
-                array_push(instructions, ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expressions[i], scope_stack));
+            for (int i = 0; i < array_len(((AST_IndexedVector *)assignment->identifier)->expressions); ++i) {
+                ILOC_Instruction *index_code = ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expressions[i], scope_stack);
+                array_push(instructions, index_code);
+                code = iloc_instruction_concat(code, index_code);
             }
         }
         code = iloc_instruction_concat(code, expr_code);
