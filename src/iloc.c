@@ -331,7 +331,7 @@ int calculate_dk(Array(ILOC_Instruction *) instructions, VectorDeclaration *decl
     }
 }
 
-ILOC_Instruction *ast_vector_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
+ILOC_Instruction *ast_vector_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
     if (assignment->is_user_type_assignment) {
@@ -781,7 +781,7 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
         if(((AST_Assignment*)cmd)->identifier->type == AST_IDENTIFICADOR){
             cmd_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
         } else {
-            cmd_code = ast_vector_generate_code((AST_Assignment*)cmd, scope_stack);
+            cmd_code = ast_vector_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
         }
         Assert(cmd_code);
         code = iloc_instruction_concat(code, cmd_code);
