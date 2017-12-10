@@ -331,6 +331,65 @@ int calculate_dk(Array(ILOC_Instruction *) instructions, VectorDeclaration *decl
     }
 }
 
+ILOC_Instruction *ast_vector_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
+    ILOC_Instruction *code = NULL;
+
+    if (assignment->is_user_type_assignment) {
+        // Not implemented yet.
+        Assert(false);
+    } else {
+        Assert( assignment->identifier->type == AST_VETOR_INDEXADO);
+
+        ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack);
+        Array(ILOC_Instruction *) instructions;
+        array_init(instructions);
+        for (int i = 0; i < array_len(((AST_IndexedVector *)assignment->identifier)->expressions); ++i) {
+            ILOC_Instruction *index_code = ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expressions[i], scope_stack);
+            array_push(instructions, index_code);
+            code = iloc_instruction_concat(code, index_code);
+        }
+        code = iloc_instruction_concat(code, expr_code);
+
+        bool is_global_scope;
+        DeclarationHeader *decl = scope_find_declaration_recursive( (AST_Identifier*)((AST_IndexedVector *)assignment->identifier)->identifier,
+                scope_stack, &is_global_scope);
+        ILOC_Instruction *inst = iloc_instruction_make();
+        inst->opcode = ILOC_STOREAI;
+        // Sources
+        int array_offset = 0;
+        int dk = calculate_dk(instructions, ((VectorDeclaration *)decl), array_len(instructions));
+        array_offset += dk * ((VectorDeclaration *)decl)->elem_size_in_bytes;
+        array_free(instructions);
+        if (expr_code->opcode == ILOC_NOP) {
+            ILOC_Instruction *load_into_reg = iloc_instruction_make();
+            load_into_reg->opcode = ILOC_LOADI;
+
+            array_push(load_into_reg->sources, expr_code->targets[0]);
+            array_push(load_into_reg->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+            Assert(load_into_reg->targets[0].register_type == ILOC_RT_GENERIC);
+            Assert(load_into_reg->targets[0].register_number != -1);
+
+            code = iloc_instruction_concat(code, load_into_reg);
+
+            array_push(inst->sources, load_into_reg->targets[0]);
+        } else {
+            array_push(inst->sources, expr_code->targets[0]);
+        }
+        // Targets
+        if (is_global_scope)
+            array_push(inst->targets, iloc_register_make(ILOC_RT_RBSS));
+        else
+            array_push(inst->targets, iloc_register_make(ILOC_RT_RARP));
+        int address_offset = declaration_header_get_address_offset(decl) + array_offset;
+        array_push(inst->targets, iloc_number_make(address_offset));
+
+        code = iloc_instruction_concat(code, inst);
+    }
+
+    return code;
+}
+
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
     /* printf("Generating code for assignment\n"); */
     ILOC_Instruction *code = NULL;
@@ -339,36 +398,17 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
         // Not implemented yet.
         Assert(false);
     } else {
-        Assert(assignment->identifier->type == AST_IDENTIFICADOR  ||
-               assignment->identifier->type == AST_VETOR_INDEXADO);
+        Assert(assignment->identifier->type == AST_IDENTIFICADOR);
 
         ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack);
-        Array(ILOC_Instruction *) instructions;
-        if (assignment->identifier->type == AST_VETOR_INDEXADO) {
-            array_init(instructions);
-            for (int i = 0; i < array_len(((AST_IndexedVector *)assignment->identifier)->expressions); ++i) {
-                ILOC_Instruction *index_code = ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expressions[i], scope_stack);
-                array_push(instructions, index_code);
-                code = iloc_instruction_concat(code, index_code);
-            }
-        }
         code = iloc_instruction_concat(code, expr_code);
 
         bool is_global_scope;
-        DeclarationHeader *decl = NULL;
-        if(assignment->identifier->type == AST_IDENTIFICADOR){
-            decl = scope_find_declaration_recursive(
-                (AST_Identifier*)assignment->identifier, scope_stack, &is_global_scope
-            );
-        } else { //vector assignment
-            decl = scope_find_declaration_recursive(
-                (AST_Identifier*)((AST_IndexedVector *)assignment->identifier)->identifier, scope_stack, &is_global_scope
-            );
-        }
+        DeclarationHeader *decl = scope_find_declaration_recursive( (AST_Identifier*)assignment->identifier, 
+                scope_stack, &is_global_scope);
         ILOC_Instruction *inst = iloc_instruction_make();
         inst->opcode = ILOC_STOREAI;
         // Sources
-        int array_offset = 0;
         if (expr_code->opcode == ILOC_NOP) {
             ILOC_Instruction *load_into_reg = iloc_instruction_make();
             load_into_reg->opcode = ILOC_LOADI;
@@ -383,12 +423,6 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
 
             array_push(inst->sources, load_into_reg->targets[0]);
 
-            if(assignment->identifier->type == AST_VETOR_INDEXADO) {
-                int dk = calculate_dk(instructions, ((VectorDeclaration *)decl), array_len(instructions));
-                array_offset += dk * ((VectorDeclaration *)decl)->elem_size_in_bytes;
-                array_free(instructions);
-            }
-
             /* printf("Target number is: %d\n", load_into_reg->targets[0].number); */
         } else {
             array_push(inst->sources, expr_code->targets[0]);
@@ -398,7 +432,7 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
             array_push(inst->targets, iloc_register_make(ILOC_RT_RBSS));
         else
             array_push(inst->targets, iloc_register_make(ILOC_RT_RARP));
-        int address_offset = declaration_header_get_address_offset(decl) + array_offset;
+        int address_offset = declaration_header_get_address_offset(decl);
         array_push(inst->targets, iloc_number_make(address_offset));
 
         code = iloc_instruction_concat(code, inst);
@@ -743,9 +777,14 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
 
     switch (cmd->type) {
     case AST_ATRIBUICAO: {
-        ILOC_Instruction *assignment_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
-        Assert(assignment_code);
-        code = iloc_instruction_concat(code, assignment_code);
+        ILOC_Instruction *cmd_code;
+        if(((AST_Assignment*)cmd)->identifier->type == AST_IDENTIFICADOR){
+            cmd_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
+        } else {
+            cmd_code = ast_vector_generate_code((AST_Assignment*)cmd, scope_stack);
+        }
+        Assert(cmd_code);
+        code = iloc_instruction_concat(code, cmd_code);
     } break;
     case AST_IF_ELSE: {
         ILOC_Instruction *if_code = ast_if_generate_code((AST_IfElse*)cmd, scope_stack);
