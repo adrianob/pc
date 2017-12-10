@@ -500,7 +500,24 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
         code = iloc_instruction_concat(code, second_code);
     } break;
     case AST_LOGICO_E: {
-        Assert(false);
+        AST_LogicExpr *expr = (AST_LogicExpr*)hdr;
+
+        // new true label
+        ILOC_Instruction *true_label_code = iloc_instruction_make();
+        true_label_code->opcode = ILOC_NOP;
+        true_label_code->label = label_make();
+        
+        ILOC_Instruction *first_code = ast_expr_generate_code_labels(expr->first, true_label_code->label,
+                                                                     false_label, scope_stack);
+        ILOC_Instruction *second_code = ast_expr_generate_code_labels(expr->second, true_label,
+                                                                      false_label, scope_stack);
+        // Do not allow, e.g, 3 && 4
+        Assert(first_code->opcode != ILOC_NOP);
+        Assert(second_code->opcode != ILOC_NOP);
+
+        code = iloc_instruction_concat(code, first_code);
+        code = iloc_instruction_concat(code, true_label_code);
+        code = iloc_instruction_concat(code, second_code);
     } break;
     case AST_LOGICO_COMP_DIF:
     case AST_LOGICO_COMP_GE:
