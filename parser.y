@@ -66,7 +66,6 @@ static inline comp_dict_t *dict_from_tree(comp_tree_t *node) {
 }
 
 static DeclarationHeader *find_or_make_declaration(comp_dict_item_t *entry, IKS_Type type) {
-    Assert(type != DT_USER_TYPE_DEFINITION);
     //check if already declared
     AST_Identifier *id = (AST_Identifier*)ast_identifier_make(entry);
     Scope *scope = stack_top(g_scopes);
