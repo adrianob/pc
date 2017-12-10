@@ -12,14 +12,14 @@ int get_user_type_definition_size(UserTypeField *first_field) {
     return size_in_bytes;
 }
 
-int get_vector_declaration_size(VectorDeclaration *v) {
+unsigned long get_vector_declaration_size(VectorDeclaration *v) {
     int i;
-    int size = 0;
+    unsigned long size = 0;
     for (i = 0; i < array_len(v->dimensions); ++i) {
         TableSymbol *ts = (TableSymbol*)v->dimensions[i]->entry->value;
         Assert(ts->token_type == POA_LIT_INT);
 
-        int num_elements = ts->value_int;
+        unsigned long num_elements = ts->value_int;
         if(size == 0){
             size +=  num_elements;
         } else {

@@ -92,7 +92,7 @@ sds iloc_operand_string(const ILOC_Operand *operand) {
     sds name;
     switch (operand->type) {
     case ILOC_NUMBER: 
-        name = sdscatprintf(sdsempty(), "%d", operand->number);
+        name = sdscatprintf(sdsempty(), "%lu", operand->number);
         break;
     case ILOC_LABEL_REF:
         name = sdsdup(operand->label);
@@ -321,7 +321,7 @@ ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_sta
     }
 }
 
-int calculate_dk(Array(ILOC_Instruction *) instructions, VectorDeclaration *decl, int k) {
+unsigned long calculate_dk(Array(ILOC_Instruction *) instructions, VectorDeclaration *decl, int k) {
     if(k == 1) {
         return instructions[0]->targets[0].number;
     } else {
@@ -356,8 +356,8 @@ ILOC_Instruction *ast_vector_assignment_generate_code(AST_Assignment *assignment
         ILOC_Instruction *inst = iloc_instruction_make();
         inst->opcode = ILOC_STOREAI;
         // Sources
-        int array_offset = 0;
-        int dk = calculate_dk(instructions, ((VectorDeclaration *)decl), array_len(instructions));
+        unsigned long array_offset = 0;
+        unsigned long dk = calculate_dk(instructions, ((VectorDeclaration *)decl), array_len(instructions));
         array_offset += dk * ((VectorDeclaration *)decl)->elem_size_in_bytes;
         array_free(instructions);
         if (expr_code->opcode == ILOC_NOP) {
@@ -381,7 +381,7 @@ ILOC_Instruction *ast_vector_assignment_generate_code(AST_Assignment *assignment
             array_push(inst->targets, iloc_register_make(ILOC_RT_RBSS));
         else
             array_push(inst->targets, iloc_register_make(ILOC_RT_RARP));
-        int address_offset = declaration_header_get_address_offset(decl) + array_offset;
+        unsigned long address_offset = declaration_header_get_address_offset(decl) + array_offset;
         array_push(inst->targets, iloc_number_make(address_offset));
 
         code = iloc_instruction_concat(code, inst);
@@ -432,7 +432,7 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
             array_push(inst->targets, iloc_register_make(ILOC_RT_RBSS));
         else
             array_push(inst->targets, iloc_register_make(ILOC_RT_RARP));
-        int address_offset = declaration_header_get_address_offset(decl);
+        unsigned long address_offset = declaration_header_get_address_offset(decl);
         array_push(inst->targets, iloc_number_make(address_offset));
 
         code = iloc_instruction_concat(code, inst);
@@ -467,7 +467,7 @@ ILOC_Instruction *ast_identifier_generate_code(AST_Identifier *id, STACK_T *scop
     } else {
         array_push(code->sources, iloc_register_make(ILOC_RT_RARP));
     }
-    int offset_size = declaration_header_get_address_offset(decl);
+    unsigned long offset_size = declaration_header_get_address_offset(decl);
     array_push(code->sources, iloc_number_make(offset_size));
     array_push(code->targets, iloc_register_make(ILOC_RT_GENERIC));
     return code;

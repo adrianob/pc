@@ -14,7 +14,7 @@ typedef enum ScopeType {
 typedef struct Scope {
     comp_dict_t *symbols;
     // The next symbol added will have this address offset.
-    int current_address_offset;
+    unsigned long current_address_offset;
     ScopeType type;
 } Scope;
 

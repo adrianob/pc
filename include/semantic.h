@@ -42,7 +42,7 @@ typedef struct UserTypeDeclaration {
     DeclarationHeader     header;
     UserTypeDefinition   *type_definition;
     AST_Identifier       *identifier;
-    int                   address_offset;
+    unsigned int         address_offset;
 } UserTypeDeclaration;
 
 DeclarationHeader *user_type_declaration_make(AST_Identifier *id, UserTypeDefinition *type_definition);
@@ -53,7 +53,7 @@ typedef struct VariableDeclaration {
     AST_Identifier     *type_identifier;
     AST_Identifier     *identifier;
     int                 size_in_bytes;
-    int                 address_offset;
+    unsigned int        address_offset;
     /* @Todo(leo): Consider when variable is const. */
     // bool                is_const;
 } VariableDeclaration;
@@ -66,11 +66,11 @@ typedef struct VectorDeclaration {
     Array(AST_Literal*) dimensions;
     IKS_Type            type;
     int                 elem_size_in_bytes;
-    int                 address_offset;
+    unsigned int        address_offset;
 } VectorDeclaration;
 
 DeclarationHeader *vector_declaration_make(AST_Identifier *id, IKS_Type type);
-int get_vector_declaration_size(VectorDeclaration *v);
+unsigned long get_vector_declaration_size(VectorDeclaration *v);
 
 typedef struct FunctionDeclaration {
     DeclarationHeader   header;
@@ -92,7 +92,7 @@ static inline DeclarationHeader *declaration_header_implicit_share(DeclarationHe
     return hdr;
 }
 
-static inline int declaration_header_get_address_offset(DeclarationHeader *hdr) {
+static inline unsigned long declaration_header_get_address_offset(DeclarationHeader *hdr) {
     switch (hdr->type) {
     case DT_VECTOR: return ((VectorDeclaration*)hdr)->address_offset;
     case DT_VARIABLE: return ((VariableDeclaration*)hdr)->address_offset;

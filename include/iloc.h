@@ -26,7 +26,7 @@ typedef struct ILOC_Operand {
     ILOC_OperandType type;
     union {
         sds label;
-        int number;
+        unsigned long number;
         struct {
             ILOC_RegisterType register_type;
             int register_number;
