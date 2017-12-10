@@ -777,7 +777,7 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
 
     switch (cmd->type) {
     case AST_ATRIBUICAO: {
-        ILOC_Instruction *cmd_code;
+        ILOC_Instruction *cmd_code = NULL;
         if(((AST_Assignment*)cmd)->identifier->type == AST_IDENTIFICADOR){
             cmd_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
         } else {
