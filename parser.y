@@ -755,6 +755,28 @@ comando_break:  TK_PR_BREAK {
 
 comando_decl_var:
         comando_decl_var_2                          { $$ = NULL; }
+        |   tipo_primitivo TK_IDENTIFICADOR '[' TK_LIT_INT ']' { array_init(current_array_dimensions); } array_multidimensional_global
+        {
+            AST_Identifier *id = (AST_Identifier*)ast_identifier_make($2);
+            AST_Literal *count = (AST_Literal*)ast_literal_make($4, IKS_INT);
+
+            Scope *scope = stack_top(g_scopes);
+            char *id_key = get_key_from_identifier(id);
+
+            if (scope_get(scope, id_key)) {
+                push_declared_error(id);
+            } else {
+                DeclarationHeader *decl = vector_declaration_make(id, $1);
+                array_push(((VectorDeclaration *)decl)->dimensions, count);
+                int i;
+                for(i = (array_len(current_array_dimensions) - 1); i >= 0 ;i--){
+                    array_push(((VectorDeclaration *)decl)->dimensions, current_array_dimensions[i]);
+                }
+                scope_add(scope, id_key, decl);
+                array_free(current_array_dimensions);
+            }
+            $$ = NULL;
+        }
         |   TK_PR_STATIC             comando_decl_var_2 { $$ = NULL; }
         |   TK_PR_CONST comando_decl_var_2              { $$ = NULL; }
         |   TK_PR_STATIC TK_PR_CONST comando_decl_var_2 { $$ = NULL; }
