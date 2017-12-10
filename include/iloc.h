@@ -106,8 +106,6 @@ static inline int get_next_register_number() {
     return next++;
 }
 
-ILOC_Instruction *iloc_instruction_append_after(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
-ILOC_Instruction *iloc_instruction_append_before(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
 ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_stack);
 ILOC_Instruction *iloc_generate_code(AST_Program *program);
