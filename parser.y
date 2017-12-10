@@ -401,7 +401,6 @@ decl_global_non_static:
                     array_push(((VectorDeclaration *)decl)->dimensions, current_array_dimensions[i]);
                 }
                 scope_add(scope, id_key, decl);
-                ast_literal_free(count);
                 array_free(current_array_dimensions);
             }
         }
