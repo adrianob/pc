@@ -35,16 +35,12 @@ void scope_add(Scope *scope, char *name, DeclarationHeader *decl_hdr) {
 }
 
 DeclarationHeader *scope_find_declaration_recursive(AST_Identifier *id, STACK_T *scopes, bool *is_global_scope) {
-    Scope *scope = stack_top(scopes);
     char *id_key = get_key_from_identifier(id);
-
-    DeclarationHeader *decl_hdr = scope_get(scope, id_key);
-
     STACK_T *head = scopes;
 
     while(head) {
         Scope *scope = stack_top(head);
-        decl_hdr = scope_get(scope, id_key);
+        DeclarationHeader *decl_hdr = scope_get(scope, id_key);
         if (decl_hdr) {
             if (is_global_scope) {
                 *is_global_scope = (head->next == NULL) ? true : false;
