@@ -40,23 +40,18 @@ DeclarationHeader *scope_find_declaration_recursive(AST_Identifier *id, STACK_T 
 
     DeclarationHeader *decl_hdr = scope_get(scope, id_key);
 
-    if (decl_hdr) {
-        return decl_hdr;
-    } else {
-        //didn't find declaration in current scope
-        STACK_T *head = scopes;
+    STACK_T *head = scopes;
 
-        while(head) {
-            Scope *scope = stack_top(head);
-            decl_hdr = scope_get(scope, id_key);
-            if (decl_hdr) {
-                if (is_global_scope) {
-                    *is_global_scope = (head->next) ? false : true;
-                }
-                return decl_hdr;
+    while(head) {
+        Scope *scope = stack_top(head);
+        decl_hdr = scope_get(scope, id_key);
+        if (decl_hdr) {
+            if (is_global_scope) {
+                *is_global_scope = (head->next == NULL) ? true : false;
             }
-            head = head->next;
+            return decl_hdr;
         }
+        head = head->next;
     }
 
     return NULL;
