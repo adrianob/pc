@@ -376,6 +376,7 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
             if(assignment->identifier->type == AST_VETOR_INDEXADO) {
                 int dk = calculate_dk(instructions, ((VectorDeclaration *)decl), array_len(instructions));
                 array_offset += dk * ((VectorDeclaration *)decl)->elem_size_in_bytes;
+                array_free(instructions);
             }
 
             /* printf("Target number is: %d\n", load_into_reg->targets[0].number); */
