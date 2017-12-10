@@ -1,5 +1,10 @@
 #include "iloc.h"
 
+ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
+ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
+ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack);
+ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
+
 void iloc_operand_free(const ILOC_Operand *operand) {
     if (operand->type == ILOC_LABEL_REF) {
         sdsfree(operand->label);
@@ -64,6 +69,10 @@ ILOC_Instruction *load_literal_to_register(ILOC_Instruction *code) {
         array_push(reg->sources, iloc_number_make(code->targets[0].number));
         array_push(reg->targets, iloc_register_make(ILOC_RT_GENERIC));
         return reg;
+
+        ILOC_Instruction *code_and_reg = NULL;
+        code_and_reg = iloc_instruction_concat(code, reg);
+        return code_and_reg;
     } else {
         return code;
     }
@@ -94,30 +103,34 @@ sds iloc_operand_string(const ILOC_Operand *operand) {
 }
 
 ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst) {
-    if (!new_inst) return inst;
+    if (inst && new_inst) {
+        ILOC_Instruction *last_inst = inst;
+        while (last_inst->next) last_inst = last_inst->next;
+        
+        ILOC_Instruction *last_new_inst = new_inst;
+        while (last_new_inst->next) last_new_inst = last_new_inst->next;
 
-    ILOC_Instruction *last = new_inst;
+        ILOC_Instruction *first_new_inst = new_inst;
+        while (first_new_inst->prev) first_new_inst = first_new_inst->prev;
 
-    if (!inst) {
-        while (last->next) last = last->next;
-        return last;
-    }
+        last_inst->next = first_new_inst;
+        first_new_inst->prev = last_inst;
 
-    if (inst->next) {
-        Assert(false);
+        return last_new_inst;
+    } else if (!inst) {
+        ILOC_Instruction *last_new_inst = new_inst;
+        while (last_new_inst->next) last_new_inst = last_new_inst->next;
+        
+        return last_new_inst;
+    } else if (!new_inst) {
+        ILOC_Instruction *last_inst = inst;
+        while (last_inst->next) last_inst = last_inst->next;
+
+        return last_inst;
     } else {
-        ILOC_Instruction *first = new_inst;
-        while (first->prev)  first = first->prev;
-        inst->next = first;
-        first->prev = inst;
-        while (last->next) last = last->next;
-        return last;
+        Assert(false);
     }
 }
-
-ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
-ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
-ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack);
 
 ILOC_OpCode get_non_immediate_logic_expr_opcode(int ast_type) {
     switch (ast_type) {
@@ -482,14 +495,14 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
         ILOC_Instruction *second_code = ast_expr_generate_code_labels(expr->second, true_label,
                                                                       false_label, scope_stack);
 
-        ILOC_Instruction *first_target_register = load_literal_to_register(first_code);
-        ILOC_Instruction *second_target_register = load_literal_to_register(second_code);
+        ILOC_Instruction *first_code_with_target_register = load_literal_to_register(first_code);
+        ILOC_Instruction *second_code_with_target_register = load_literal_to_register(second_code);
 
         // Comparison
         ILOC_Instruction *comp = iloc_instruction_make();
         comp->opcode = ILOC_CMP_NE;
-        array_push(comp->sources, first_target_register->targets[0]);
-        array_push(comp->sources, second_target_register->targets[0]);
+        array_push(comp->sources, first_code_with_target_register->targets[0]);
+        array_push(comp->sources, second_code_with_target_register->targets[0]);
         array_push(comp->targets, iloc_register_make(ILOC_RT_GENERIC));
 
         // Conditional branch
@@ -499,10 +512,8 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
         array_push(cbr->targets, iloc_label_ref_make(true_label));
         array_push(cbr->targets, iloc_label_ref_make(false_label));
 
-        code = iloc_instruction_concat(code, first_target_register);
-        code = iloc_instruction_concat(code, second_target_register);
-        code = iloc_instruction_concat(code, first_code);
-        code = iloc_instruction_concat(code, second_code);
+        code = iloc_instruction_concat(code, first_code_with_target_register);
+        code = iloc_instruction_concat(code, second_code_with_target_register);
         code = iloc_instruction_concat(code, comp);
         code = iloc_instruction_concat(code, cbr);
     } break;
