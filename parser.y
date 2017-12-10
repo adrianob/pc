@@ -1441,6 +1441,6 @@ operator_relacional:
         | TK_OC_GE {$$ = AST_LOGICO_COMP_GE;}
         | TK_OC_EQ {$$ = AST_LOGICO_COMP_IGUAL;}
         | TK_OC_NE {$$ = AST_LOGICO_COMP_DIF;}
-        | TK_OC_LT {$$ = AST_LOGICO_COMP_LT;}
-        | TK_OC_GT {$$ = AST_LOGICO_COMP_GT;}
+        | TK_OC_LT {$$ = AST_LOGICO_COMP_L;}
+        | TK_OC_GT {$$ = AST_LOGICO_COMP_G;}
         ;

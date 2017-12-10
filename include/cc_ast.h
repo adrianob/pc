@@ -44,10 +44,8 @@
 	AST_TYPE(AST_LOGICO_COMP_DIF,     "!="),		\
 	AST_TYPE(AST_LOGICO_COMP_IGUAL,   "=="),		\
 	AST_TYPE(AST_LOGICO_COMP_LE,      "<="),		\
-	AST_TYPE(AST_LOGICO_COMP_LT,      "<"),		\
+	AST_TYPE(AST_LOGICO_COMP_L,       "<"),		\
 	AST_TYPE(AST_LOGICO_COMP_GE,      ">="),		\
-	AST_TYPE(AST_LOGICO_COMP_GT,      ">"),		\
-	AST_TYPE(AST_LOGICO_COMP_L,       "<"),			\
 	AST_TYPE(AST_LOGICO_COMP_G,       ">"),			\
 	AST_TYPE(AST_LOGICO_COMP_NEGACAO, "!"),			\
 	AST_TYPE(AST_VETOR_INDEXADO,      "Indexed Vector"),	\

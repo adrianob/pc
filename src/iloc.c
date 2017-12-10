@@ -14,7 +14,7 @@ ILOC_Instruction *iloc_instruction_make(void) {
 }
 
 ILOC_Operand iloc_register_make(ILOC_RegisterType type) {
-    ILOC_Operand op;
+    ILOC_Operand op = {0};
     op.type = ILOC_REGISTER;
     op.register_type = type;
     op.register_number = (type == ILOC_RT_GENERIC) ? get_next_register_number() : -1;
@@ -22,10 +22,23 @@ ILOC_Operand iloc_register_make(ILOC_RegisterType type) {
 }
 
 ILOC_Operand iloc_number_make(int value) {
-    ILOC_Operand op;
+    ILOC_Operand op = {0};
     op.type = ILOC_NUMBER;
     op.number = value;
     return op;
+}
+
+ILOC_Operand iloc_label_ref_make(sds label_name) {
+    ILOC_Operand op = {0};
+    op.type = ILOC_LABEL_REF;
+    op.label = sdsdup(label_name);
+    return op;
+}
+
+sds label_make() {
+    static int number = 0;
+    sds label = sdscatprintf(sdsempty(), "L%d", number++);
+    return label;
 }
 
 void iloc_instruction_free(ILOC_Instruction *inst) {
@@ -38,6 +51,22 @@ void iloc_instruction_free(ILOC_Instruction *inst) {
     for (int i = 0; i < array_len(inst->targets); ++i)
         iloc_operand_free(&inst->targets[i]);
     array_free(inst->targets);
+}
+
+// Function that creates a register if the last intruction points to a literal.
+// If the instruction does not point to a literal, it does nothing.
+ILOC_Instruction *load_literal_to_register(ILOC_Instruction *code) {
+    if (code->opcode == ILOC_NOP) {
+        Assert(array_len(code->targets) == 1);
+
+        ILOC_Instruction *reg = iloc_instruction_make();
+        reg->opcode = ILOC_LOADI;
+        array_push(reg->sources, iloc_number_make(code->targets[0].number));
+        array_push(reg->targets, iloc_register_make(ILOC_RT_GENERIC));
+        return reg;
+    } else {
+        return code;
+    }
 }
 
 sds iloc_operand_string(const ILOC_Operand *operand) {
@@ -86,17 +115,18 @@ ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instructi
 
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
 ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
+ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack);
 
 ILOC_OpCode get_non_immediate_logic_expr_opcode(int ast_type) {
     switch (ast_type) {
     case AST_LOGICO_E:          return ILOC_AND;
     case AST_LOGICO_OU:         return ILOC_OR;
-    case AST_LOGICO_COMP_DIF:   return ILOC_NE;
-    case AST_LOGICO_COMP_IGUAL: return ILOC_EQ;
-    case AST_LOGICO_COMP_LE:    return ILOC_LE;
-    case AST_LOGICO_COMP_GE:    return ILOC_GE;
-    case AST_LOGICO_COMP_L:     return ILOC_LT;
-    case AST_LOGICO_COMP_G:     return ILOC_GT;
+    case AST_LOGICO_COMP_DIF:   return ILOC_CMP_NE;
+    case AST_LOGICO_COMP_IGUAL: return ILOC_CMP_EQ;
+    case AST_LOGICO_COMP_LE:    return ILOC_CMP_LE;
+    case AST_LOGICO_COMP_GE:    return ILOC_CMP_GE;
+    case AST_LOGICO_COMP_L:     return ILOC_CMP_LT;
+    case AST_LOGICO_COMP_G:     return ILOC_CMP_GT;
     // @TODO negação
     default: Assert(false);
     }
@@ -406,6 +436,159 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
     return code;
 }
 
+/* ILOC_Instruction *logic_expr_generate_code_labels(AST_LogicExpr *hdr, sds true_label, */
+/*                                                   sds false_label, STACK_T *scope_stack) { */
+/*     ILOC_Instruction *code = NULL; */
+    
+/*     return code; */
+/* } */
+
+ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
+                                                sds false_label, STACK_T *scope_stack) {
+    ILOC_Instruction *code = NULL;
+    switch (hdr->type) {
+    case AST_LOGICO_OU: {
+        AST_LogicExpr *expr = (AST_LogicExpr*)hdr;
+
+        // new false label
+        ILOC_Instruction *false_label_code = iloc_instruction_make();
+        false_label_code->opcode = ILOC_NOP;
+        false_label_code->label = label_make();
+        
+        ILOC_Instruction *first_code = ast_expr_generate_code_labels(expr->first, true_label,
+                                                                     false_label_code->label, scope_stack);
+        ILOC_Instruction *second_code = ast_expr_generate_code_labels(expr->second, true_label,
+                                                                      false_label, scope_stack);
+        // Do not allow, e.g, 3 || 4
+        Assert(first_code->opcode != ILOC_NOP);
+        Assert(second_code->opcode != ILOC_NOP);
+
+        code = iloc_instruction_concat(code, first_code);
+        code = iloc_instruction_concat(code, false_label_code);
+        code = iloc_instruction_concat(code, second_code);
+    } break;
+    case AST_LOGICO_E: {
+        Assert(false);
+    } break;
+    case AST_LOGICO_COMP_DIF: {
+        AST_LogicExpr *expr = (AST_LogicExpr*)hdr;
+
+        ILOC_Instruction *first_code = ast_expr_generate_code_labels(expr->first, true_label,
+                                                                     false_label, scope_stack);
+        ILOC_Instruction *second_code = ast_expr_generate_code_labels(expr->second, true_label,
+                                                                      false_label, scope_stack);
+
+        ILOC_Instruction *first_target_register = load_literal_to_register(first_code);
+        ILOC_Instruction *second_target_register = load_literal_to_register(second_code);
+
+        // Comparison
+        ILOC_Instruction *comp = iloc_instruction_make();
+        comp->opcode = ILOC_CMP_NE;
+        array_push(comp->sources, first_target_register->targets[0]);
+        array_push(comp->sources, second_target_register->targets[0]);
+        array_push(comp->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+        // Conditional branch
+        ILOC_Instruction *cbr = iloc_instruction_make();
+        cbr->opcode = ILOC_CBR;
+        array_push(cbr->sources, comp->targets[0]);
+        array_push(cbr->targets, iloc_label_ref_make(true_label));
+        array_push(cbr->targets, iloc_label_ref_make(false_label));
+
+        code = iloc_instruction_concat(code, first_target_register);
+        code = iloc_instruction_concat(code, second_target_register);
+        code = iloc_instruction_concat(code, first_code);
+        code = iloc_instruction_concat(code, second_code);
+        code = iloc_instruction_concat(code, comp);
+        code = iloc_instruction_concat(code, cbr);
+    } break;
+    case AST_LOGICO_COMP_IGUAL:
+    case AST_LOGICO_COMP_LE:
+    case AST_LOGICO_COMP_GE:
+    case AST_LOGICO_COMP_L:
+    case AST_LOGICO_COMP_G:
+    case AST_LOGICO_COMP_NEGACAO:
+        Assert(false);
+        /* code = logic_expr_generate_code_labels((AST_LogicExpr*)hdr, true_label, false_label, scope_stack); */
+        break;
+    // TODO(leo): finish other ast nodes.
+    case AST_LITERAL: {
+        ILOC_Instruction *nop = ast_literal_generate_code((AST_Literal*)hdr);
+        code = iloc_instruction_concat(code, nop);
+    } break;
+    default:
+        printf("%s not handled\n", g_ast_names[hdr->type]);
+        Assert(false);
+    }
+    return code;
+}
+
+ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack) {
+    ILOC_Instruction *code = NULL;
+    // The true label for the if command.
+    ILOC_Instruction *true_label = iloc_instruction_make();
+    true_label->opcode = ILOC_NOP;
+    true_label->label = label_make();
+    // The false label for the if command.
+    ILOC_Instruction *false_label = iloc_instruction_make();
+    false_label->opcode = ILOC_NOP;
+    false_label->label = label_make();
+    // The next label for the if command.
+    ILOC_Instruction *next_label = iloc_instruction_make();
+    next_label->opcode = ILOC_NOP;
+    next_label->label = label_make();
+    // Goto next
+    ILOC_Instruction *goto_next = iloc_instruction_make();
+    goto_next->opcode = ILOC_JUMPI;
+    array_push(goto_next->targets, iloc_label_ref_make(next_label->label));
+
+    ILOC_Instruction *condition_code = ast_expr_generate_code_labels(if_else->condition, true_label->label,
+                                                                     false_label->label, scope_stack);
+
+    // Make the then branch code
+    ILOC_Instruction *then_branch_code = NULL;
+    if (if_else->then_command) {
+        stack_push(&scope_stack, if_else->then_scope);
+
+        AST_Header *cmd = if_else->then_command;
+        while (cmd) {
+            ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+            then_branch_code = iloc_instruction_concat(code, cmd_code);
+            cmd = cmd->next;
+        }
+
+        stack_pop(&scope_stack);
+    }
+    // Make the else branch code
+    ILOC_Instruction *else_branch_code = NULL;
+    if (if_else->else_command) {
+        stack_push(&scope_stack, if_else->else_scope);
+
+        AST_Header *cmd = if_else->else_command;
+        while (cmd) {
+            ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+            else_branch_code = iloc_instruction_concat(code, cmd_code);
+            cmd = cmd->next;
+        }
+
+        stack_pop(&scope_stack);
+    }
+
+    code = iloc_instruction_concat(code, condition_code);
+    code = iloc_instruction_concat(code, true_label);
+    if (then_branch_code) {
+        code = iloc_instruction_concat(code, then_branch_code);
+    }
+    code = iloc_instruction_concat(code, goto_next);
+    code = iloc_instruction_concat(code, false_label);
+    if (else_branch_code) {
+        code = iloc_instruction_concat(code, else_branch_code);
+    }
+    code = iloc_instruction_concat(code, next_label);
+
+    return code;
+}
+
 ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
@@ -413,12 +596,12 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
     case AST_ATRIBUICAO: {
         ILOC_Instruction *assignment_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
         Assert(assignment_code);
-
         code = iloc_instruction_concat(code, assignment_code);
     } break;
     case AST_IF_ELSE: {
-        printf("OIQWDJOIQWDOIQJWDOIJQWOIDJQOIWDJ\n");
-        Assert(false);
+        ILOC_Instruction *if_code = ast_if_generate_code((AST_IfElse*)cmd, scope_stack);
+        Assert(if_code);
+        code = iloc_instruction_concat(code, if_code);
     } break;
     // TODO(leo): the rest of the ast nodes.
     default:
@@ -482,6 +665,11 @@ sds iloc_stringify(ILOC_Instruction *code) {
     sds code_str = sdsempty();
     // Loop one instruction by one
     while (inst) {
+        if (inst->label) {
+            code_str = sdscat(code_str, inst->label);
+            code_str = sdscat(code_str, ":\n");
+        }
+
         code_str = sdscatprintf(code_str, "%s ", iloc_opcode_names[inst->opcode]);
 
         if (inst->opcode == ILOC_NOP) {
