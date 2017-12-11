@@ -108,6 +108,8 @@ DeclarationHeader *vector_declaration_make(AST_Identifier *id, IKS_Type type) {
 
 void vector_declaration_free(VectorDeclaration *d) {
     ast_identifier_free(d->identifier);
+    for (int i = 0; i < array_len(d->dimensions); i++)
+        ast_literal_free(d->dimensions[i]);
     array_free(d->dimensions);
     free(d);
 }

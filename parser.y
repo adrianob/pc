@@ -396,8 +396,7 @@ decl_global_non_static:
             } else {
                 DeclarationHeader *decl = vector_declaration_make(id, $1);
                 array_push(((VectorDeclaration *)decl)->dimensions, count);
-                int i;
-                for(i = (array_len(current_array_dimensions) - 1); i >= 0 ;i--){
+                for (int i = array_len(current_array_dimensions) - 1; i >= 0 ;i--){
                     array_push(((VectorDeclaration *)decl)->dimensions, current_array_dimensions[i]);
                 }
                 scope_add(scope, id_key, decl);
