@@ -5,11 +5,6 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
 ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack);
 ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
 
-#define MAX_NUM_INSTRUCTIONS 2000
-
-static ILOC_Instruction *g_allocated_instructions[MAX_NUM_INSTRUCTIONS] = {0};
-static int g_num_allocated_instructions = 0;
-
 void iloc_operand_free(const ILOC_Operand *operand) {
     if (operand->type == ILOC_LABEL_REF) {
         sdsfree(operand->label);
@@ -20,10 +15,6 @@ ILOC_Instruction *iloc_instruction_make(void) {
     ILOC_Instruction *i = calloc(1, sizeof(*i));
     array_init(i->sources);
     array_init(i->targets);
-
-    Assert(g_num_allocated_instructions < MAX_NUM_INSTRUCTIONS);
-    g_allocated_instructions[g_num_allocated_instructions++] = i;
-
     return i;
 }
 
@@ -77,7 +68,6 @@ ILOC_Instruction *load_literal_to_register(ILOC_Instruction *code) {
         reg->opcode = ILOC_LOADI;
         array_push(reg->sources, iloc_number_make(code->targets[0].number));
         array_push(reg->targets, iloc_register_make(ILOC_RT_GENERIC));
-        return reg;
 
         ILOC_Instruction *code_and_reg = NULL;
         code_and_reg = iloc_instruction_concat(code, reg);
@@ -512,13 +502,6 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
     return code;
 }
 
-/* ILOC_Instruction *logic_expr_generate_code_labels(AST_LogicExpr *hdr, sds true_label, */
-/*                                                   sds false_label, STACK_T *scope_stack) { */
-/*     ILOC_Instruction *code = NULL; */
-    
-/*     return code; */
-/* } */
-
 ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
                                                 sds false_label, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
@@ -905,17 +888,12 @@ sds iloc_stringify(ILOC_Instruction *code) {
 }
 
 void iloc_free_code(ILOC_Instruction *code) {
+    Assert(code->next == NULL);
     ILOC_Instruction *it = code;
     // Get it to the beginning of the list
-    while (it->prev) it = it->prev; 
-
-    for (int i = 0; i < g_num_allocated_instructions; ++i) {
-        iloc_instruction_free(g_allocated_instructions[i]);
+    while (it) {
+        ILOC_Instruction *prev = it->prev;
+        iloc_instruction_free(it);
+        it = prev;    
     }
-            
-    /* while (it) { */
-    /*     ILOC_Instruction *next = it->next; */
-    /*     iloc_instruction_free(it); */
-    /*     it = next; */
-    /* } */
 }
