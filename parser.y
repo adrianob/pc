@@ -1184,8 +1184,7 @@ comando_atribuicao:
             AST_Header *vec = ast_indexed_vector_make(id);
             array_push(((AST_IndexedVector *)vec)->expressions, $3);
             $$ = ast_assignment_make(vec, $8);
-            int i;
-            for(i = array_len(current_array_expressions) - 1; i >= 0; i--) {
+            for (int i = array_len(current_array_expressions) - 1; i >= 0; i--) {
                 array_push(((AST_IndexedVector *)vec)->expressions, current_array_expressions[i]);
             }
             array_free(current_array_expressions);

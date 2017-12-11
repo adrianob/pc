@@ -368,6 +368,8 @@ AST_Header *ast_indexed_vector_make(AST_Identifier *id) {
 
 void ast_indexed_vector_free(AST_IndexedVector *iv) {
     ast_identifier_free(iv->identifier);
+    for (int i = 0; i < array_len(iv->expressions); i++)
+        ast_header_free(iv->expressions[i]);
     array_free(iv->expressions);
     free(iv);
 }
