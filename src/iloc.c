@@ -27,7 +27,7 @@ ILOC_Operand iloc_register_make(ILOC_RegisterType type) {
 }
 
 ILOC_Operand iloc_number_make(int value) {
-    ILOC_Operand op = {0};
+  ILOC_Operand op = {0};
     op.type = ILOC_NUMBER;
     op.number = value;
     return op;
@@ -92,6 +92,10 @@ sds iloc_operand_string(const ILOC_Operand *operand) {
             name = sdsnew("rarp");
         } else if (operand->register_type == ILOC_RT_RBSS) {
             name = sdsnew("rbss");
+        } else if (operand->register_type == ILOC_RT_SP) {
+            name = sdsnew("sp");
+        } else if (operand->register_type == ILOC_RT_FP) {
+            name = sdsnew("fp");
         } else if (operand->register_type == ILOC_RT_GENERIC) {
             name = sdscatprintf(sdsempty(), "r%d", operand->register_number);
         } else Assert(false);
@@ -816,6 +820,25 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
     ILOC_Instruction *code = NULL;
     // Loop over all functions. NOTE(leo): currently there is only main declared.
     AST_Function *func = program->first_func;
+
+    ILOC_Instruction *reg_fp = iloc_instruction_make();
+    reg_fp->opcode = ILOC_LOADI;
+    array_push(reg_fp->sources, iloc_number_make(0));
+    array_push(reg_fp->targets, iloc_register_make(ILOC_RT_FP));
+    code = iloc_instruction_concat(code, reg_fp);
+
+    ILOC_Instruction *reg_sp = iloc_instruction_make();
+    reg_sp->opcode = ILOC_LOADI;
+    array_push(reg_sp->sources, iloc_number_make(0));
+    array_push(reg_sp->targets, iloc_register_make(ILOC_RT_SP));
+    code = iloc_instruction_concat(code, reg_sp);
+
+    ILOC_Instruction *reg_rbss = iloc_instruction_make();
+    reg_rbss->opcode = ILOC_LOADI;
+    array_push(reg_rbss->sources, iloc_number_make(0));
+    array_push(reg_rbss->targets, iloc_register_make(ILOC_RT_RBSS));
+    code = iloc_instruction_concat(code, reg_rbss);
+
 
     while (func) {
         ILOC_Instruction *func_code = ast_function_generate_code(func, scope_stack);

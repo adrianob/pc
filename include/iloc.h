@@ -18,6 +18,8 @@ typedef enum ILOC_OperandType {
 
 typedef enum ILOC_RegisterType {
     ILOC_RT_RBSS,
+    ILOC_RT_FP,
+    ILOC_RT_SP,
     ILOC_RT_RARP,
     ILOC_RT_GENERIC
 } ILOC_RegisterType;
