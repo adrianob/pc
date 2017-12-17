@@ -2,12 +2,12 @@
 #define __ENUMS_H__
 
 #define IKS_TYPES \
-    IKS_TYPE(IKS_UNDEFINED, "Undefined"),              \
-        IKS_TYPE(IKS_INT, "Integer"),                  \
-        IKS_TYPE(IKS_FLOAT, "Float"),                  \
-        IKS_TYPE(IKS_CHAR, "Character"),               \
-        IKS_TYPE(IKS_STRING, "String"),                \
-        IKS_TYPE(IKS_BOOL, "Boolean"),                 \
+    IKS_TYPE(IKS_UNDEFINED, "undefined"),              \
+        IKS_TYPE(IKS_INT, "int"),                  \
+        IKS_TYPE(IKS_FLOAT, "float"),                  \
+        IKS_TYPE(IKS_CHAR, "char"),               \
+        IKS_TYPE(IKS_STRING, "string"),                \
+        IKS_TYPE(IKS_BOOL, "bool"),                 \
         IKS_TYPE(IKS_USER_TYPE, "User-Type")
 
 typedef enum IKS_Type {

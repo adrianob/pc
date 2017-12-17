@@ -565,13 +565,14 @@ parametro_entrada:
             Scope *scope = stack_top(g_scopes);
 
             DeclarationHeader *decl = variable_declaration_make(id, NULL, IKS_UNDEFINED);
+            decl->is_parameter = true;
 
             if (scope_get(scope, get_key_from_identifier(id))) {
                 push_declared_error(id);
             } else {
                 scope_add(scope,
-                                             id_key,
-                                             declaration_header_implicit_share(decl));
+                          id_key,
+                          declaration_header_implicit_share(decl));
             }
 
             $$ = decl;
@@ -583,13 +584,14 @@ parametro_entrada:
             Scope *scope = stack_top(g_scopes);
 
             DeclarationHeader *decl = variable_declaration_make(id, NULL, $2);
+            decl->is_parameter = true;
 
             if (scope_get(scope, get_key_from_identifier(id))) {
                 push_declared_error(id);
             } else {
                 scope_add(scope,
-                                             id_key,
-                                             declaration_header_implicit_share(decl));
+                          id_key,
+                          declaration_header_implicit_share(decl));
             }
 
             $$ = decl;
@@ -609,6 +611,7 @@ parametro_entrada:
                 Assert(type_decl_hdr->type == DT_USER_TYPE_DEFINITION);
 
             DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
+            decl->is_parameter = true;
 
             if (scope_get(scope, id_key)) {
                 push_declared_error(id);
@@ -635,6 +638,7 @@ parametro_entrada:
                 Assert(type_decl_hdr->type == DT_USER_TYPE_DEFINITION);
 
             DeclarationHeader *decl = user_type_declaration_make(id, (UserTypeDefinition*)type_decl_hdr);
+            decl->is_parameter = true;
 
             scope_add(scope, id_key, declaration_header_implicit_share(decl));
 
@@ -1116,17 +1120,14 @@ chamada_func:
             DeclarationHeader *decl = scope_find_declaration_recursive(id, g_scopes, NULL);
 
             if (decl) {
-                if (decl->type == DT_VARIABLE) {
-                    push_variable_error(id);
-                } else if (decl->type == DT_VECTOR) {
-                    push_vector_error(id);
-                } else if (decl->type == DT_FUNCTION) {
+                if (decl->type == DT_FUNCTION) {
                     FunctionDeclaration *func_decl = (FunctionDeclaration*)decl;
+                    $$->semantic_type = func_decl->return_type;
                     if (func_decl->first_param) {
                         push_missing_args_error(id);
                     }
                 } else {
-                    Assert(false);
+                    push_wrong_type_usage_error(id, decl->type);
                 }
             } else {
                 push_undeclared_error(id);

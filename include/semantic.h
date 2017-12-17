@@ -8,6 +8,8 @@
 #include "enums.h"
 #include "sds.h"
 
+typedef struct ILOC_Operand ILOC_Operand;
+
 static int g_current_global_address_offset = 0;
 static int g_local_address_offset = 0;
 
@@ -16,6 +18,7 @@ void declaration_header_free(void *data);
 typedef struct DeclarationHeader {
     DeclarationType type;
     int             ref_count;
+    bool            is_parameter;
     struct DeclarationHeader *next;
 } DeclarationHeader;
 
@@ -58,7 +61,9 @@ typedef struct VariableDeclaration {
     // bool                is_const;
 } VariableDeclaration;
 
-DeclarationHeader *variable_declaration_make(AST_Identifier *id, AST_Identifier *type_id, IKS_Type type);
+DeclarationHeader *variable_declaration_make(AST_Identifier *id,
+                                             AST_Identifier *type_id,
+                                             IKS_Type type);
 
 typedef struct VectorDeclaration {
     DeclarationHeader   header;

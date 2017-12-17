@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "sds.h"
 #include "macros.h"
 #include "stack.h"
@@ -28,7 +29,7 @@ typedef struct ILOC_Operand {
     ILOC_OperandType type;
     union {
         sds label;
-        unsigned long number;
+        int64_t number;
         struct {
             ILOC_RegisterType register_type;
             int register_number;
@@ -108,8 +109,6 @@ static inline int get_next_register_number() {
     return next++;
 }
 
-ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
-ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_stack);
 ILOC_Instruction *iloc_generate_code(AST_Program *program);
 ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, DeclarationHeader *decl_hdr);
 sds iloc_stringify(ILOC_Instruction *code);

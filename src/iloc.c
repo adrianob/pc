@@ -1,9 +1,42 @@
 #include "iloc.h"
+#include <inttypes.h>
 
 ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
 ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
-ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack);
+ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, AST_Function *curr_func);
 ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
+
+static sds get_function_declaration_string(AST_Function *func, STACK_T *scope_stack) {
+    Assert(func->return_type != IKS_USER_TYPE);
+
+    FunctionDeclaration *func_decl = (FunctionDeclaration*)scope_find_declaration_recursive(func->identifier,
+                                                                                            scope_stack, NULL);
+
+    sds decl_str = NULL;
+
+    // Append the return type
+    decl_str = sdscat(sdsempty(), iks_type_names[func->return_type]);
+    decl_str = sdscat(decl_str, " ");
+    // Append the function name
+    decl_str = sdscat(decl_str, get_key_from_identifier(func->identifier));
+    decl_str = sdscat(decl_str, "(");
+
+    DeclarationHeader *param = func_decl->first_param;
+    while (param) {
+        Assert(param->type == DT_VARIABLE);
+        VariableDeclaration *var_decl = (VariableDeclaration*)param;
+
+        decl_str = sdscat(decl_str, iks_type_names[var_decl->type]);
+        decl_str = sdscat(decl_str, get_key_from_identifier(var_decl->identifier));
+        if (param->next) decl_str = sdscat(decl_str, ", ");
+
+        param = param->next;
+    }
+
+    decl_str = sdscat(decl_str, ")");
+
+    return decl_str;
+}
 
 void iloc_operand_free(const ILOC_Operand *operand) {
     if (operand->type == ILOC_LABEL_REF) {
@@ -27,7 +60,7 @@ ILOC_Operand iloc_register_make(ILOC_RegisterType type) {
 }
 
 ILOC_Operand iloc_number_make(int value) {
-  ILOC_Operand op = {0};
+    ILOC_Operand op = {0};
     op.type = ILOC_NUMBER;
     op.number = value;
     return op;
@@ -82,7 +115,7 @@ sds iloc_operand_string(const ILOC_Operand *operand) {
     sds name;
     switch (operand->type) {
     case ILOC_NUMBER: 
-        name = sdscatprintf(sdsempty(), "%lu", operand->number);
+        name = sdscatprintf(sdsempty(), "%" PRId64, operand->number);
         break;
     case ILOC_LABEL_REF:
         name = sdsdup(operand->label);
@@ -398,8 +431,8 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
         code = iloc_instruction_concat(code, expr_code);
 
         bool is_global_scope;
-        DeclarationHeader *decl = scope_find_declaration_recursive( (AST_Identifier*)assignment->identifier, 
-                scope_stack, &is_global_scope);
+        DeclarationHeader *decl = scope_find_declaration_recursive((AST_Identifier*)assignment->identifier, 
+                                                                   scope_stack, &is_global_scope);
         ILOC_Instruction *inst = iloc_instruction_make();
         inst->opcode = ILOC_STOREAI;
         // Sources
@@ -421,11 +454,13 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
         } else {
             array_push(inst->sources, expr_code->targets[0]);
         }
+
         // Targets
         if (is_global_scope)
             array_push(inst->targets, iloc_register_make(ILOC_RT_RBSS));
         else
             array_push(inst->targets, iloc_register_make(ILOC_RT_RARP));
+
         unsigned long address_offset = declaration_header_get_address_offset(decl);
         array_push(inst->targets, iloc_number_make(address_offset));
 
@@ -461,7 +496,8 @@ ILOC_Instruction *ast_identifier_generate_code(AST_Identifier *id, STACK_T *scop
     } else {
         array_push(code->sources, iloc_register_make(ILOC_RT_RARP));
     }
-    unsigned long offset_size = declaration_header_get_address_offset(decl);
+
+    size_t offset_size = declaration_header_get_address_offset(decl);
     array_push(code->sources, iloc_number_make(offset_size));
     array_push(code->targets, iloc_register_make(ILOC_RT_GENERIC));
     return code;
@@ -480,9 +516,6 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
     case AST_ARIM_SUBTRACAO:
         code = arit_expr_generate_code((AST_AritExpr*)expr, scope_stack);
         break;
-    /* case AST_ATRIBUICAO: */
-    /*     code = ast_assignment_generate_code((AST_Assignment*)expr, scope_stack); */
-    /*     break; */
     case AST_LITERAL:
         code = ast_literal_generate_code((AST_Literal*)expr);
         break;
@@ -605,7 +638,7 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
     return code;
 }
 
-ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stack) {
+ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stack, AST_Function *curr_func) {
     ILOC_Instruction *code = NULL;
 
     if (while_cmd->header.type == AST_DO_WHILE) {
@@ -629,7 +662,7 @@ ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stac
 
             AST_Header *cmd = while_cmd->first_command;
             while (cmd) {
-                ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+                ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack, curr_func);
                 branch_code = iloc_instruction_concat(branch_code, cmd_code);
                 cmd = cmd->next;
             }
@@ -673,7 +706,7 @@ ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stac
 
             AST_Header *cmd = while_cmd->first_command;
             while (cmd) {
-                ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+                ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack, curr_func);
                 branch_code = iloc_instruction_concat(branch_code, cmd_code);
                 cmd = cmd->next;
             }
@@ -693,7 +726,7 @@ ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stac
     }
 }
 
-ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack) {
+ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack, AST_Function *curr_func) {
     ILOC_Instruction *code = NULL;
     // The true label for the if command.
     ILOC_Instruction *true_label = iloc_instruction_make();
@@ -723,7 +756,7 @@ ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack
 
         AST_Header *cmd = if_else->then_command;
         while (cmd) {
-            ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+            ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack, curr_func);
             then_branch_code = iloc_instruction_concat(code, cmd_code);
             cmd = cmd->next;
         }
@@ -739,7 +772,7 @@ ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack
 
         AST_Header *cmd = if_else->else_command;
         while (cmd) {
-            ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+            ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack, curr_func);
             else_branch_code = iloc_instruction_concat(code, cmd_code);
             cmd = cmd->next;
         }
@@ -759,7 +792,72 @@ ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack
     return code;
 }
 
-ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
+ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scope_stack, AST_Function *curr_func) {
+    ILOC_Instruction *code = NULL;
+
+    int return_val_size = get_primitive_type_size(curr_func->return_type);
+    Assert(return_val_size != -1);
+
+    int return_value_offset = -return_val_size;
+    int return_address_offset = return_value_offset - 4;
+    int old_sp_offset = return_address_offset - 4;
+    int old_fp_offset = old_sp_offset - 4;
+
+    // Load old fp value into a register
+    ILOC_Instruction *load_fp_address_code = iloc_instruction_make();
+    load_fp_address_code->opcode = ILOC_LOADAI;
+    array_push(load_fp_address_code->sources, iloc_register_make(ILOC_RT_RARP));
+    array_push(load_fp_address_code->sources, iloc_number_make(old_fp_offset));
+    array_push(load_fp_address_code->targets, iloc_register_make(ILOC_RT_GENERIC));
+    // Store old fp value into fp
+    ILOC_Instruction *store_fp_address_code = iloc_instruction_make();
+    store_fp_address_code->opcode = ILOC_STORE;
+    array_push(store_fp_address_code->sources, load_fp_address_code->targets[0]);
+    array_push(store_fp_address_code->targets, iloc_register_make(ILOC_RT_RARP));
+    // Load old sp value into a register
+    ILOC_Instruction *load_sp_address_code = iloc_instruction_make();
+    load_sp_address_code->opcode = ILOC_LOADAI;
+    array_push(load_sp_address_code->sources, iloc_register_make(ILOC_RT_RARP));
+    array_push(load_sp_address_code->sources, iloc_number_make(old_sp_offset));
+    array_push(load_sp_address_code->targets, iloc_register_make(ILOC_RT_GENERIC));
+    // Store old sp value into sp
+    ILOC_Instruction *store_sp_address_code = iloc_instruction_make();
+    store_sp_address_code->opcode = ILOC_STORE;
+    array_push(store_sp_address_code->sources, load_sp_address_code->targets[0]);
+    array_push(store_sp_address_code->targets, iloc_register_make(ILOC_RT_SP));
+    // Load return address into a register
+    ILOC_Instruction *load_ret_address_code = iloc_instruction_make();
+    load_ret_address_code->opcode = ILOC_LOADAI;
+    array_push(load_ret_address_code->sources, iloc_register_make(ILOC_RT_RARP));
+    array_push(load_ret_address_code->sources, iloc_number_make(return_address_offset));
+    array_push(load_ret_address_code->targets, iloc_register_make(ILOC_RT_GENERIC));
+
+    ILOC_Instruction *jump = iloc_instruction_make();
+    jump->opcode = ILOC_JUMPI;
+    array_push(jump->sources, load_ret_address_code->targets[0]);
+
+    if (ret->expr) {
+        ILOC_Instruction *expr_code = load_literal_to_register(ast_expr_generate_code(ret->expr, scope_stack));
+
+        ILOC_Instruction *save_ret = iloc_instruction_make();
+        save_ret->opcode = ILOC_STOREAI;
+        array_push(save_ret->sources, iloc_register_make(ILOC_RT_RARP));
+        array_push(save_ret->sources, iloc_number_make(return_value_offset));
+        array_push(save_ret->targets, expr_code->targets[0]);
+
+        code = iloc_instruction_concat(code, expr_code);
+    }
+
+    code = iloc_instruction_concat(code, load_fp_address_code);
+    code = iloc_instruction_concat(code, store_fp_address_code);
+    code = iloc_instruction_concat(code, load_sp_address_code);
+    code = iloc_instruction_concat(code, store_sp_address_code);
+    code = iloc_instruction_concat(code, load_ret_address_code);
+    code = iloc_instruction_concat(code, jump);
+    return code;
+}
+
+ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, AST_Function *curr_func) {
     ILOC_Instruction *code = NULL;
 
     switch (cmd->type) {
@@ -774,17 +872,21 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
         code = iloc_instruction_concat(code, cmd_code);
     } break;
     case AST_IF_ELSE: {
-        ILOC_Instruction *if_code = ast_if_generate_code((AST_IfElse*)cmd, scope_stack);
+        ILOC_Instruction *if_code = ast_if_generate_code((AST_IfElse*)cmd, scope_stack, curr_func);
         Assert(if_code);
         code = iloc_instruction_concat(code, if_code);
     } break;
     case AST_WHILE_DO:
     case AST_DO_WHILE: {
-        ILOC_Instruction *do_code = ast_do_generate_code((AST_While*)cmd, scope_stack);
+        ILOC_Instruction *do_code = ast_do_generate_code((AST_While*)cmd, scope_stack, curr_func);
         code = iloc_instruction_concat(code, do_code);
     } break;
     // TODO(leo): the rest of the ast nodes.
-
+    // TODO(leo): Attach a Register to an AST_Identifier for reuse.
+    case AST_RETURN: {
+        ILOC_Instruction *ret_code = ast_return_generate_code((AST_Return*)cmd, scope_stack, curr_func);
+        code = iloc_instruction_concat(code, ret_code);
+    } break;
     default:
         printf("node: %s\n", g_ast_names[cmd->type]);
         Assert(false);
@@ -794,14 +896,22 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack) {
 }
 
 ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_stack) {
-    /* printf("Generating code for function %s\n", get_key_from_identifier(func->identifier)); */
     ILOC_Instruction *code = NULL;
 
+    ILOC_Instruction *func_label = iloc_instruction_make();
+    func_label->opcode = ILOC_NOP;
+    func_label->label = get_function_declaration_string(func, scope_stack);
+
     stack_push(&scope_stack, func->scope);
+    /* FunctionDeclaration *func_decl = (FunctionDeclaration*)scope_find_declaration_recursive(func->identifier, */
+    /*                                                                                         scope_stack, */
+    /*                                                                                         NULL); */
+    /* Assert(func_decl); */
+    code = iloc_instruction_concat(code, func_label);
 
     AST_Header *cmd = func->first_command;
     while (cmd) {
-        ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack);
+        ILOC_Instruction *cmd_code = ast_cmd_generate_code(cmd, scope_stack, func);
         code = iloc_instruction_concat(code, cmd_code);
         cmd = cmd->next;
     }
@@ -838,7 +948,6 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
     array_push(reg_rbss->sources, iloc_number_make(0));
     array_push(reg_rbss->targets, iloc_register_make(ILOC_RT_RBSS));
     code = iloc_instruction_concat(code, reg_rbss);
-
 
     while (func) {
         ILOC_Instruction *func_code = ast_function_generate_code(func, scope_stack);
