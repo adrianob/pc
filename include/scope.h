@@ -36,5 +36,6 @@ static inline DeclarationHeader *scope_get(Scope *scope, char *name) {
 void scope_add(Scope *scope, char *name, DeclarationHeader *decl_hdr);
 
 DeclarationHeader *scope_find_declaration_recursive(AST_Identifier *id, STACK_T *scopes, bool *is_global_scope);
+DeclarationHeader *scope_find_declaration_recursive_str(char *id, STACK_T *scopes, bool *is_global_scope);
 
 #endif // __SCOPE_H__

@@ -34,8 +34,7 @@ void scope_add(Scope *scope, char *name, DeclarationHeader *decl_hdr) {
     // TODO(leo): maybe return something useful here.
 }
 
-DeclarationHeader *scope_find_declaration_recursive(AST_Identifier *id, STACK_T *scopes, bool *is_global_scope) {
-    char *id_key = get_key_from_identifier(id);
+DeclarationHeader *scope_find_declaration_recursive_str(char *id_key, STACK_T *scopes, bool *is_global_scope) {
     STACK_T *head = scopes;
 
     while(head) {
@@ -51,4 +50,9 @@ DeclarationHeader *scope_find_declaration_recursive(AST_Identifier *id, STACK_T 
     }
 
     return NULL;
+}
+
+DeclarationHeader *scope_find_declaration_recursive(AST_Identifier *id, STACK_T *scopes, bool *is_global_scope) {
+    char *id_key = get_key_from_identifier(id);
+    return scope_find_declaration_recursive_str(id_key, scopes, is_global_scope);
 }

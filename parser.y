@@ -564,7 +564,7 @@ parametro_entrada:
             char *id_key = get_key_from_identifier(id);
             Scope *scope = stack_top(g_scopes);
 
-            DeclarationHeader *decl = variable_declaration_make(id, NULL, IKS_UNDEFINED);
+            DeclarationHeader *decl = variable_declaration_make(id, NULL, $1);
             decl->is_parameter = true;
 
             if (scope_get(scope, get_key_from_identifier(id))) {

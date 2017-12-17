@@ -94,11 +94,24 @@ static const char *iloc_opcode_names[] = {
 #undef ILOC_OPCODE
 };
 
+typedef enum ILOC_IT {
+    ILOC_IT_CODE,
+    ILOC_IT_COMMENT,
+} ILOC_IT;
+
 typedef struct ILOC_Instruction {
-    sds                        label;
-    ILOC_OpCode                opcode;
-    Array(ILOC_Operand)        sources;
-    Array(ILOC_Operand)        targets;
+    ILOC_IT type;
+    union {
+        struct {
+            sds                        label;
+            ILOC_OpCode                opcode;
+            Array(ILOC_Operand)        sources;
+            Array(ILOC_Operand)        targets;
+        };
+        struct {
+            sds                        comment;
+        };
+    };
 
     struct ILOC_Instruction *prev;
     struct ILOC_Instruction *next;
