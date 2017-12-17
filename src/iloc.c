@@ -340,53 +340,43 @@ ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_sta
         // Two literals on the expression
 
         // Load one literal in one register
-        ILOC_Instruction *load = iloc_instruction_make();
-        load->opcode = ILOC_LOADI;
-        array_push(load->sources, code_expr1->targets[0]);
-        array_push(load->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *load = iloc_1source_1target(ILOC_LOADI,
+                                                      code_expr1->targets[0],
+                                                      iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, load);
 
         // Apply the immediate instruction with the other literal
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = get_immediate_arit_expr_opcode(expr->header.type);
-        array_push(inst->sources, load->targets[0]);
-        array_push(inst->sources, code_expr2->targets[0]);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *inst = iloc_2sources_1target(get_immediate_arit_expr_opcode(expr->header.type),
+                                                       load->targets[0],
+                                                       code_expr2->targets[0],
+                                                       iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, inst);
         return code;
     } else if (code_expr1->opcode != ILOC_NOP && code_expr2->opcode == ILOC_NOP) {
         // First expression is on a register but second is a literal
         // Apply the immediate instruction with the other literal
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = get_immediate_arit_expr_opcode(expr->header.type);
-        array_push(inst->sources, code_expr1->targets[0]);
-        array_push(inst->sources, code_expr2->targets[0]);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *inst = iloc_2sources_1target(get_immediate_arit_expr_opcode(expr->header.type),
+                                                       code_expr1->targets[0],
+                                                       code_expr2->targets[0],
+                                                       iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, inst);
         return code;
     } else if (code_expr1->opcode == ILOC_NOP && code_expr2->opcode != ILOC_NOP) {
         // Second expression is on a register but first is a literal
         // Apply the immediate instruction with the other literal
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = get_immediate_arit_expr_opcode(expr->header.type);
-        array_push(inst->sources, code_expr2->targets[0]);
-        array_push(inst->sources, code_expr1->targets[0]);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *inst = iloc_2sources_1target(get_immediate_arit_expr_opcode(expr->header.type),
+                                                       code_expr2->targets[0],
+                                                       code_expr1->targets[0],
+                                                       iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, inst);
         return code;
     } else {
         // The two expressions are on registers
         // Apply the register instruction with the other literal
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = get_non_immediate_arit_expr_opcode(expr->header.type);
-        array_push(inst->sources, code_expr1->targets[0]);
-        array_push(inst->sources, code_expr2->targets[0]);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *inst = iloc_2sources_1target(get_non_immediate_arit_expr_opcode(expr->header.type),
+                                                       code_expr1->targets[0],
+                                                       code_expr2->targets[0],
+                                                       iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, inst);
         return code;
     }
