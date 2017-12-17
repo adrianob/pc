@@ -858,9 +858,9 @@ ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scope_stack
 
         ILOC_Instruction *save_ret = iloc_instruction_make();
         save_ret->opcode = ILOC_STOREAI;
-        array_push(save_ret->sources, iloc_register_make(ILOC_RT_RARP));
-        array_push(save_ret->sources, iloc_number_make(return_value_offset));
-        array_push(save_ret->targets, expr_code->targets[0]);
+        array_push(save_ret->sources, expr_code->targets[0]);
+        array_push(save_ret->targets, iloc_register_make(ILOC_RT_RARP));
+        array_push(save_ret->targets, iloc_number_make(return_value_offset));
 
         code = iloc_instruction_concat(code, expr_code);
         code = iloc_instruction_concat(code, save_ret);
