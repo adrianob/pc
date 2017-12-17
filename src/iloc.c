@@ -5,6 +5,43 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
 ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
 ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, AST_Function *curr_func);
 ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
+ILOC_Instruction *iloc_instruction_make(void);
+
+
+static ILOC_Instruction *iloc_1target(ILOC_OpCode opcode, ILOC_Operand target1) {
+    ILOC_Instruction *code = iloc_instruction_make();
+    code->opcode = opcode;
+    array_push(code->targets, target1);
+    return code;
+}
+
+static ILOC_Instruction *iloc_1source_1target(ILOC_OpCode opcode, ILOC_Operand source1, ILOC_Operand target1) {
+    ILOC_Instruction *code = iloc_instruction_make();
+    code->opcode = opcode;
+    array_push(code->sources, source1);
+    array_push(code->targets, target1);
+    return code;
+}
+
+static ILOC_Instruction *iloc_1source_2targets(ILOC_OpCode opcode, ILOC_Operand source1, ILOC_Operand target1,
+                                               ILOC_Operand target2) {
+    ILOC_Instruction *code = iloc_instruction_make();
+    code->opcode = opcode;
+    array_push(code->sources, source1);
+    array_push(code->targets, target1);
+    array_push(code->targets, target2);
+    return code;
+}
+
+static ILOC_Instruction *iloc_2sources_1target(ILOC_OpCode opcode, ILOC_Operand source1, ILOC_Operand source2,
+                                        ILOC_Operand target1) {
+    ILOC_Instruction *code = iloc_instruction_make();
+    code->opcode = opcode;
+    array_push(code->sources, source1);
+    array_push(code->sources, source2);
+    array_push(code->targets, target1);
+    return code;
+}
 
 static sds get_function_declaration_string(FunctionDeclaration *func, STACK_T *scope_stack) {
     sds decl_str = NULL;
@@ -245,53 +282,43 @@ ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *scope_s
         // Two literals on the expression
 
         // Load one literal in one register
-        ILOC_Instruction *load = iloc_instruction_make();
-        load->opcode = ILOC_LOADI;
-        array_push(load->sources, code_expr1->targets[0]);
-        array_push(load->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *load = iloc_1source_1target(ILOC_LOADI,
+                                                      code_expr1->targets[0],
+                                                      iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, load);
 
         // Apply the immediate instruction with the other literal
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = get_immediate_logic_expr_opcode(expr->header.type);
-        array_push(inst->sources, load->targets[0]);
-        array_push(inst->sources, code_expr2->targets[0]);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *inst = iloc_2sources_1target(get_immediate_logic_expr_opcode(expr->header.type),
+                                                       load->targets[0],
+                                                       code_expr2->targets[0],
+                                                       iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, inst);
         return code;
     } else if (code_expr1->opcode != ILOC_NOP && code_expr2->opcode == ILOC_NOP) {
         // First expression is on a register but second is a literal
         // Apply the immediate instruction with the other literal
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = get_immediate_logic_expr_opcode(expr->header.type);
-        array_push(inst->sources, code_expr1->targets[0]);
-        array_push(inst->sources, code_expr2->targets[0]);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *inst = iloc_2sources_1target(get_immediate_logic_expr_opcode(expr->header.type),
+                                                       code_expr1->targets[0],
+                                                       code_expr2->targets[0],
+                                                       iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, inst);
         return code;
     } else if (code_expr1->opcode == ILOC_NOP && code_expr2->opcode != ILOC_NOP) {
         // Second expression is on a register but first is a literal
         // Apply the immediate instruction with the other literal
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = get_immediate_logic_expr_opcode(expr->header.type);
-        array_push(inst->sources, code_expr2->targets[0]);
-        array_push(inst->sources, code_expr1->targets[0]);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *inst = iloc_2sources_1target(get_immediate_logic_expr_opcode(expr->header.type),
+                                                       code_expr2->targets[0],
+                                                       code_expr1->targets[0],
+                                                       iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, inst);
         return code;
     } else {
         // The two expressions are on registers
         // Apply the register instruction with the other literal
-        ILOC_Instruction *inst = iloc_instruction_make();
-        inst->opcode = get_non_immediate_logic_expr_opcode(expr->header.type);
-        array_push(inst->sources, code_expr1->targets[0]);
-        array_push(inst->sources, code_expr2->targets[0]);
-        array_push(inst->targets, iloc_register_make(ILOC_RT_GENERIC));
-
+        ILOC_Instruction *inst = iloc_2sources_1target(get_non_immediate_logic_expr_opcode(expr->header.type),
+                                                       code_expr1->targets[0],
+                                                       code_expr2->targets[0],
+                                                       iloc_register_make(ILOC_RT_GENERIC));
         code = iloc_instruction_concat(code, inst);
         return code;
     }
@@ -624,11 +651,10 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
         array_push(comp->targets, iloc_register_make(ILOC_RT_GENERIC));
 
         // Conditional branch
-        ILOC_Instruction *cbr = iloc_instruction_make();
-        cbr->opcode = ILOC_CBR;
-        array_push(cbr->sources, comp->targets[0]);
-        array_push(cbr->targets, iloc_label_ref_make(true_label));
-        array_push(cbr->targets, iloc_label_ref_make(false_label));
+        ILOC_Instruction *cbr = iloc_1source_2targets(ILOC_CBR,
+                                                      comp->targets[0],
+                                                      iloc_label_ref_make(true_label),
+                                                      iloc_label_ref_make(false_label));
 
         code = iloc_instruction_concat(code, first_code_with_target_register);
         code = iloc_instruction_concat(code, second_code_with_target_register);
@@ -709,12 +735,12 @@ ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stac
         next_label_inst->opcode = ILOC_NOP;
         next_label_inst->label = label_make();
         // Goto begin
-        ILOC_Instruction *goto_begin = iloc_instruction_make();
-        goto_begin->opcode = ILOC_JUMPI;
-        array_push(goto_begin->targets, iloc_label_ref_make(begin_label_inst->label));
+        ILOC_Instruction *goto_begin = iloc_1target(ILOC_JUMPI, iloc_label_ref_make(begin_label_inst->label));
 
-        ILOC_Instruction *condition_code = ast_expr_generate_code_labels(while_cmd->condition, true_label_inst->label,
-                                                                         next_label_inst->label, scope_stack);
+        ILOC_Instruction *condition_code = ast_expr_generate_code_labels(while_cmd->condition,
+                                                                         true_label_inst->label,
+                                                                         next_label_inst->label,
+                                                                         scope_stack);
         // Make the then branch code
         ILOC_Instruction *branch_code = NULL;
         if (while_cmd->first_command) {
@@ -821,37 +847,30 @@ ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scope_stack
     int old_fp_offset = old_sp_offset - 4;
 
     // Load old fp value into a register
-    ILOC_Instruction *load_fp_address_code = iloc_instruction_make();
-    load_fp_address_code->opcode = ILOC_LOADAI;
-    array_push(load_fp_address_code->sources, iloc_register_make(ILOC_RT_RARP));
-    array_push(load_fp_address_code->sources, iloc_number_make(old_fp_offset));
-    array_push(load_fp_address_code->targets, iloc_register_make(ILOC_RT_GENERIC));
+    ILOC_Instruction *load_fp_address_code = iloc_2sources_1target(ILOC_LOADAI,
+                                                                   iloc_register_make(ILOC_RT_RARP),
+                                                                   iloc_number_make(old_fp_offset),
+                                                                   iloc_register_make(ILOC_RT_GENERIC));
     // Store old fp value into fp
-    ILOC_Instruction *store_fp_address_code = iloc_instruction_make();
-    store_fp_address_code->opcode = ILOC_STORE;
-    array_push(store_fp_address_code->sources, load_fp_address_code->targets[0]);
-    array_push(store_fp_address_code->targets, iloc_register_make(ILOC_RT_RARP));
+    ILOC_Instruction *store_fp_address_code = iloc_1source_1target(ILOC_STORE,
+                                                                   load_fp_address_code->targets[0],
+                                                                   iloc_register_make(ILOC_RT_RARP));
     // Load old sp value into a register
-    ILOC_Instruction *load_sp_address_code = iloc_instruction_make();
-    load_sp_address_code->opcode = ILOC_LOADAI;
-    array_push(load_sp_address_code->sources, iloc_register_make(ILOC_RT_RARP));
-    array_push(load_sp_address_code->sources, iloc_number_make(old_sp_offset));
-    array_push(load_sp_address_code->targets, iloc_register_make(ILOC_RT_GENERIC));
+    ILOC_Instruction *load_sp_address_code = iloc_2sources_1target(ILOC_LOADAI,
+                                                                   iloc_register_make(ILOC_RT_RARP),
+                                                                   iloc_number_make(old_sp_offset),
+                                                                   iloc_register_make(ILOC_RT_GENERIC));
     // Store old sp value into sp
-    ILOC_Instruction *store_sp_address_code = iloc_instruction_make();
-    store_sp_address_code->opcode = ILOC_STORE;
-    array_push(store_sp_address_code->sources, load_sp_address_code->targets[0]);
-    array_push(store_sp_address_code->targets, iloc_register_make(ILOC_RT_SP));
+    ILOC_Instruction *store_sp_address_code = iloc_1source_1target(ILOC_STORE,
+                                                                   load_sp_address_code->targets[0],
+                                                                   iloc_register_make(ILOC_RT_SP));
     // Load return address into a register
-    ILOC_Instruction *load_ret_address_code = iloc_instruction_make();
-    load_ret_address_code->opcode = ILOC_LOADAI;
-    array_push(load_ret_address_code->sources, iloc_register_make(ILOC_RT_RARP));
-    array_push(load_ret_address_code->sources, iloc_number_make(return_address_offset));
-    array_push(load_ret_address_code->targets, iloc_register_make(ILOC_RT_GENERIC));
+    ILOC_Instruction *load_ret_address_code = iloc_2sources_1target(ILOC_LOADAI,
+                                                                    iloc_register_make(ILOC_RT_RARP),
+                                                                    iloc_number_make(return_address_offset),
+                                                                    iloc_register_make(ILOC_RT_GENERIC));
 
-    ILOC_Instruction *jump = iloc_instruction_make();
-    jump->opcode = ILOC_JUMPI;
-    array_push(jump->targets, load_ret_address_code->targets[0]);
+    ILOC_Instruction *jump = iloc_1target(ILOC_JUMPI, load_ret_address_code->targets[0]);
 
     if (ret->expr) {
         ILOC_Instruction *expr_code = load_literal_to_register(ast_expr_generate_code(ret->expr, scope_stack));
@@ -949,22 +968,19 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
     // Loop over all functions. NOTE(leo): currently there is only main declared.
     AST_Function *func = program->first_func;
 
-    ILOC_Instruction *reg_fp = iloc_instruction_make();
-    reg_fp->opcode = ILOC_LOADI;
-    array_push(reg_fp->sources, iloc_number_make(0));
-    array_push(reg_fp->targets, iloc_register_make(ILOC_RT_FP));
+    ILOC_Instruction *reg_fp = iloc_1source_1target(ILOC_LOADI,
+                                                    iloc_number_make(0),
+                                                    iloc_register_make(ILOC_RT_FP));
     code = iloc_instruction_concat(code, reg_fp);
 
-    ILOC_Instruction *reg_sp = iloc_instruction_make();
-    reg_sp->opcode = ILOC_LOADI;
-    array_push(reg_sp->sources, iloc_number_make(0));
-    array_push(reg_sp->targets, iloc_register_make(ILOC_RT_SP));
+    ILOC_Instruction *reg_sp = iloc_1source_1target(ILOC_LOADI,
+                                                    iloc_number_make(0),
+                                                    iloc_register_make(ILOC_RT_SP));
     code = iloc_instruction_concat(code, reg_sp);
 
-    ILOC_Instruction *reg_rbss = iloc_instruction_make();
-    reg_rbss->opcode = ILOC_LOADI;
-    array_push(reg_rbss->sources, iloc_number_make(2048));
-    array_push(reg_rbss->targets, iloc_register_make(ILOC_RT_RBSS));
+    ILOC_Instruction *reg_rbss = iloc_1source_1target(ILOC_LOADI,
+                                                      iloc_number_make(2048),
+                                                      iloc_register_make(ILOC_RT_RBSS));
     code = iloc_instruction_concat(code, reg_rbss);
 
     FunctionDeclaration *func_decl = (FunctionDeclaration*)scope_find_declaration_recursive_str("main",
@@ -972,9 +988,7 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
                                                                                                 NULL);
     sds main_label = get_function_declaration_string(func_decl, scope_stack);
 
-    ILOC_Instruction *jump_to_main = iloc_instruction_make();
-    jump_to_main->opcode = ILOC_JUMPI;
-    array_push(jump_to_main->targets, iloc_label_ref_make(main_label));
+    ILOC_Instruction *jump_to_main = iloc_1target(ILOC_JUMPI, iloc_label_ref_make(main_label));
     code = iloc_instruction_concat(code, jump_to_main);
 
     while (func) {
