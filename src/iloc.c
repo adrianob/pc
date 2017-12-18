@@ -1,11 +1,11 @@
 #include "iloc.h"
 #include <inttypes.h>
 
-ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
-ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
-ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, AST_Function *curr_func);
-ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
-ILOC_Instruction *iloc_instruction_make(void);
+static ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
+static ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
+static ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, AST_Function *curr_func);
+static ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
+static ILOC_Instruction *iloc_instruction_make(void);
 
 
 static ILOC_Instruction *iloc_1target(ILOC_OpCode opcode, ILOC_Operand target1) {
@@ -47,26 +47,29 @@ static sds get_function_declaration_string(FunctionDeclaration *func, STACK_T *s
     sds decl_str = NULL;
 
     // Append the return type
-    decl_str = sdscat(sdsempty(), iks_type_names[func->return_type]);
-    decl_str = sdscat(decl_str, " ");
+    decl_str = sdscat(sdsempty(), "L");
+    decl_str = sdscat(decl_str, iks_type_names[func->return_type]);
+    decl_str = sdscat(decl_str, "-");
     // Append the function name
     decl_str = sdscat(decl_str, get_key_from_identifier(func->identifier));
-    decl_str = sdscat(decl_str, "(");
 
     DeclarationHeader *param = func->first_param;
+
+    if (param) decl_str = sdscat(decl_str, "-");
+
     while (param) {
         Assert(param->type == DT_VARIABLE);
         VariableDeclaration *var_decl = (VariableDeclaration*)param;
 
         decl_str = sdscat(decl_str, iks_type_names[var_decl->type]);
-        decl_str = sdscat(decl_str, " ");
-        decl_str = sdscat(decl_str, get_key_from_identifier(var_decl->identifier));
-        if (param->next) decl_str = sdscat(decl_str, ", ");
+        /* decl_str = sdscat(decl_str, "-"); */
+        /* decl_str = sdscat(decl_str, get_key_from_identifier(var_decl->identifier)); */
+        if (param->next) decl_str = sdscat(decl_str, "-");
 
         param = param->next;
     }
 
-    decl_str = sdscat(decl_str, ")");
+    /* decl_str = sdscat(decl_str, ")"); */
 
     return decl_str;
 }
@@ -85,13 +88,13 @@ static ILOC_Instruction *iloc_comment_make(char *comment) {
     return i;
 }
 
-void iloc_operand_free(const ILOC_Operand *operand) {
+static void iloc_operand_free(const ILOC_Operand *operand) {
     if (operand->type == ILOC_LABEL_REF) {
         sdsfree(operand->label);
     }
 }
 
-ILOC_Instruction *iloc_instruction_make(void) {
+static ILOC_Instruction *iloc_instruction_make(void) {
     ILOC_Instruction *i = calloc(1, sizeof(*i));
     i->type = ILOC_IT_CODE;
     array_init(i->sources);
@@ -99,7 +102,7 @@ ILOC_Instruction *iloc_instruction_make(void) {
     return i;
 }
 
-ILOC_Operand iloc_register_make(ILOC_RegisterType type) {
+static ILOC_Operand iloc_register_make(ILOC_RegisterType type) {
     ILOC_Operand op = {0};
     op.type = ILOC_REGISTER;
     op.register_type = type;
@@ -107,27 +110,27 @@ ILOC_Operand iloc_register_make(ILOC_RegisterType type) {
     return op;
 }
 
-ILOC_Operand iloc_number_make(int value) {
+static ILOC_Operand iloc_number_make(int value) {
     ILOC_Operand op = {0};
     op.type = ILOC_NUMBER;
     op.number = value;
     return op;
 }
 
-ILOC_Operand iloc_label_ref_make(sds label_name) {
+static ILOC_Operand iloc_label_ref_make(sds label_name) {
     ILOC_Operand op = {0};
     op.type = ILOC_LABEL_REF;
     op.label = sdsdup(label_name);
     return op;
 }
 
-sds label_make() {
+static sds label_make() {
     static int number = 0;
     sds label = sdscatprintf(sdsempty(), "L%d", number++);
     return label;
 }
 
-void iloc_instruction_free(ILOC_Instruction *inst) {
+static void iloc_instruction_free(ILOC_Instruction *inst) {
     if (inst->type == ILOC_IT_COMMENT) {
         sdsfree(inst->comment);
     } else {
@@ -147,7 +150,7 @@ void iloc_instruction_free(ILOC_Instruction *inst) {
 
 // Function that creates a register if the last intruction points to a literal.
 // If the instruction does not point to a literal, it does nothing.
-ILOC_Instruction *load_literal_to_register(ILOC_Instruction *code) {
+static ILOC_Instruction *load_literal_to_register(ILOC_Instruction *code) {
     if (code->opcode == ILOC_NOP) {
         Assert(array_len(code->targets) == 1);
 
@@ -164,7 +167,7 @@ ILOC_Instruction *load_literal_to_register(ILOC_Instruction *code) {
     }
 }
 
-sds iloc_operand_string(const ILOC_Operand *operand) {
+static sds iloc_operand_string(const ILOC_Operand *operand) {
     Assert(operand);
     sds name;
     switch (operand->type) {
@@ -192,7 +195,7 @@ sds iloc_operand_string(const ILOC_Operand *operand) {
     return name;
 }
 
-ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst) {
+static ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst) {
     if (inst && new_inst) {
         ILOC_Instruction *last_inst = inst;
         while (last_inst->next) last_inst = last_inst->next;
@@ -222,7 +225,7 @@ ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instructi
     }
 }
 
-ILOC_OpCode get_non_immediate_logic_expr_opcode(int ast_type) {
+static ILOC_OpCode get_non_immediate_logic_expr_opcode(int ast_type) {
     switch (ast_type) {
     case AST_LOGICO_E:          return ILOC_AND;
     case AST_LOGICO_OU:         return ILOC_OR;
@@ -237,7 +240,7 @@ ILOC_OpCode get_non_immediate_logic_expr_opcode(int ast_type) {
     }
 }
 
-ILOC_OpCode get_immediate_logic_expr_opcode(int ast_type) {
+static ILOC_OpCode get_immediate_logic_expr_opcode(int ast_type) {
     switch (ast_type) {
     // @TODO implement short circuit
     case AST_LOGICO_E:          return ILOC_ANDI;
@@ -246,7 +249,7 @@ ILOC_OpCode get_immediate_logic_expr_opcode(int ast_type) {
     }
 }
 
-ILOC_OpCode get_non_immediate_arit_expr_opcode(int ast_type) {
+static ILOC_OpCode get_non_immediate_arit_expr_opcode(int ast_type) {
     switch (ast_type) {
     case AST_ARIM_DIVISAO:       return ILOC_DIV;
     case AST_ARIM_MULTIPLICACAO: return ILOC_MULT;
@@ -256,7 +259,7 @@ ILOC_OpCode get_non_immediate_arit_expr_opcode(int ast_type) {
     }
 }
 
-ILOC_OpCode get_immediate_arit_expr_opcode(int ast_type) {
+static ILOC_OpCode get_immediate_arit_expr_opcode(int ast_type) {
     switch (ast_type) {
     case AST_ARIM_DIVISAO:       return ILOC_DIVI;
     case AST_ARIM_MULTIPLICACAO: return ILOC_MULTI;
@@ -266,7 +269,7 @@ ILOC_OpCode get_immediate_arit_expr_opcode(int ast_type) {
     }
 }
 
-ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *scope_stack) {
+static ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
     ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
@@ -324,7 +327,7 @@ ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *scope_s
     }
 }
 
-ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack) {
+static ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
     ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
@@ -382,7 +385,7 @@ ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_sta
     }
 }
 
-unsigned long calculate_dk(Array(ILOC_Instruction *) instructions, VectorDeclaration *decl, int k) {
+static unsigned long calculate_dk(Array(ILOC_Instruction *) instructions, VectorDeclaration *decl, int k) {
     if(k == 1) {
         return instructions[0]->targets[0].number;
     } else {
@@ -392,7 +395,7 @@ unsigned long calculate_dk(Array(ILOC_Instruction *) instructions, VectorDeclara
     }
 }
 
-ILOC_Instruction *ast_vector_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
+static ILOC_Instruction *ast_vector_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
     if (assignment->is_user_type_assignment) {
@@ -451,7 +454,7 @@ ILOC_Instruction *ast_vector_assignment_generate_code(AST_Assignment *assignment
     return code;
 }
 
-ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
+static ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
     /* printf("Generating code for assignment\n"); */
     ILOC_Instruction *code = NULL;
 
@@ -504,7 +507,7 @@ ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK
     return code;
 }
 
-ILOC_Instruction *ast_literal_generate_code(AST_Literal *lit) {
+static ILOC_Instruction *ast_literal_generate_code(AST_Literal *lit) {
     ILOC_Instruction *code = iloc_instruction_make();
     code->opcode = ILOC_NOP;
 
@@ -518,7 +521,7 @@ ILOC_Instruction *ast_literal_generate_code(AST_Literal *lit) {
     return code;
 }
 
-ILOC_Instruction *ast_identifier_generate_code(AST_Identifier *id, STACK_T *scope_stack) {
+static ILOC_Instruction *ast_identifier_generate_code(AST_Identifier *id, STACK_T *scope_stack) {
     bool is_global_scope;
     DeclarationHeader *decl = scope_find_declaration_recursive(id, scope_stack, &is_global_scope);
     Assert(decl);
@@ -537,7 +540,7 @@ ILOC_Instruction *ast_identifier_generate_code(AST_Identifier *id, STACK_T *scop
     return code;
 }
 
-ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack) {
+static ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
     switch (expr->type) {
@@ -573,8 +576,8 @@ ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack)
     return code;
 }
 
-ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
-                                                sds false_label, STACK_T *scope_stack) {
+static ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
+                                                       sds false_label, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
     switch (hdr->type) {
     case AST_LOGICO_OU: {
@@ -671,7 +674,7 @@ ILOC_Instruction *ast_expr_generate_code_labels(AST_Header *hdr, sds true_label,
     return code;
 }
 
-ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stack, AST_Function *curr_func) {
+static ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stack, AST_Function *curr_func) {
     ILOC_Instruction *code = NULL;
 
     if (while_cmd->header.type == AST_DO_WHILE) {
@@ -759,7 +762,7 @@ ILOC_Instruction *ast_do_generate_code(AST_While *while_cmd, STACK_T *scope_stac
     }
 }
 
-ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack, AST_Function *curr_func) {
+static ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack, AST_Function *curr_func) {
     ILOC_Instruction *code = NULL;
     // The true label for the if command.
     ILOC_Instruction *true_label = iloc_instruction_make();
@@ -825,7 +828,7 @@ ILOC_Instruction *ast_if_generate_code(AST_IfElse *if_else, STACK_T *scope_stack
     return code;
 }
 
-ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scope_stack, AST_Function *curr_func) {
+static ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scope_stack, AST_Function *curr_func) {
     ILOC_Instruction *code = iloc_comment_make("Return instruction section");
 
     int return_val_size = get_primitive_type_size(curr_func->return_type);
@@ -884,7 +887,7 @@ ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scope_stack
     return code;
 }
 
-ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, AST_Function *curr_func) {
+static ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, AST_Function *curr_func) {
     ILOC_Instruction *code = NULL;
 
     switch (cmd->type) {
@@ -922,7 +925,7 @@ ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, A
     return code;
 }
 
-ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_stack) {
+static ILOC_Instruction *ast_function_generate_code(AST_Function *func, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
     ILOC_Instruction *func_label = iloc_instruction_make();
@@ -992,11 +995,11 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
     return code;
 }
 
-ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, DeclarationHeader *decl_hdr) {
-    ILOC_Instruction *inst = iloc_instruction_make();
-    inst->label = sdsnew(symbol_name);
-    return inst;
-}
+/* ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, DeclarationHeader *decl_hdr) { */
+/*     ILOC_Instruction *inst = iloc_instruction_make(); */
+/*     inst->label = sdsnew(symbol_name); */
+/*     return inst; */
+/* } */
 
 sds iloc_stringify(ILOC_Instruction *code) {
     // Go to the beginning of the list.

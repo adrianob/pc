@@ -123,7 +123,6 @@ static inline int get_next_register_number() {
 }
 
 ILOC_Instruction *iloc_generate_code(AST_Program *program);
-ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, DeclarationHeader *decl_hdr);
 sds iloc_stringify(ILOC_Instruction *code);
 void iloc_free_code(ILOC_Instruction *code);
 
