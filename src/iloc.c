@@ -979,6 +979,10 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
     FunctionDeclaration *func_decl = (FunctionDeclaration*)scope_find_declaration_recursive_str("main",
                                                                                                 scope_stack,
                                                                                                 NULL);
+    if(!func_decl) {
+        perror("main not declared\n");
+        exit(1);
+    }
     sds main_label = get_function_declaration_string(func_decl, scope_stack);
 
     ILOC_Instruction *jump_to_main = iloc_1target(ILOC_JUMPI, iloc_label_ref_make(main_label));
