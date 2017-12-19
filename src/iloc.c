@@ -1,8 +1,8 @@
 #include "iloc.h"
 #include <inttypes.h>
 
-static ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack);
-static ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack);
+static ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack, AST_Function * curr_func);
+static ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack, AST_Function * curr_func);
 static ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_stack, AST_Function *curr_func);
 static ILOC_Instruction *iloc_instruction_concat(ILOC_Instruction *inst, ILOC_Instruction *new_inst);
 static ILOC_Instruction *iloc_instruction_make(void);
@@ -272,8 +272,8 @@ static ILOC_OpCode get_immediate_arit_expr_opcode(int ast_type) {
 static ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
-    ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
-    ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack);
+    ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack, NULL);
+    ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack, NULL);
 
     Assert(array_len(code_expr1->targets) > 0);
     Assert(array_len(code_expr2->targets) > 0);
@@ -327,11 +327,54 @@ static ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *
     }
 }
 
+static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *expr, STACK_T *scope_stack, AST_Function * func) {
+
+    ILOC_Instruction *code = iloc_comment_make("Function call section");
+
+    int return_val_size = get_primitive_type_size(func->return_type);
+    Assert(return_val_size != -1);
+
+    int return_value_offset = -return_val_size;
+    int return_address_offset = return_value_offset - 4;
+
+    // Load old fp value into a register
+    ILOC_Instruction *load_fp_address_code = iloc_1source_1target(ILOC_LOAD,
+                                                                  iloc_register_make(ILOC_RT_FP),
+                                                                  iloc_register_make(ILOC_RT_GENERIC));
+    // Store old fp value
+    ILOC_Instruction *store_fp_address_code = iloc_1source_1target(ILOC_STORE,
+                                                                   load_fp_address_code->targets[0],
+                                                                   iloc_register_make(ILOC_RT_RARP));
+    // Load old sp value into a register
+    ILOC_Instruction *load_sp_address_code = iloc_1source_1target(ILOC_LOAD,
+                                                                  iloc_register_make(ILOC_RT_SP),
+                                                                  iloc_register_make(ILOC_RT_GENERIC));
+    // Store old sp value into sp
+    ILOC_Instruction *store_sp_address_code = iloc_1source_1target(ILOC_STORE,
+                                                                   load_sp_address_code->targets[0],
+                                                                   iloc_register_make(ILOC_RT_SP));
+    // Load return address into a register
+    ILOC_Instruction *load_ret_address_code = iloc_2sources_1target(ILOC_LOADAI,
+                                                                    iloc_register_make(ILOC_RT_RARP),
+                                                                    iloc_number_make(return_address_offset),
+                                                                    iloc_register_make(ILOC_RT_GENERIC));
+
+    ILOC_Instruction *jump = iloc_1target(ILOC_JUMPI, load_ret_address_code->targets[0]);
+
+    code = iloc_instruction_concat(code, load_fp_address_code);
+    code = iloc_instruction_concat(code, store_fp_address_code);
+    code = iloc_instruction_concat(code, load_sp_address_code);
+    code = iloc_instruction_concat(code, store_sp_address_code);
+    code = iloc_instruction_concat(code, load_ret_address_code);
+    code = iloc_instruction_concat(code, jump);
+    return code;
+}
+
 static ILOC_Instruction *arit_expr_generate_code(AST_AritExpr *expr, STACK_T *scope_stack) {
     ILOC_Instruction *code = NULL;
 
-    ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack);
-    ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack);
+    ILOC_Instruction *code_expr1 = ast_expr_generate_code(expr->first, scope_stack, NULL);
+    ILOC_Instruction *code_expr2 = ast_expr_generate_code(expr->second, scope_stack, NULL);
 
     Assert(array_len(code_expr1->targets) > 0);
     Assert(array_len(code_expr2->targets) > 0);
@@ -404,11 +447,11 @@ static ILOC_Instruction *ast_vector_assignment_generate_code(AST_Assignment *ass
     } else {
         Assert( assignment->identifier->type == AST_VETOR_INDEXADO);
 
-        ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack);
+        ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack, NULL);
         Array(ILOC_Instruction *) instructions;
         array_init(instructions);
         for (int i = 0; i < array_len(((AST_IndexedVector *)assignment->identifier)->expressions); ++i) {
-            ILOC_Instruction *index_code = ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expressions[i], scope_stack);
+            ILOC_Instruction *index_code = ast_expr_generate_code(((AST_IndexedVector *)assignment->identifier)->expressions[i], scope_stack, NULL);
             array_push(instructions, index_code);
             code = iloc_instruction_concat(code, index_code);
         }
@@ -454,7 +497,7 @@ static ILOC_Instruction *ast_vector_assignment_generate_code(AST_Assignment *ass
     return code;
 }
 
-static ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack) {
+static ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment, STACK_T *scope_stack, AST_Function * curr_func) {
     /* printf("Generating code for assignment\n"); */
     ILOC_Instruction *code = NULL;
 
@@ -464,7 +507,7 @@ static ILOC_Instruction *ast_assignment_generate_code(AST_Assignment *assignment
     } else {
         Assert(assignment->identifier->type == AST_IDENTIFICADOR);
 
-        ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack);
+        ILOC_Instruction *expr_code = ast_expr_generate_code(assignment->expr, scope_stack, curr_func);
         code = iloc_instruction_concat(code, expr_code);
 
         bool is_global_scope;
@@ -540,7 +583,7 @@ static ILOC_Instruction *ast_identifier_generate_code(AST_Identifier *id, STACK_
     return code;
 }
 
-static ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack) {
+static ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope_stack, AST_Function * curr_func) {
     ILOC_Instruction *code = NULL;
 
     switch (expr->type) {
@@ -568,6 +611,9 @@ static ILOC_Instruction *ast_expr_generate_code(AST_Header *expr, STACK_T *scope
     case AST_LOGICO_COMP_L:
     case AST_LOGICO_COMP_G:
         code = logic_expr_generate_code((AST_LogicExpr*)expr, scope_stack);
+        break;
+    case AST_CHAMADA_DE_FUNCAO:
+        code = function_call_generate_code((AST_FunctionCall*)expr, scope_stack, curr_func);
         break;
     default:
         Assert(false);
@@ -866,7 +912,7 @@ static ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scop
     ILOC_Instruction *jump = iloc_1target(ILOC_JUMPI, load_ret_address_code->targets[0]);
 
     if (ret->expr) {
-        ILOC_Instruction *expr_code = load_literal_to_register(ast_expr_generate_code(ret->expr, scope_stack));
+        ILOC_Instruction *expr_code = load_literal_to_register(ast_expr_generate_code(ret->expr, scope_stack, NULL));
 
         ILOC_Instruction *save_ret = iloc_instruction_make();
         save_ret->opcode = ILOC_STOREAI;
@@ -894,7 +940,7 @@ static ILOC_Instruction *ast_cmd_generate_code(AST_Header *cmd, STACK_T *scope_s
     case AST_ATRIBUICAO: {
         ILOC_Instruction *cmd_code = NULL;
         if(((AST_Assignment*)cmd)->identifier->type == AST_IDENTIFICADOR){
-            cmd_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
+            cmd_code = ast_assignment_generate_code((AST_Assignment*)cmd, scope_stack, curr_func);
         } else {
             cmd_code = ast_vector_assignment_generate_code((AST_Assignment*)cmd, scope_stack);
         }
