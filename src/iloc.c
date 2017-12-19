@@ -331,8 +331,24 @@ static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *expr, STA
 
     ILOC_Instruction *code = iloc_comment_make("Function call section");
 
+    AST_Header *param = expr->first_param;
+
     int return_val_size = get_primitive_type_size(func->return_type);
     Assert(return_val_size != -1);
+    while (param) {
+        ILOC_Instruction *param_load =  iloc_2sources_1target(ILOC_LOADAI,
+                                                              iloc_register_make(ILOC_RT_FP),
+                                                              iloc_number_make(0),
+                                                              iloc_register_make(ILOC_RT_GENERIC));
+        ILOC_Instruction *param_store = iloc_1source_2targets(ILOC_STOREAI,
+                                                              param_load->targets[0],
+                                                              iloc_register_make(ILOC_RT_SP),
+                                                              iloc_number_make(return_val_size)); //@TODO not sure what to put here
+        code = iloc_instruction_concat(code, param_load);
+        code = iloc_instruction_concat(code, param_store);
+        param = param->next;
+    }
+
 
     int return_value_offset = -return_val_size;
     int return_address_offset = return_value_offset - 4;
