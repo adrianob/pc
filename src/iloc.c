@@ -49,13 +49,12 @@ static sds get_function_declaration_string(FunctionDeclaration *func, STACK_T *s
     // Append the return type
     decl_str = sdscat(sdsempty(), "L");
     decl_str = sdscat(decl_str, iks_type_names[func->return_type]);
-    decl_str = sdscat(decl_str, "-");
     // Append the function name
     decl_str = sdscat(decl_str, get_key_from_identifier(func->identifier));
 
     DeclarationHeader *param = func->first_param;
 
-    if (param) decl_str = sdscat(decl_str, "-");
+    /* if (param) decl_str = sdscat(decl_str, "-"); */
 
     while (param) {
         Assert(param->type == DT_VARIABLE);
@@ -64,7 +63,7 @@ static sds get_function_declaration_string(FunctionDeclaration *func, STACK_T *s
         decl_str = sdscat(decl_str, iks_type_names[var_decl->type]);
         /* decl_str = sdscat(decl_str, "-"); */
         /* decl_str = sdscat(decl_str, get_key_from_identifier(var_decl->identifier)); */
-        if (param->next) decl_str = sdscat(decl_str, "-");
+        /* if (param->next) decl_str = sdscat(decl_str, "-"); */
 
         param = param->next;
     }
@@ -183,9 +182,9 @@ static sds iloc_operand_string(const ILOC_Operand *operand) {
         } else if (operand->register_type == ILOC_RT_RBSS) {
             name = sdsnew("rbss");
         } else if (operand->register_type == ILOC_RT_SP) {
-            name = sdsnew("sp");
+            name = sdsnew("rsp");
         } else if (operand->register_type == ILOC_RT_FP) {
-            name = sdsnew("fp");
+            name = sdsnew("rfp");
         } else if (operand->register_type == ILOC_RT_GENERIC) {
             name = sdscatprintf(sdsempty(), "r%d", operand->register_number);
         } else Assert(false);
@@ -375,7 +374,7 @@ static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *expr, STA
                                                                     iloc_number_make(return_address_offset),
                                                                     iloc_register_make(ILOC_RT_GENERIC));
 
-    ILOC_Instruction *jump = iloc_1target(ILOC_JUMPI, load_ret_address_code->targets[0]);
+    ILOC_Instruction *jump = iloc_1target(ILOC_JUMP, load_ret_address_code->targets[0]);
 
     code = iloc_instruction_concat(code, load_fp_address_code);
     code = iloc_instruction_concat(code, store_fp_address_code);
@@ -925,7 +924,7 @@ static ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scop
                                                                     iloc_number_make(return_address_offset),
                                                                     iloc_register_make(ILOC_RT_GENERIC));
 
-    ILOC_Instruction *jump = iloc_1target(ILOC_JUMPI, load_ret_address_code->targets[0]);
+    ILOC_Instruction *jump = iloc_1target(ILOC_JUMP, load_ret_address_code->targets[0]);
 
     if (ret->expr) {
         ILOC_Instruction *expr_code = load_literal_to_register(ast_expr_generate_code(ret->expr, scope_stack, NULL));
@@ -1097,7 +1096,7 @@ sds iloc_stringify(ILOC_Instruction *code) {
         }
 
         if (inst->opcode == ILOC_JUMPI) {
-            code_str = sdscatprintf(code_str, "%s\n", iloc_operand_string(&inst->targets[0]));
+            code_str = sdscatprintf(code_str, "=> %s\n", iloc_operand_string(&inst->targets[0]));
             inst = inst->next;
             continue;
         }

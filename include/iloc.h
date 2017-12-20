@@ -74,52 +74,53 @@ typedef struct ILOC_Operand {
     ILOC_OPCODE(ILOC_C2I, "c2i"),           \
     ILOC_OPCODE(ILOC_I2C, "i2c"), \
     ILOC_OPCODE(ILOC_JUMPI, "jumpI"), \
-    ILOC_OPCODE(ILOC_CBR, "cbr"), \
-    ILOC_OPCODE(ILOC_CMP_LT, "cmp_LT"), \
-    ILOC_OPCODE(ILOC_CMP_LE, "cmp_LE"), \
-    ILOC_OPCODE(ILOC_CMP_GT, "cmp_GT"), \
-    ILOC_OPCODE(ILOC_CMP_GE, "cmp_GE"), \
-    ILOC_OPCODE(ILOC_CMP_EQ, "cmp_EQ"), \
-    ILOC_OPCODE(ILOC_CMP_NE, "cmp_NE"),
+    ILOC_OPCODE(ILOC_JUMP, "jump"),       \
+    ILOC_OPCODE(ILOC_CBR, "cbr"),           \
+    ILOC_OPCODE(ILOC_CMP_LT, "cmp_LT"),     \
+        ILOC_OPCODE(ILOC_CMP_LE, "cmp_LE"), \
+        ILOC_OPCODE(ILOC_CMP_GT, "cmp_GT"), \
+        ILOC_OPCODE(ILOC_CMP_GE, "cmp_GE"), \
+        ILOC_OPCODE(ILOC_CMP_EQ, "cmp_EQ"), \
+        ILOC_OPCODE(ILOC_CMP_NE, "cmp_NE"),
 
 typedef enum ILOC_OpCode {
 #define ILOC_OPCODE(e, s) e
-    ILOC_OPCODES
+ILOC_OPCODES
 #undef ILOC_OPCODE
 } ILOC_OpCode;
 
 static const char *iloc_opcode_names[] = {
 #define ILOC_OPCODE(e, s) s
-    ILOC_OPCODES
+ILOC_OPCODES
 #undef ILOC_OPCODE
 };
 
 typedef enum ILOC_IT {
-    ILOC_IT_CODE,
+ILOC_IT_CODE,
     ILOC_IT_COMMENT,
-} ILOC_IT;
+    } ILOC_IT;
 
 typedef struct ILOC_Instruction {
-    ILOC_IT type;
-    union {
-        struct {
-            sds                        label;
-            ILOC_OpCode                opcode;
-            Array(ILOC_Operand)        sources;
-            Array(ILOC_Operand)        targets;
-        };
-        struct {
-            sds                        comment;
-        };
-    };
+ILOC_IT type;
+union {
+struct {
+sds                        label;
+ILOC_OpCode                opcode;
+Array(ILOC_Operand)        sources;
+Array(ILOC_Operand)        targets;
+};
+struct {
+sds                        comment;
+};
+};
 
-    struct ILOC_Instruction *prev;
-    struct ILOC_Instruction *next;
+struct ILOC_Instruction *prev;
+struct ILOC_Instruction *next;
 } ILOC_Instruction;
 
 static inline int get_next_register_number() {
-    static int next = 0;
-    return next++;
+static int next = 0;
+return next++;
 }
 
 ILOC_Instruction *iloc_generate_code(AST_Program *program);
