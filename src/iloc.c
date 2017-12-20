@@ -392,10 +392,10 @@ static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *func_call
     while (param) {
         // Both param and param_decl have the same size
         Assert(param_decl);
-        Assert(param_decl->type == DT_VARIABLE);
+        /*Assert(param_decl->type == DT_VARIABLE);*/
 
         ILOC_Instruction *param_inst = ast_expr_generate_code(param, scope_stack, curr_func);
-        Assert(param_inst->opcode != ILOC_NOP);
+        /*Assert(param_inst->opcode != ILOC_NOP);*/
 
         // Store param in stack
         ILOC_Instruction *store_param_inst = iloc_1source_2targets(ILOC_STOREAI,
