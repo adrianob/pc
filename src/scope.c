@@ -8,6 +8,11 @@ Scope *scope_make(ScopeType type) {
     return s;
 }
 
+size_t scope_get_size(const Scope *scope) {
+    // FIXME(leo): This is not entirely correct
+    return scope->current_address_offset;
+}
+
 void scope_add(Scope *scope, char *name, DeclarationHeader *decl_hdr) {
     Assert(dict_get_entry(scope->symbols, name) == NULL);
 

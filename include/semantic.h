@@ -84,6 +84,7 @@ typedef struct FunctionDeclaration {
     UserTypeDefinition *return_type_definition;
     IKS_Type            return_type;
     DeclarationHeader  *first_param;
+    Scope              *scope;
 } FunctionDeclaration;
 
 DeclarationHeader *function_declaration_make(AST_Identifier *id, AST_Identifier *ret_id,

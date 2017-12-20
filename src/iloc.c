@@ -10,6 +10,7 @@ static ILOC_Instruction *iloc_instruction_make(void);
 
 static ILOC_Instruction *iloc_1target(ILOC_OpCode opcode, ILOC_Operand target1) {
     ILOC_Instruction *code = iloc_instruction_make();
+    code->type = ILOC_IT_CODE;
     code->opcode = opcode;
     array_push(code->targets, target1);
     return code;
@@ -17,6 +18,7 @@ static ILOC_Instruction *iloc_1target(ILOC_OpCode opcode, ILOC_Operand target1) 
 
 static ILOC_Instruction *iloc_1source_1target(ILOC_OpCode opcode, ILOC_Operand source1, ILOC_Operand target1) {
     ILOC_Instruction *code = iloc_instruction_make();
+    code->type = ILOC_IT_CODE;
     code->opcode = opcode;
     array_push(code->sources, source1);
     array_push(code->targets, target1);
@@ -26,6 +28,7 @@ static ILOC_Instruction *iloc_1source_1target(ILOC_OpCode opcode, ILOC_Operand s
 static ILOC_Instruction *iloc_1source_2targets(ILOC_OpCode opcode, ILOC_Operand source1, ILOC_Operand target1,
                                                ILOC_Operand target2) {
     ILOC_Instruction *code = iloc_instruction_make();
+    code->type = ILOC_IT_CODE;
     code->opcode = opcode;
     array_push(code->sources, source1);
     array_push(code->targets, target1);
@@ -36,6 +39,7 @@ static ILOC_Instruction *iloc_1source_2targets(ILOC_OpCode opcode, ILOC_Operand 
 static ILOC_Instruction *iloc_2sources_1target(ILOC_OpCode opcode, ILOC_Operand source1, ILOC_Operand source2,
                                         ILOC_Operand target1) {
     ILOC_Instruction *code = iloc_instruction_make();
+    code->type = ILOC_IT_CODE;
     code->opcode = opcode;
     array_push(code->sources, source1);
     array_push(code->sources, source2);
@@ -184,7 +188,9 @@ static sds iloc_operand_string(const ILOC_Operand *operand) {
         } else if (operand->register_type == ILOC_RT_SP) {
             name = sdsnew("rsp");
         } else if (operand->register_type == ILOC_RT_FP) {
-            name = sdsnew("rfp");
+            name = sdsnew("rarp");
+        } else if (operand->register_type == ILOC_RT_PC) {
+            name = sdsnew("rpc");
         } else if (operand->register_type == ILOC_RT_GENERIC) {
             name = sdscatprintf(sdsempty(), "r%d", operand->register_number);
         } else Assert(false);
@@ -326,62 +332,165 @@ static ILOC_Instruction *logic_expr_generate_code(AST_LogicExpr *expr, STACK_T *
     }
 }
 
-static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *expr, STACK_T *scope_stack, AST_Function * func) {
-
+static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *func_call,
+                                                     STACK_T *scope_stack, AST_Function *curr_func) {
     ILOC_Instruction *code = iloc_comment_make("Function call section");
 
-    AST_Header *param = expr->first_param;
+    FunctionDeclaration *func_decl = (FunctionDeclaration*)scope_find_declaration_recursive(
+        func_call->identifier, scope_stack, NULL
+    );
+    Assert(func_decl);
 
-    int return_val_size = get_primitive_type_size(func->return_type);
-    Assert(return_val_size != -1);
+    const size_t return_type_size = get_primitive_type_size(func_decl->return_type);
+
+    // ============================================
+    // Store old values for FP and SP
+    // ============================================
+    ILOC_Instruction *store_fp_address_code = iloc_1source_2targets(ILOC_STOREAI,
+                                                                    iloc_register_make(ILOC_RT_FP),
+                                                                    iloc_register_make(ILOC_RT_SP),
+                                                                    iloc_number_make(0));
+    ILOC_Instruction *store_sp_address_code = iloc_1source_2targets(ILOC_STOREAI,
+                                                                    iloc_register_make(ILOC_RT_SP),
+                                                                    iloc_register_make(ILOC_RT_SP),
+                                                                    iloc_number_make(4));
+    // ============================================
+    // Set the new value for fp
+    // ============================================
+    const size_t fp_offset_from_old_sp =
+        4 +               // old FP
+        4 +               // old SP
+        4 +               // return address
+        return_type_size; // return value
+
+    // Set new fp equal to sp
+    ILOC_Instruction *new_fp_value_code = iloc_2sources_1target(ILOC_ADDI,
+                                                                iloc_register_make(ILOC_RT_SP),
+                                                                iloc_number_make(fp_offset_from_old_sp),
+                                                                iloc_register_make(ILOC_RT_GENERIC));
+    ILOC_Instruction *store_new_fp_into_fp_code = iloc_1source_1target(ILOC_I2I,
+                                                                       new_fp_value_code->targets[0],
+                                                                       iloc_register_make(ILOC_RT_FP));
+    // ============================================
+    // Set the new value for sp
+    // ============================================
+    size_t size_parameters_and_vars = scope_get_size(func_decl->scope);
+    ILOC_Instruction *new_sp_value_code = iloc_2sources_1target(ILOC_ADDI,
+                                                                iloc_register_make(ILOC_RT_FP),
+                                                                iloc_number_make(size_parameters_and_vars),
+                                                                iloc_register_make(ILOC_RT_GENERIC));
+    ILOC_Instruction *store_new_sp_code = iloc_1source_1target(ILOC_I2I,
+                                                               new_sp_value_code->targets[0],
+                                                               iloc_register_make(ILOC_RT_SP));
+    // ============================================
+    // Set the function parameters on the stack
+    // ============================================
+    ILOC_Instruction *parameters_stack_code = NULL;
+    AST_Header *param = func_call->first_param;
+    DeclarationHeader *param_decl = func_decl->first_param;
+    size_t param_offset = 0;
     while (param) {
-        ILOC_Instruction *param_load =  iloc_2sources_1target(ILOC_LOADAI,
-                                                              iloc_register_make(ILOC_RT_FP),
-                                                              iloc_number_make(0),
-                                                              iloc_register_make(ILOC_RT_GENERIC));
-        ILOC_Instruction *param_store = iloc_1source_2targets(ILOC_STOREAI,
-                                                              param_load->targets[0],
-                                                              iloc_register_make(ILOC_RT_SP),
-                                                              iloc_number_make(return_val_size)); //@TODO not sure what to put here
-        code = iloc_instruction_concat(code, param_load);
-        code = iloc_instruction_concat(code, param_store);
+        // Both param and param_decl have the same size
+        Assert(param_decl);
+        Assert(param_decl->type == DT_VARIABLE);
+
+        ILOC_Instruction *param_inst = ast_expr_generate_code(param, scope_stack, curr_func);
+        Assert(param_inst->opcode != ILOC_NOP);
+
+        // Store param in stack
+        ILOC_Instruction *store_param_inst = iloc_1source_2targets(ILOC_STOREAI,
+                                                                   param_inst->targets[0],
+                                                                   iloc_register_make(ILOC_RT_FP),
+                                                                   iloc_number_make(param_offset));
+
+        param_offset += ((VariableDeclaration*)param_decl)->size_in_bytes;
+
+        parameters_stack_code = iloc_instruction_concat(parameters_stack_code, param_inst);
+        parameters_stack_code = iloc_instruction_concat(parameters_stack_code, store_param_inst);
+        
         param = param->next;
+        param_decl = param_decl->next;
     }
 
-
-    int return_value_offset = -return_val_size;
-    int return_address_offset = return_value_offset - 4;
-
-    // Load old fp value into a register
-    ILOC_Instruction *load_fp_address_code = iloc_1source_1target(ILOC_LOAD,
-                                                                  iloc_register_make(ILOC_RT_FP),
-                                                                  iloc_register_make(ILOC_RT_GENERIC));
-    // Store old fp value
-    ILOC_Instruction *store_fp_address_code = iloc_1source_1target(ILOC_STORE,
-                                                                   load_fp_address_code->targets[0],
-                                                                   iloc_register_make(ILOC_RT_RARP));
-    // Load old sp value into a register
-    ILOC_Instruction *load_sp_address_code = iloc_1source_1target(ILOC_LOAD,
-                                                                  iloc_register_make(ILOC_RT_SP),
-                                                                  iloc_register_make(ILOC_RT_GENERIC));
-    // Store old sp value into sp
-    ILOC_Instruction *store_sp_address_code = iloc_1source_1target(ILOC_STORE,
-                                                                   load_sp_address_code->targets[0],
-                                                                   iloc_register_make(ILOC_RT_SP));
+    // ============================================
+    // Set the return address on the stack
+    // ============================================
     // Load return address into a register
-    ILOC_Instruction *load_ret_address_code = iloc_2sources_1target(ILOC_LOADAI,
-                                                                    iloc_register_make(ILOC_RT_RARP),
-                                                                    iloc_number_make(return_address_offset),
-                                                                    iloc_register_make(ILOC_RT_GENERIC));
+    ILOC_Instruction *ret_address_value_code = iloc_2sources_1target(ILOC_ADDI,
+                                                                     iloc_register_make(ILOC_RT_PC),
+                                                                     iloc_number_make(3),
+                                                                     iloc_register_make(ILOC_RT_GENERIC));
+    // Save return address into the stack
+    int return_address_offset_from_fp = - 4 - return_type_size;
+    ILOC_Instruction *store_ret_address_code = iloc_1source_2targets(
+        ILOC_STOREAI,
+        ret_address_value_code->targets[0],
+        iloc_register_make(ILOC_RT_FP),
+        iloc_number_make(return_address_offset_from_fp)
+    );
 
-    ILOC_Instruction *jump = iloc_1target(ILOC_JUMP, load_ret_address_code->targets[0]);
+    // ============================================
+    // Jump to function label
+    // ============================================
+    sds function_label = get_function_declaration_string(func_decl, scope_stack);
+    ILOC_Instruction *jump = iloc_1target(ILOC_JUMPI,
+                                          iloc_label_ref_make(function_label));
+    sdsfree(function_label);
 
-    code = iloc_instruction_concat(code, load_fp_address_code);
+    // ============================================
+    // Restore old fp and sp values
+    // ============================================
+    /* int old_fp_offset = - return_type_size - 12; */
+    /* ILOC_Instruction *load_old_fp_code = iloc_2sources_1target(ILOC_LOADAI, */
+    /*                                                            iloc_register_make(ILOC_RT_FP), */
+    /*                                                            iloc_number_make(old_fp_offset), */
+    /*                                                            iloc_register_make(ILOC_RT_GENERIC)); */
+    /* int old_sp_offset = - return_type_size - 8; */
+    /* ILOC_Instruction *load_old_sp_code = iloc_2sources_1target(ILOC_LOADAI, */
+    /*                                                            iloc_register_make(ILOC_RT_FP), */
+    /*                                                            iloc_number_make(old_sp_offset), */
+    /*                                                            iloc_register_make(ILOC_RT_GENERIC)); */
+    /* ILOC_Instruction *restore_old_fp_code = iloc_1source_1target(ILOC_STORE, */
+    /*                                                              load_old_fp_code->targets[0], */
+    /*                                                              iloc_register_make(ILOC_RT_GENERIC)); */
+    /* ILOC_Instruction *restore_old_sp_code = iloc_1source_1target(ILOC_STORE, */
+    /*                                                              load_old_sp_code->targets[0], */
+    /*                                                              iloc_register_make(ILOC_RT_GENERIC)); */
+
+    // ============================================
+    // Load return value into a register
+    // ============================================
+    ILOC_Instruction *return_to_reg_code = iloc_2sources_1target(ILOC_LOADAI,
+                                                                 iloc_register_make(ILOC_RT_SP),
+                                                                 iloc_number_make(12),
+                                                                 iloc_register_make(ILOC_RT_GENERIC));
+
     code = iloc_instruction_concat(code, store_fp_address_code);
-    code = iloc_instruction_concat(code, load_sp_address_code);
     code = iloc_instruction_concat(code, store_sp_address_code);
-    code = iloc_instruction_concat(code, load_ret_address_code);
+
+    code = iloc_instruction_concat(code, iloc_comment_make("Set new fp value"));
+    code = iloc_instruction_concat(code, new_fp_value_code);
+    code = iloc_instruction_concat(code, store_new_fp_into_fp_code);
+
+    code = iloc_instruction_concat(code, iloc_comment_make("Set new sp value"));
+    code = iloc_instruction_concat(code, new_sp_value_code);
+    code = iloc_instruction_concat(code, store_new_sp_code);
+
+    if (parameters_stack_code)
+        code = iloc_instruction_concat(code, iloc_comment_make("Set parameters in the stack"));
+    code = iloc_instruction_concat(code, parameters_stack_code);
+
+    code = iloc_instruction_concat(code, iloc_comment_make("Load and store return address"));
+    code = iloc_instruction_concat(code, ret_address_value_code);
+    code = iloc_instruction_concat(code, store_ret_address_code);
     code = iloc_instruction_concat(code, jump);
+    // Restore old sp and fp values after function returns
+    /* code = iloc_instruction_concat(code, load_old_fp_code); */
+    /* code = iloc_instruction_concat(code, load_old_sp_code); */
+    /* code = iloc_instruction_concat(code, restore_old_fp_code); */
+    /* code = iloc_instruction_concat(code, restore_old_sp_code); */
+    // Put return value into a register
+    code = iloc_instruction_concat(code, return_to_reg_code);
     return code;
 }
 
@@ -906,7 +1015,7 @@ static ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scop
                                                                    iloc_number_make(old_fp_offset),
                                                                    iloc_register_make(ILOC_RT_GENERIC));
     // Store old fp value into fp
-    ILOC_Instruction *store_fp_address_code = iloc_1source_1target(ILOC_STORE,
+    ILOC_Instruction *store_fp_address_code = iloc_1source_1target(ILOC_I2I,
                                                                    load_fp_address_code->targets[0],
                                                                    iloc_register_make(ILOC_RT_RARP));
     // Load old sp value into a register
@@ -915,7 +1024,7 @@ static ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scop
                                                                    iloc_number_make(old_sp_offset),
                                                                    iloc_register_make(ILOC_RT_GENERIC));
     // Store old sp value into sp
-    ILOC_Instruction *store_sp_address_code = iloc_1source_1target(ILOC_STORE,
+    ILOC_Instruction *store_sp_address_code = iloc_1source_1target(ILOC_I2I,
                                                                    load_sp_address_code->targets[0],
                                                                    iloc_register_make(ILOC_RT_SP));
     // Load return address into a register
@@ -940,10 +1049,10 @@ static ILOC_Instruction *ast_return_generate_code(AST_Return *ret, STACK_T *scop
     }
 
     code = iloc_instruction_concat(code, load_fp_address_code);
-    code = iloc_instruction_concat(code, store_fp_address_code);
     code = iloc_instruction_concat(code, load_sp_address_code);
-    code = iloc_instruction_concat(code, store_sp_address_code);
     code = iloc_instruction_concat(code, load_ret_address_code);
+    code = iloc_instruction_concat(code, store_fp_address_code);
+    code = iloc_instruction_concat(code, store_sp_address_code);
     code = iloc_instruction_concat(code, jump);
     return code;
 }
@@ -1032,10 +1141,10 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
                                                     iloc_register_make(ILOC_RT_SP));
     code = iloc_instruction_concat(code, reg_sp);
 
-    ILOC_Instruction *reg_rbss = iloc_1source_1target(ILOC_LOADI,
-                                                      iloc_number_make(2048),
-                                                      iloc_register_make(ILOC_RT_RBSS));
-    code = iloc_instruction_concat(code, reg_rbss);
+    /* ILOC_Instruction *reg_rbss = iloc_1source_1target(ILOC_LOADI, */
+    /*                                                   iloc_number_make(1024), */
+    /*                                                   iloc_register_make(ILOC_RT_RBSS)); */
+    /* code = iloc_instruction_concat(code, reg_rbss); */
 
     FunctionDeclaration *func_decl = (FunctionDeclaration*)scope_find_declaration_recursive_str("main",
                                                                                                 scope_stack,
@@ -1044,6 +1153,7 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
         perror("main not declared\n");
         exit(1);
     }
+
     sds main_label = get_function_declaration_string(func_decl, scope_stack);
 
     ILOC_Instruction *jump_to_main = iloc_1target(ILOC_JUMPI, iloc_label_ref_make(main_label));
@@ -1059,12 +1169,6 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
 
     return code;
 }
-
-/* ILOC_Instruction *iloc_instruction_from_declaration(char *symbol_name, DeclarationHeader *decl_hdr) { */
-/*     ILOC_Instruction *inst = iloc_instruction_make(); */
-/*     inst->label = sdsnew(symbol_name); */
-/*     return inst; */
-/* } */
 
 sds iloc_stringify(ILOC_Instruction *code) {
     // Go to the beginning of the list.

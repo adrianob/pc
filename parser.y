@@ -465,6 +465,7 @@ decl_func2:
                     char *id_key = get_key_from_identifier(id);
                     AST_Block *block = (AST_Block*)$6;
 
+
                     DeclarationHeader *id_decl_hdr = scope_find_declaration_recursive(id, g_scopes, NULL);
                     if (id_decl_hdr) {
                         Assert(id_decl_hdr->type == DT_FUNCTION);
@@ -476,7 +477,13 @@ decl_func2:
                     }
 
                     Scope *scope = stack_pop(&g_scopes);
-                    $$->scope = scope;
+                    {
+                        // Add scope to ast_funtion and function_declaration
+                        $$->scope = scope;
+                        FunctionDeclaration *decl = (FunctionDeclaration*)scope_find_declaration_recursive(id, g_scopes, NULL);
+                        Assert(decl);
+                        decl->scope = scope;
+                    }
                     block->first_command = NULL;
                     ast_block_free(block);
                 }
@@ -531,7 +538,13 @@ decl_func2:
                     }
 
                     Scope *scope = stack_pop(&g_scopes);
-                    $$->scope = scope;
+                    {
+                        // Add scope to ast_funtion and function_declaration
+                        $$->scope = scope;
+                        FunctionDeclaration *decl = (FunctionDeclaration*)scope_find_declaration_recursive(id, g_scopes, NULL);
+                        Assert(decl);
+                        decl->scope = scope;
+                    }
                     block->first_command = NULL;
                     ast_block_free(block);
                 }

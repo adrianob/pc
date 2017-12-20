@@ -37,5 +37,6 @@ void scope_add(Scope *scope, char *name, DeclarationHeader *decl_hdr);
 
 DeclarationHeader *scope_find_declaration_recursive(AST_Identifier *id, STACK_T *scopes, bool *is_global_scope);
 DeclarationHeader *scope_find_declaration_recursive_str(char *id, STACK_T *scopes, bool *is_global_scope);
+size_t             scope_get_size(const Scope *scope);
 
 #endif // __SCOPE_H__
