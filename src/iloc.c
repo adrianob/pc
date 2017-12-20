@@ -354,15 +354,48 @@ static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *func_call
                                                                     iloc_register_make(ILOC_RT_SP),
                                                                     iloc_register_make(ILOC_RT_SP),
                                                                     iloc_number_make(4));
-    // ============================================
-    // Set the new value for fp
-    // ============================================
+
     const size_t fp_offset_from_old_sp =
         4 +               // old FP
         4 +               // old SP
         4 +               // return address
         return_type_size; // return value
 
+    // ============================================
+    // Set the function parameters on the stack
+    // ============================================
+    ILOC_Instruction *parameters_stack_code = NULL;
+    AST_Header *param = func_call->first_param;
+    DeclarationHeader *param_decl = func_decl->first_param;
+    size_t param_offset = 0;
+    while (param) {
+        // Both param and param_decl have the same size
+        Assert(param_decl);
+        /*Assert(param_decl->type == DT_VARIABLE);*/
+
+        ILOC_Instruction *param_inst = ast_expr_generate_code(param, scope_stack, curr_func);
+        /*Assert(param_inst->opcode != ILOC_NOP);*/
+
+        // Store param in stack
+        ILOC_Instruction *store_param_inst = iloc_1source_2targets(
+            ILOC_STOREAI,
+            param_inst->targets[0],
+            iloc_register_make(ILOC_RT_SP),
+            iloc_number_make(fp_offset_from_old_sp + param_offset)
+        );
+
+        param_offset += ((VariableDeclaration*)param_decl)->size_in_bytes;
+
+        parameters_stack_code = iloc_instruction_concat(parameters_stack_code, param_inst);
+        parameters_stack_code = iloc_instruction_concat(parameters_stack_code, store_param_inst);
+        
+        param = param->next;
+        param_decl = param_decl->next;
+    }
+
+    // ============================================
+    // Set the new value for fp
+    // ============================================
     // Set new fp equal to sp
     ILOC_Instruction *new_fp_value_code = iloc_2sources_1target(ILOC_ADDI,
                                                                 iloc_register_make(ILOC_RT_SP),
@@ -382,36 +415,6 @@ static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *func_call
     ILOC_Instruction *store_new_sp_code = iloc_1source_1target(ILOC_I2I,
                                                                new_sp_value_code->targets[0],
                                                                iloc_register_make(ILOC_RT_SP));
-    // ============================================
-    // Set the function parameters on the stack
-    // ============================================
-    ILOC_Instruction *parameters_stack_code = NULL;
-    AST_Header *param = func_call->first_param;
-    DeclarationHeader *param_decl = func_decl->first_param;
-    size_t param_offset = 0;
-    while (param) {
-        // Both param and param_decl have the same size
-        Assert(param_decl);
-        /*Assert(param_decl->type == DT_VARIABLE);*/
-
-        ILOC_Instruction *param_inst = ast_expr_generate_code(param, scope_stack, curr_func);
-        /*Assert(param_inst->opcode != ILOC_NOP);*/
-
-        // Store param in stack
-        ILOC_Instruction *store_param_inst = iloc_1source_2targets(ILOC_STOREAI,
-                                                                   param_inst->targets[0],
-                                                                   iloc_register_make(ILOC_RT_FP),
-                                                                   iloc_number_make(param_offset));
-
-        param_offset += ((VariableDeclaration*)param_decl)->size_in_bytes;
-
-        parameters_stack_code = iloc_instruction_concat(parameters_stack_code, param_inst);
-        parameters_stack_code = iloc_instruction_concat(parameters_stack_code, store_param_inst);
-        
-        param = param->next;
-        param_decl = param_decl->next;
-    }
-
     // ============================================
     // Set the return address on the stack
     // ============================================
@@ -468,6 +471,10 @@ static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *func_call
     code = iloc_instruction_concat(code, store_fp_address_code);
     code = iloc_instruction_concat(code, store_sp_address_code);
 
+    if (parameters_stack_code)
+        code = iloc_instruction_concat(code, iloc_comment_make("Set parameters in the stack"));
+    code = iloc_instruction_concat(code, parameters_stack_code);
+
     code = iloc_instruction_concat(code, iloc_comment_make("Set new fp value"));
     code = iloc_instruction_concat(code, new_fp_value_code);
     code = iloc_instruction_concat(code, store_new_fp_into_fp_code);
@@ -475,10 +482,6 @@ static ILOC_Instruction *function_call_generate_code(AST_FunctionCall *func_call
     code = iloc_instruction_concat(code, iloc_comment_make("Set new sp value"));
     code = iloc_instruction_concat(code, new_sp_value_code);
     code = iloc_instruction_concat(code, store_new_sp_code);
-
-    if (parameters_stack_code)
-        code = iloc_instruction_concat(code, iloc_comment_make("Set parameters in the stack"));
-    code = iloc_instruction_concat(code, parameters_stack_code);
 
     code = iloc_instruction_concat(code, iloc_comment_make("Load and store return address"));
     code = iloc_instruction_concat(code, ret_address_value_code);
@@ -1153,6 +1156,12 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
         perror("main not declared\n");
         exit(1);
     }
+
+    ILOC_Instruction *set_sp = iloc_1source_1target(ILOC_LOADI,
+                                                    iloc_number_make(func_decl->scope->current_address_offset),
+                                                    iloc_register_make(ILOC_RT_SP));
+    code = iloc_instruction_concat(code, set_sp);
+
 
     sds main_label = get_function_declaration_string(func_decl, scope_stack);
 

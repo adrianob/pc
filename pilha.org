@@ -1,0 +1,27 @@
+
+ESQUEMA DA PILHA PARA FUNCOES
+
+
+----------------- current sp
+var y
+-----------------
+var x
+-----------------
+parameter 2
+-----------------
+parameter 1
+----------------- current fp
+return value
+-----------------
+return address
+-----------------
+old sp
+-----------------
+old fp
+----------------- old sp
+..
+..
+rest of the stack
+..
+..
+----------------- old fp
