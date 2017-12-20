@@ -74,14 +74,14 @@ typedef struct ILOC_Operand {
     ILOC_OPCODE(ILOC_C2I, "c2i"),           \
     ILOC_OPCODE(ILOC_I2C, "i2c"), \
     ILOC_OPCODE(ILOC_JUMPI, "jumpI"), \
-    ILOC_OPCODE(ILOC_JUMP, "jump"),       \
-    ILOC_OPCODE(ILOC_CBR, "cbr"),           \
-    ILOC_OPCODE(ILOC_CMP_LT, "cmp_LT"),     \
-        ILOC_OPCODE(ILOC_CMP_LE, "cmp_LE"), \
-        ILOC_OPCODE(ILOC_CMP_GT, "cmp_GT"), \
-        ILOC_OPCODE(ILOC_CMP_GE, "cmp_GE"), \
-        ILOC_OPCODE(ILOC_CMP_EQ, "cmp_EQ"), \
-        ILOC_OPCODE(ILOC_CMP_NE, "cmp_NE"),
+    ILOC_OPCODE(ILOC_JUMP, "jump"), \
+    ILOC_OPCODE(ILOC_CBR, "cbr"), \
+    ILOC_OPCODE(ILOC_CMP_LT, "cmp_LT"), \
+    ILOC_OPCODE(ILOC_CMP_LE, "cmp_LE"), \
+    ILOC_OPCODE(ILOC_CMP_GT, "cmp_GT"), \
+    ILOC_OPCODE(ILOC_CMP_GE, "cmp_GE"), \
+    ILOC_OPCODE(ILOC_CMP_EQ, "cmp_EQ"), \
+    ILOC_OPCODE(ILOC_CMP_NE, "cmp_NE"),
 
 typedef enum ILOC_OpCode {
 #define ILOC_OPCODE(e, s) e

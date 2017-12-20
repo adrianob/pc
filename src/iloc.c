@@ -1095,8 +1095,9 @@ sds iloc_stringify(ILOC_Instruction *code) {
             continue;
         }
 
-        if (inst->opcode == ILOC_JUMPI) {
-            code_str = sdscatprintf(code_str, "=> %s\n", iloc_operand_string(&inst->targets[0]));
+        if (inst->opcode == ILOC_JUMPI || inst->opcode == ILOC_JUMP) {
+            code_str = sdscat(code_str, " => ");
+            code_str = sdscatprintf(code_str, "%s\n", iloc_operand_string(&inst->targets[0]));
             inst = inst->next;
             continue;
         }
