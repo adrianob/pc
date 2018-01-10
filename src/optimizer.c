@@ -30,15 +30,34 @@ static ILOC_Instruction *remove_instruction(ILOC_Instruction *code) {
     return to_return;
 }
 
-static ILOC_Instruction *remove_comments(ILOC_Instruction *code) {
-    ILOC_Instruction *search = code;
-    while (search) {
-        if (search->type == ILOC_IT_COMMENT) {
-            search = remove_instruction(search);
+static ILOC_Instruction *remove_comments(ILOC_Instruction *begin_window,
+                                         ILOC_Instruction **end_window, int window_size) {
+    ILOC_Instruction *curr = begin_window;
+    // Iterate inside the window
+    while (curr != (*end_window)->next) {
+        if (curr->type == ILOC_IT_COMMENT) {
+            curr = remove_instruction(curr);
+            *end_window = (*end_window)->next;
         }
-        search = search->next;
+        curr = curr->next;
     }
-    return code;
+
+    return begin_window;
+}
+
+static inline void initialize_window(ILOC_Instruction *code, int window_size,
+                                     ILOC_Instruction **begin, ILOC_Instruction **end) {
+    Assert(window_size >= 2);
+    *begin = code;
+    *end = code;
+    int steps = 0;
+    while (steps != window_size) {
+        *end = (*end)->next;
+        steps++;
+        Assert(*end);
+    }
+
+    Assert(begin != end);
 }
 
 static inline void step_window(ILOC_Instruction **begin, ILOC_Instruction **end) {
@@ -46,55 +65,54 @@ static inline void step_window(ILOC_Instruction **begin, ILOC_Instruction **end)
     *end = (*end)->next;
 }
 
-static ILOC_Instruction *remove_redundant_instructions(ILOC_Instruction *code, int window_size) {
-    // Initialize window
-    ILOC_Instruction *begin_window = code;
-    ILOC_Instruction *end_window = code;
-    {
-        int steps = 0;
-        while (steps != window_size) {
-            end_window = end_window->next;
-            steps++;
-            Assert(end_window);
-        }
-    }
-    Assert(begin_window != end_window);
-
-    // Start the actual removing of instructions
-    while (end_window) {
-        ILOC_Instruction *curr = begin_window;
-        // Iterate inside the window
-        while (curr != end_window->next) {
-            // Remove NOPs
-            if (curr->opcode == ILOC_NOP && curr != end_window) {
-                // If the nop has no label, then just delete it.
-                if (!curr->label) {
-                    curr = remove_instruction(curr);
-                    end_window = end_window->next;
-                } else if (!curr->next->label) {
-                    curr->next->label = curr->label;
-                    curr->label = NULL;
-                    // Remove first instruction of the window
-                    curr = remove_instruction(curr);
-                    end_window = end_window->next;
-                }
+static ILOC_Instruction *redundant_instructions_optimization(ILOC_Instruction *begin_window,
+                                                             ILOC_Instruction **end_window,
+                                                             int window_size) {
+    ILOC_Instruction *curr = begin_window;
+    // Iterate inside the window
+    while (curr != (*end_window)->next) {
+        // Remove NOPs, and transfer any label that it contains to the next instruction
+        if (curr->opcode == ILOC_NOP && curr != *end_window) {
+            // If the nop has no label, then just delete it.
+            if (!curr->label) {
+                curr = remove_instruction(curr);
+                *end_window = (*end_window)->next;
+            } else if (!curr->next->label) {
+                curr->next->label = curr->label;
+                curr->label = NULL;
+                // Remove first instruction of the window
+                curr = remove_instruction(curr);
+                *end_window = (*end_window)->next;
             }
-            // Remove unnecessary jumps
-            if (curr->opcode == ILOC_JUMPI && curr != end_window) {
-                Assert(curr->targets[0].type == ILOC_LABEL_REF);
-                if (sdscmp(curr->targets[0].label, curr->next->label) == 0) {
-                    curr = remove_instruction(curr);
-                }
-            }
-
-            curr = curr->next;
         }
 
-        step_window(&begin_window, &end_window);
-        Assert(begin_window);
+        curr = curr->next;
     }
 
-    return code;
+    return begin_window;
+}
+
+static ILOC_Instruction *control_flow_optimization(ILOC_Instruction *begin_window,
+                                                   ILOC_Instruction **end_window,
+                                                   int window_size) {
+    ILOC_Instruction *curr = begin_window;
+    // Iterate inside the window
+    while (curr != (*end_window)->next) {
+        // Remove unnecessary jumps
+        // jump => La
+        // La: ...
+        if (curr->opcode == ILOC_JUMPI && curr != *end_window) {
+            Assert(curr->targets[0].type == ILOC_LABEL_REF);
+            if (sdscmp(curr->targets[0].label, curr->next->label) == 0) {
+                curr = remove_instruction(curr);
+                *end_window = (*end_window)->next;
+            }
+        }
+
+        curr = curr->next;
+    }
+
+    return begin_window;
 }
 
 ILOC_Instruction *optimize_window(ILOC_Instruction *code, OptimizationLevel opt_lvl, int window_size) {
@@ -102,12 +120,20 @@ ILOC_Instruction *optimize_window(ILOC_Instruction *code, OptimizationLevel opt_
         printf("No optimizations will be run\n");
         return code;
     }
-    // Reverse code
 
-    printf("Will optimize\n");
+    // slide window
+    ILOC_Instruction *begin_window, *end_window;
+    initialize_window(code, window_size, &begin_window, &end_window);
 
-    code = remove_comments(code);
-    code = remove_redundant_instructions(code, window_size);
+    while (end_window) {
+        // this is not really an optimization
+        begin_window = remove_comments(begin_window, &end_window, window_size);
+        begin_window = redundant_instructions_optimization(begin_window, &end_window, window_size);
+        begin_window = control_flow_optimization(begin_window, &end_window, window_size);
+
+        step_window(&begin_window, &end_window);
+        Assert(begin_window);
+    }
 
     return code;
 }
