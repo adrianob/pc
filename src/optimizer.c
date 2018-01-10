@@ -115,6 +115,51 @@ static ILOC_Instruction *control_flow_optimization(ILOC_Instruction *begin_windo
     return begin_window;
 }
 
+static ILOC_Instruction *calculate_constants(ILOC_Instruction *begin_window,
+                                                   ILOC_Instruction **end_window,
+                                                   int window_size) {
+    ILOC_Instruction *curr = begin_window;
+    // Iterate inside the window
+
+    while (curr != (*end_window)->next) {
+        // example:
+        // loadI 10 => r0
+        // addI r0, 20 => r1
+        // becomes:
+        // loadI 30 => r1
+        if (curr->opcode == ILOC_LOADI) {
+            int register_target = curr->targets[0].register_number;
+            int64_t load_constant = curr->sources[0].number;
+
+            //expression always comes immediately after LOADI
+            if( ( curr->next->opcode == ILOC_ADDI || curr->next->opcode == ILOC_SUBI || curr->next->opcode == ILOC_MULTI || curr->next->opcode == ILOC_DIVI )
+               && (curr->next->sources[0].register_number == register_target && curr != *end_window)
+               ) {
+                    int64_t arith_constant = curr->next->sources[1].number;
+                    int register_final = curr->next->targets[0].register_number;
+                    curr->targets[0].register_number = register_final;
+                    int64_t result;
+                    if(curr->next->opcode == ILOC_ADDI) {
+                        result = load_constant + arith_constant;
+                    } else if(curr->next->opcode == ILOC_SUBI){
+                        result = load_constant - arith_constant;
+                    } else if(curr->next->opcode == ILOC_MULTI){
+                        result = load_constant * arith_constant;
+                    } else if(curr->next->opcode == ILOC_DIVI){
+                        result = load_constant / arith_constant;
+                    }
+                    curr->next = remove_instruction(curr->next);
+                    curr->sources[0].number = result;
+            }
+        }
+
+        curr = curr->next;
+    }
+
+
+    return begin_window;
+}
+
 ILOC_Instruction *optimize_window(ILOC_Instruction *code, OptimizationLevel opt_lvl, int window_size) {
     if (opt_lvl == OPTIMIZATION_LEVEL_NONE || !code) {
         printf("No optimizations will be run\n");
@@ -130,6 +175,7 @@ ILOC_Instruction *optimize_window(ILOC_Instruction *code, OptimizationLevel opt_
         begin_window = remove_comments(begin_window, &end_window, window_size);
         begin_window = redundant_instructions_optimization(begin_window, &end_window, window_size);
         begin_window = control_flow_optimization(begin_window, &end_window, window_size);
+        begin_window = calculate_constants(begin_window, &end_window, window_size);
 
         step_window(&begin_window, &end_window);
         Assert(begin_window);
