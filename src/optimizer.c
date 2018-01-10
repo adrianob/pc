@@ -64,9 +64,9 @@ static ILOC_Instruction *remove_redundant_instructions(ILOC_Instruction *code, i
     while (end_window) {
         ILOC_Instruction *curr = begin_window;
         // Iterate inside the window
-        while (curr != end_window) {
+        while (curr != end_window->next) {
             // Remove NOPs
-            if (curr->opcode == ILOC_NOP) {
+            if (curr->opcode == ILOC_NOP && curr != end_window) {
                 // If the nop has no label, then just delete it.
                 if (!curr->label) {
                     curr = remove_instruction(curr);
@@ -79,6 +79,14 @@ static ILOC_Instruction *remove_redundant_instructions(ILOC_Instruction *code, i
                     end_window = end_window->next;
                 }
             }
+            // Remove unnecessary jumps
+            if (curr->opcode == ILOC_JUMPI && curr != end_window) {
+                Assert(curr->targets[0].type == ILOC_LABEL_REF);
+                if (sdscmp(curr->targets[0].label, curr->next->label) == 0) {
+                    curr = remove_instruction(curr);
+                }
+            }
+
             curr = curr->next;
         }
 
