@@ -1,5 +1,6 @@
 #include "main.h"
 #include "macros.h"
+#include "optimizer.h"
 
 extern FILE *yyin;
 extern char *yytext;
@@ -9,7 +10,7 @@ extern int getLineNumber();
 #define print_nome2(TOKEN)                                                     \
     printf("%d TK_ESPECIAL [%c]\n", comp_get_line_number(), TOKEN);
 #define USER_INIT main_init(argc, argv);
-#define USER_FINALIZE main_finalize(argc, argv);
+#define USER_FINALIZE(opt_lvl) main_finalize(opt_lvl);
 
 void main_avaliacao_etapa_1_tabela(void);
 int main_avaliacao_etapa_1(int argc, char **argv) {
@@ -216,7 +217,14 @@ int main_avaliacao_etapa_7(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     // if some argument is provided, treat it as input
+    OptimizationLevel opt_lvl = OPTIMIZATION_LEVEL_NONE;
     if (argc != 1) {
+        for (int i = 0; i < argc; i++) {
+            if (strcmp(argv[i], "-O1") == 0) {
+                opt_lvl = OPTIMIZATION_LEVEL_1;
+            }
+        }
+
         yyin = fopen(argv[1], "r");
         // if fopen fails, yyin continues to be stdin
         if (yyin == NULL) {
@@ -242,6 +250,6 @@ int main(int argc, char **argv) {
 #else
     r = 0;
 #endif
-    USER_FINALIZE(argc, argv);
+    USER_FINALIZE(opt_lvl);
     return r;
 }

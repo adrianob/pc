@@ -240,10 +240,7 @@ void print_errors() {
     }
 }
 
-void main_finalize(int argc, char **argv) {
-    /* gv_init(NULL); */
-    /* print_ast_to_graph(g_program); */
-    /* gv_close(); */
+void main_finalize(OptimizationLevel opt_lvl) {
     int exit_code = IKS_SUCCESS;
     int num_errors = array_len(g_semantic_errors);
 
@@ -255,17 +252,22 @@ void main_finalize(int argc, char **argv) {
     if (exit_code == IKS_SUCCESS && !g_syntax_error) {
         ILOC_Instruction *code = iloc_generate_code(g_program);
 
-        /* ILOC_Instruction *temp = code; */
-        /* int num_inst = 0; */
-        /* while (temp) {num_inst++; temp = temp->prev;} */
-
-        /* printf("Number of instructions: %d\n", num_inst); */
         if (code) {
-            if(argc == 1 || ( argc == 2 && strcmp(argv[1], "-o0") != 0 )) {
-                optimize_window(code, 5);
-            }
+            printf("===================================\n");
+            printf("BEFORE OPTIMIZATION\n");
+            printf("===================================\n");
             sds code_str = iloc_stringify(code);
             printf("%s\n", code_str);
+            sdsfree(code_str);
+
+            printf("===================================\n");
+            printf("AFTER OPTIMIZATION\n");
+            printf("===================================\n");
+
+            code = optimize_window(code, opt_lvl, OPTIMIZER_DEFAULT_WINDOW_SIZE);
+            code_str = iloc_stringify(code);
+            printf("%s\n", code_str);
+
             sdsfree(code_str);
             iloc_free_code(code);
         }

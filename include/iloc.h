@@ -86,46 +86,47 @@ typedef struct ILOC_Operand {
 
 typedef enum ILOC_OpCode {
 #define ILOC_OPCODE(e, s) e
-ILOC_OPCODES
+    ILOC_OPCODES
 #undef ILOC_OPCODE
 } ILOC_OpCode;
 
 static const char *iloc_opcode_names[] = {
 #define ILOC_OPCODE(e, s) s
-ILOC_OPCODES
+    ILOC_OPCODES
 #undef ILOC_OPCODE
 };
 
 typedef enum ILOC_IT {
-ILOC_IT_CODE,
+    ILOC_IT_CODE,
     ILOC_IT_COMMENT,
-    } ILOC_IT;
+} ILOC_IT;
 
 typedef struct ILOC_Instruction {
-ILOC_IT type;
-union {
-struct {
-sds                        label;
-ILOC_OpCode                opcode;
-Array(ILOC_Operand)        sources;
-Array(ILOC_Operand)        targets;
-};
-struct {
-sds                        comment;
-};
-};
+    ILOC_IT type;
+    union {
+        struct {
+            sds                        label;
+            ILOC_OpCode                opcode;
+            Array(ILOC_Operand)        sources;
+            Array(ILOC_Operand)        targets;
+        };
+        struct {
+            sds                        comment;
+        };
+    };
 
-struct ILOC_Instruction *prev;
-struct ILOC_Instruction *next;
+    struct ILOC_Instruction *prev;
+    struct ILOC_Instruction *next;
 } ILOC_Instruction;
 
 static inline int get_next_register_number() {
-static int next = 0;
-return next++;
+    static int next = 0;
+    return next++;
 }
 
 ILOC_Instruction *iloc_generate_code(AST_Program *program);
 sds iloc_stringify(ILOC_Instruction *code);
+void iloc_instruction_free(ILOC_Instruction *inst);
 void iloc_free_code(ILOC_Instruction *code);
 
 #endif // __ILOC_H__

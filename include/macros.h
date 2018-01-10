@@ -1,6 +1,8 @@
 #ifndef MACROS_H
 #define MACROS_H
 
+#include <stdlib.h>
+
 #ifndef Assert
 #  ifndef COMPILADORES_PROD
 #    define Assert2(cond, file, number) do {                         \

@@ -133,7 +133,7 @@ static sds label_make() {
     return label;
 }
 
-static void iloc_instruction_free(ILOC_Instruction *inst) {
+void iloc_instruction_free(ILOC_Instruction *inst) {
     if (inst->type == ILOC_IT_COMMENT) {
         sdsfree(inst->comment);
     } else {
@@ -1176,13 +1176,14 @@ ILOC_Instruction *iloc_generate_code(AST_Program *program) {
 
     stack_pop(&scope_stack);
 
+    // Go to the beginning of the list.
+    while (code->prev) code = code->prev;
     return code;
 }
 
 sds iloc_stringify(ILOC_Instruction *code) {
-    // Go to the beginning of the list.
+    Assert(code->prev == NULL);
     ILOC_Instruction *inst = code;
-    while (inst->prev) inst = inst->prev;
 
     sds code_str = sdsempty();
     // Loop one instruction by one
@@ -1248,12 +1249,12 @@ sds iloc_stringify(ILOC_Instruction *code) {
 }
 
 void iloc_free_code(ILOC_Instruction *code) {
-    Assert(code->next == NULL);
+    Assert(code->prev == NULL);
     ILOC_Instruction *it = code;
     // Get it to the beginning of the list
     while (it) {
-        ILOC_Instruction *prev = it->prev;
+        ILOC_Instruction *next = it->next;
         iloc_instruction_free(it);
-        it = prev;    
+        it = next;    
     }
 }
