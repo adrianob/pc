@@ -9,7 +9,7 @@ extern int getLineNumber();
 #define print_nome2(TOKEN)                                                     \
     printf("%d TK_ESPECIAL [%c]\n", comp_get_line_number(), TOKEN);
 #define USER_INIT main_init(argc, argv);
-#define USER_FINALIZE main_finalize();
+#define USER_FINALIZE main_finalize(argc, argv);
 
 void main_avaliacao_etapa_1_tabela(void);
 int main_avaliacao_etapa_1(int argc, char **argv) {
@@ -242,6 +242,6 @@ int main(int argc, char **argv) {
 #else
     r = 0;
 #endif
-    USER_FINALIZE;
+    USER_FINALIZE(argc, argv);
     return r;
 }

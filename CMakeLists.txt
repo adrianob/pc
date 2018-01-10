@@ -24,7 +24,8 @@ ADD_EXECUTABLE(main
   src/semantic_errors.c
   src/scope.c
   src/iloc.c
-)
+  src/optimizer.c
+  )
 TARGET_LINK_LIBRARIES(main ${FLEX_LIBRARIES})
 
 ADD_EXECUTABLE(cc_dict_main_example src/cc_dict.c src/cc_dict_main_example.c)

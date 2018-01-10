@@ -7,6 +7,7 @@
 #include "macros.h"
 #include "semantic.h"
 #include "semantic_errors.h"
+#include "optimizer.h"
 #include "scope.h"
 #include "iloc.h"
 #include <assert.h>
@@ -239,7 +240,7 @@ void print_errors() {
     }
 }
 
-void main_finalize(void) {
+void main_finalize(int argc, char **argv) {
     /* gv_init(NULL); */
     /* print_ast_to_graph(g_program); */
     /* gv_close(); */
@@ -260,6 +261,9 @@ void main_finalize(void) {
 
         /* printf("Number of instructions: %d\n", num_inst); */
         if (code) {
+            if(argc == 1 || ( argc == 2 && strcmp(argv[1], "-o0") != 0 )) {
+                optimize_window(code, 5);
+            }
             sds code_str = iloc_stringify(code);
             printf("%s\n", code_str);
             sdsfree(code_str);

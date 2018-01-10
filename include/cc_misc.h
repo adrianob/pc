@@ -6,7 +6,7 @@
 int getLineNumber(void);
 void yyerror(char const *mensagem);
 void main_init(int argc, char **argv);
-void main_finalize(void);
+void main_finalize(int argc, char **argv);
 
 comp_dict_t *dict;
 #endif
